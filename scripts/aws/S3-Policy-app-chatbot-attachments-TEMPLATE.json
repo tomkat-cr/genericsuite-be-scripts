@@ -1,0 +1,53 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "Allow${APP_NAME}${STAGE}ReadAccess",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": [
+                    "arn:aws:iam::${AWS_ACCOUNT}:root",
+                    "arn:aws:iam::${AWS_ACCOUNT}:role/${AWS_API_HANDLER_ROLE}"
+                ]
+            },
+            "Action": [
+                "s3:ListBucketMultipartUploads",
+                "s3:ListBucket",
+                "s3:GetObjectTagging",
+                "s3:GetObjectAcl",
+                "s3:GetObject",
+                "s3:DeleteObject",
+                "s3:AbortMultipartUpload"
+            ],
+            "Resource": [
+                "arn:aws:s3:::${AWS_BUCKET_NAME}/*",
+                "arn:aws:s3:::${AWS_BUCKET_NAME}"
+            ]
+        },
+        {
+            "Sid": "Allow${APP_NAME}${STAGE}WriteAccess",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": [
+                    "arn:aws:iam::${AWS_ACCOUNT}:root",
+                    "arn:aws:iam::${AWS_ACCOUNT}:role/${AWS_API_HANDLER_ROLE}"
+                ]
+            },
+            "Action": [
+                "s3:PutObjectAcl",
+                "s3:PutObject"
+            ],
+            "Resource": [
+                "arn:aws:s3:::${AWS_BUCKET_NAME}/*",
+                "arn:aws:s3:::${AWS_BUCKET_NAME}"
+            ]
+        },
+        {
+            "Sid": "AllowPublicRead",
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::${AWS_BUCKET_NAME}/*"
+        }
+    ]
+}

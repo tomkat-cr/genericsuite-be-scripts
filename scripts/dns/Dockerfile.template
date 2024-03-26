@@ -1,0 +1,14 @@
+# Utiliza una imagen base
+FROM sameersbn/bind:latest
+
+# ARG APP_NAME_LOWERCASE
+# ENV APP_NAME_LOWERCASE=${APP_NAME_LOWERCASE}
+ARG APP_NAME_LOWERCASE=APP_NAME_LOWERCASE_placeholder
+
+# Copia el archivo de zona desde el host al contenedor
+COPY ./config/zones/app.${APP_NAME_LOWERCASE}.local /etc/bind/zones/app.${APP_NAME_LOWERCASE}.local
+COPY ./config/named-to-add.conf /tmp/named-to-add.conf
+RUN cat /tmp/named-to-add.conf >> /etc/bind/named.conf
+
+# Establece el comando de inicio del servidor DNS
+CMD ["named", "-g", "-c", "/etc/bind/named.conf", "-u", "bind", "-f"]

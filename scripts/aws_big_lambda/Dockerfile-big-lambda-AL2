@@ -1,0 +1,48 @@
+FROM public.ecr.aws/lambda/python:3.11
+# FROM public.ecr.aws/lambda/python:3.9
+
+RUN yum -y update
+
+# To solve any eventual docker vulnerabilies reported...
+RUN yum -y upgrade
+
+# Error: Please make sure the libxml2 and libxslt development packages are installed.
+    # google: alpine install libxml2-dev libxslt-dev python-dev
+    # https://stackoverflow.com/questions/5178416/libxml-install-error-using-pip
+    # google: alpine linux can't find Rust compiler
+    # https://github.com/docker/compose/issues/8105
+    # https://github.com/pyca/cryptography/blob/main/docs/installation.rst#alpine
+
+RUN yum -y install \
+    libxslt-devel libxml2-devel \
+    redhat-rpm-config gcc libffi-devel python3-devel openssl-devel cargo pkg-config \
+    git
+
+# To avoid: "The extension's directory "/opt/extensions" does not exist, assuming no extensions to be loaded."
+# RUN mkdir /opt/extensions
+
+# Copy all repo content (files and directories) to handler function
+COPY . ${LAMBDA_TASK_ROOT}
+
+# RUN cd ${LAMBDA_TASK_ROOT} && \
+#     mkdir -p chalicelib && \
+#     mv config chalicelib/ && \
+#     mv config_dbdef chalicelib/ && \
+#     mv constants chalicelib/ && \
+#     mv models chalicelib/ && \
+#     mv util chalicelib/
+
+# Install the specified packages
+RUN pip install -r requirements.txt
+
+# Copy function code
+# COPY lambda_function.py ${LAMBDA_TASK_ROOT}
+
+# This makes the container to hang... so env vars must be go on the docker-composer.yml...
+# COPY ./entry-AL2.sh /
+# RUN chmod 755 /entry-AL2.sh
+# ENTRYPOINT [ "/entry-AL2.sh" ]
+
+# Set the CMD to your handler (could also be done as a parameter override outside of the Dockerfile)
+# CMD [ "lambda_function.handler" ]
+CMD [ "app.app" ]
