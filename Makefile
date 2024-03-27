@@ -7,6 +7,8 @@ SHELL := /bin/bash
 help:
 	cat Makefile
 
+## Install dependecies
+
 install:
 	pipenv install
 
@@ -22,8 +24,9 @@ locked_install:
 lock_pip_file:
 	sh scripts/aws/run_aws.sh pipfile
 
-install_tools:
-	bash scripts/install_dev_tools.sh
+requirements: lock_pip_file
+
+## Cleaning
 
 clean: clean_rm clean_temp_dir clean_logs
 
@@ -38,18 +41,24 @@ clean_logs:
 
 fresh: clean_rm install
 
-# CLI Utilities
+## CLI Utilities
+
+install_tools:
+	bash scripts/install_dev_tools.sh
+
 lsof:
 	sh scripts/run_lsof.sh
 
-# Automated Testing
+## Automated Testing
+
 test:
 	sh scripts/run_app_tests.sh
 
 test_only:
 	sh scripts/aws/run_tests.sh
 
-# Development Commands
+## Linting
+
 lint:
 	pipenv run prospector
 
@@ -68,6 +77,8 @@ format_check:
 	pipenv run yapf --diff *.py **/*.py **/**/*.py
 	pycodestyle
 
+## Development Commands
+
 qa: lint types tests format_check pycodestyle
 
 mongo_docker:
@@ -76,13 +87,7 @@ mongo_docker:
 mongo_docker_down:
 	sh scripts/mongo/run_mongo_docker.sh down
 
-# Application Specific Commands
-
-requirements:
-	sh scripts/aws/run_aws.sh pipfile
-
-create_aws_config:
-	sh scripts/aws/create_aws_config.sh
+## Chalice Specific Commands
 
 config:
 	sh scripts/aws/update_config.sh prod
@@ -115,11 +120,14 @@ unbuild: unbuild_qa
 
 unbuild_qa:
 	sh scripts/aws/run_aws.sh delete_app qa
+
+unbuild_staging:
+	sh scripts/aws/run_aws.sh delete_app staging
+
+delete_stack:
 	sh scripts/aws/run_aws.sh delete_stack
 
-unbuild_prod:
-	sh scripts/aws/run_aws.sh delete_app prod
-	sh scripts/aws/run_aws.sh delete_stack
+## AWS S3 and other
 
 create_s3_bucket_dev:
 	sh scripts/aws/create_chatbot_s3_bucket.sh dev
@@ -132,6 +140,11 @@ create_s3_bucket_staging:
 
 create_s3_bucket_prod:
 	sh scripts/aws/create_chatbot_s3_bucket.sh prod
+
+create_aws_config:
+	sh scripts/aws/create_aws_config.sh
+
+## Deployment
 
 deploy_qa: create_s3_bucket_qa
 	sh scripts/aws_big_lambda/big_lambdas_manager.sh sam_deploy qa
@@ -149,6 +162,8 @@ deploy_prod: create_s3_bucket_prod
 	sh scripts/aws_big_lambda/big_lambdas_manager.sh sam_deploy prod
 
 deploy: deploy_qa
+
+## Application Specific Commands
 
 run: config_qa clean_logs
 	sh scripts/aws/run_aws.sh run_local
@@ -169,8 +184,12 @@ run_local_docker: config_local clean_logs
 run_prod: config clean_logs
 	sh scripts/aws/run_aws.sh run
 
+## Common JSON config
+
 add_submodules:
 	sh scripts/add_github_submodules.sh
+
+# Local DNS server
 
 local_dns:
 	sh scripts/dns/run_local_dns.sh
@@ -186,6 +205,8 @@ local_dns_down:
 
 local_dns_test:
 	sh scripts/dns/run_local_dns.sh test
+
+## Self-signed local SSL certificates
 
 copy_ssl_certs:
 	sh scripts/local_ssl_certs_copy.sh
@@ -205,3 +226,19 @@ pre-publish:
 
 publish:
 	sh scripts/npm_publish.sh publish
+
+# Pypi library scripts
+
+pypi-build:
+	# Build 'dist' directory needed for the Pypi publish
+	poetry lock --no-update
+	rm -rf dist
+	python3 -m build
+
+pypi-publish-test: pypi-build
+	# Pypi Test publish
+	python3 -m twine upload --repository testpypi dist/*
+
+pypi-publish: pypi-build
+	# Production Pypi publish
+	python3 -m twine upload dist/*
