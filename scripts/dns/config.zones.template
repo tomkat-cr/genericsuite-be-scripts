@@ -1,0 +1,10 @@
+$TTL    604800
+@       IN      SOA     app.APP_NAME_LOWERCASE_placeholder.local. admin.app.APP_NAME_LOWERCASE_placeholder.local. (
+                            2023112601 ; Serial
+                            604800     ; Refresh
+                            86400      ; Retry
+                            2419200    ; Expire
+                            604800 )   ; Negative Cache TTL
+
+@       IN      NS      app.APP_NAME_LOWERCASE_placeholder.local.
+@       IN      A       192.168.1.4

@@ -1,0 +1,83 @@
+# docker-compose-big-lambda-Alpine.yml
+# 2023-12-10 | CR
+# Used by: scrips/aws_big_lambda/big_lambdas_manager.sh
+
+version: '3'
+services:
+  backend:
+    container_name: local-lambda-backend
+    build:
+      context: .
+      # dockerfile: Dockerfile-big-lambda-AL2
+      dockerfile: Dockerfile
+    volumes:
+      - ${HOME}/.aws:/root/.aws
+    ports:
+      - "9000:8080"
+    expose:
+      - 9000
+    environment:
+      - APP_NAME=$APP_NAME
+      - APP_DB_ENGINE=$APP_DB_ENGINE
+      - APP_DB_NAME=$APP_DB_NAME
+      - APP_DB_URI=$APP_DB_URI
+      - APP_FRONTEND_AUDIENCE=$APP_FRONTEND_AUDIENCE
+      - APP_CORS_ORIGIN=$APP_CORS_ORIGIN
+      - AWS_S3_CHATBOT_ATTACHMENTS_BUCKET=$AWS_S3_CHATBOT_ATTACHMENTS_BUCKET
+      - FLASK_APP=$FLASK_APP
+      - APP_SECRET_KEY=$APP_SECRET_KEY
+      - APP_SUPERADMIN_EMAIL=$APP_SUPERADMIN_EMAIL
+      - CURRENT_FRAMEWORK=$CURRENT_FRAMEWORK
+      - GIT_SUBMODULE_URL=$GIT_SUBMODULE_URL
+      - GIT_SUBMODULE_LOCAL_PATH=$GIT_SUBMODULE_LOCAL_PATH
+      - OPENAI_API_KEY=$OPENAI_API_KEY
+      - OPENAI_MODEL=$OPENAI_MODEL
+      - OPENAI_TEMPERATURE=$OPENAI_TEMPERATURE
+      - SMTP_SERVER=$SMTP_SERVER
+      - SMTP_PORT=$SMTP_PORT
+      - SMTP_USER=$SMTP_USER
+      - SMTP_PASSWORD=$SMTP_PASSWORD
+      - SMTP_DEFAULT_SENDER=$SMTP_DEFAULT_SENDER
+
+  nginx:
+    container_name: local-lambda-nginx
+    image: nginx:latest
+    ports:
+      # - "80:80"
+      # - "443:443"
+      - "5001:443"
+      - "5002:80"
+    expose:
+      - 5001
+      - 5002
+    environment:
+      - APP_NAME=$APP_NAME
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./app.${APP_NAME}.local.key:/etc/nginx/ssl/app.${APP_NAME}.local.key
+      - ./app.${APP_NAME}.local.crt:/etc/nginx/ssl/app.${APP_NAME}.local.crt
+      - ./app.${APP_NAME}.local.chain.crt:/etc/nginx/ssl/app.${APP_NAME}.local.chain.crt
+      - ./ca.crt:/etc/nginx/ssl/ca.crt
+    depends_on:
+      - backend
+
+  # local-api-gateway:
+  #   container_name: local-api-gateway
+  #   image: localstack/localstack:latest
+  #   ports:
+  #     - "4566-4599:4566-4599"
+  #     - "${PORT_WEB_UI-8080}:${PORT_WEB_UI-8080}"
+  #     # - "8000:8080"
+  #   expose:
+  #     - 8080
+  #   environment:
+  #     - SERVICES=serverless,apigateway
+  #     - DEBUG=1
+  #     - PERSISTENCE=/tmp/localstack/data
+  #     - LAMBDA_FORWARD_URL=http://local-lambda-backend:8080
+  #   volumes:
+  #     - "/var/run/docker.sock:/var/run/docker.sock"
+  #   depends_on:
+  #     - backend
+  #   links:
+  #     - "backend:local-lambda-backend"

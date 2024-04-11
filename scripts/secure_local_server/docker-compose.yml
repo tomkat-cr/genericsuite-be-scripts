@@ -1,0 +1,36 @@
+version: '3'
+services:
+  backend:
+    container_name: sls-backend
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ${REPO_BASEDIR}:/app
+      - ${SCRIPTS_DIR}:/var/scripts
+      - ${HOME}/.aws:/root/.aws
+    environment:
+      - STAGE=${STAGE}
+    entrypoint: /var/scripts/docker_entrypoint.sh
+
+  nginx:
+    container_name: sls-nginx
+    image: nginx:latest
+    ports:
+      # - "80:80"
+      # - "443:443"
+      - "5001:443"
+      - "5002:80"
+    expose:
+      - 5001
+      - 5002
+    environment:
+      - APP_NAME_LOWERCASE=${APP_NAME_LOWERCASE}
+    volumes:
+      - ${SCRIPTS_DIR}/nginx.conf.tmp:/etc/nginx/nginx.conf
+      - ${REPO_BASEDIR}/app.${APP_NAME_LOWERCASE}.local.key:/etc/nginx/ssl/app.${APP_NAME_LOWERCASE}.local.key
+      - ${REPO_BASEDIR}/app.${APP_NAME_LOWERCASE}.local.crt:/etc/nginx/ssl/app.${APP_NAME_LOWERCASE}.local.crt
+      - ${REPO_BASEDIR}/app.${APP_NAME_LOWERCASE}.local.chain.crt:/etc/nginx/ssl/app.${APP_NAME_LOWERCASE}.local.chain.crt
+      - ${REPO_BASEDIR}/ca.crt:/etc/nginx/ssl/ca.crt
+    depends_on:
+      - backend

@@ -1,0 +1,93 @@
+{
+  "version": "2.0",
+  "app_name": "APP_NAME_LOWERCASE_placeholder-backend",
+  "lambda_memory_size": 256,
+  "environment_variables": {
+    "APP_NAME": "APP_NAME_placeholder",
+    "AI_ASSISTANT_NAME": "AI_ASSISTANT_NAME_placeholder",
+    "APP_VERSION": "APP_VERSION_placeholder",
+    "APP_SECRET_KEY": "APP_SECRET_KEY_placeholder",
+    "APP_SUPERADMIN_EMAIL": "APP_SUPERADMIN_EMAIL_placeholder",
+    "GIT_SUBMODULE_URL": "GIT_SUBMODULE_URL_placeholder",
+    "GIT_SUBMODULE_LOCAL_PATH": "GIT_SUBMODULE_LOCAL_PATH_placeholder",
+    "CURRENT_FRAMEWORK": "CURRENT_FRAMEWORK_placeholder",
+    "DEFAULT_LANG": "DEFAULT_LANG_placeholder",
+    "OPENAI_API_KEY": "OPENAI_API_KEY_placeholder",
+    "OPENAI_MODEL": "OPENAI_MODEL_placeholder",
+    "OPENAI_TEMPERATURE": "OPENAI_TEMPERATURE_placeholder",
+    "GOOGLE_API_KEY": "GOOGLE_API_KEY_placeholder",
+    "GOOGLE_CSE_ID": "GOOGLE_CSE_ID_placeholder",
+    "LANGCHAIN_API_KEY": "LANGCHAIN_API_KEY_placeholder",
+    "LANGCHAIN_PROJECT": "GOOGLE_CSE_ID_placeholder",
+    "HUGGINGFACE_API_KEY": "HUGGINGFACE_API_KEY_placeholder",
+    "HUGGINGFACE_ENDPOINT_URL": "HUGGINGFACE_ENDPOINT_URL_placeholder",
+    "SMTP_SERVER": "SMTP_SERVER_placeholder",
+    "SMTP_PORT": "SMTP_PORT_placeholder",
+    "SMTP_USER": "SMTP_USER_placeholder",
+    "SMTP_PASSWORD": "SMTP_PASSWORD_placeholder",
+    "SMTP_DEFAULT_SENDER": "SMTP_DEFAULT_SENDER_placeholder",
+    "FLASK_APP": "FLASK_APP_placeholder"
+  },
+  "stages": {
+    "dev": {
+      "api_gateway_stage": "API_GATEWAY_STAGE_placeholder",
+      "environment_variables": {
+        "APP_DEBUG": "APP_DEBUG_placeholder",
+        "APP_STAGE": "dev",
+        "APP_DB_ENGINE": "APP_DB_ENGINE_DEV_placeholder",
+        "APP_DB_NAME": "APP_DB_NAME_DEV_placeholder",
+        "APP_DB_URI": "APP_DB_URI_DEV_placeholder",
+        "APP_FRONTEND_AUDIENCE": "APP_FRONTEND_AUDIENCE_DEV_placeholder",
+        "APP_CORS_ORIGIN": "APP_CORS_ORIGIN_DEV_placeholder",
+        "AWS_S3_CHATBOT_ATTACHMENTS_BUCKET": "AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_DEV_placeholder"
+      }
+    },
+    "qa": {
+      "api_gateway_stage": "API_GATEWAY_STAGE_placeholder",
+      "autogen_policy": false,
+      "iam_role_arn": "arn:aws:iam::071141316464:role/chalice-api-dev-api_handler",
+      "manage_iam_role": false,
+      "certificate_arn": "",
+      "certificate_arn_key": "",
+      "certificate_path": "./app.APP_NAME_LOWERCASE_placeholder.local.crt",
+      "private_key_path": "./app.APP_NAME_LOWERCASE_placeholder.local.key",
+      "environment_variables": {
+        "PORT": "5001",
+        "APP_DEBUG": "APP_DEBUG_placeholder",
+        "APP_STAGE": "qa",
+        "APP_DB_ENGINE": "APP_DB_ENGINE_QA_placeholder",
+        "APP_DB_NAME": "APP_DB_NAME_QA_placeholder",
+        "APP_DB_URI": "APP_DB_URI_QA_placeholder",
+        "APP_FRONTEND_AUDIENCE": "APP_FRONTEND_AUDIENCE_QA_placeholder",
+        "APP_CORS_ORIGIN": "APP_CORS_ORIGIN_QA_placeholder",
+        "AWS_S3_CHATBOT_ATTACHMENTS_BUCKET": "AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_QA_placeholder"
+      }
+    },
+    "prod": {
+      "api_gateway_stage": "API_GATEWAY_STAGE_placeholder",
+      "environment_variables": {
+        "APP_DEBUG": "0",
+        "APP_STAGE": "prod",
+        "APP_DB_ENGINE": "APP_DB_ENGINE_PROD_placeholder",
+        "APP_DB_NAME": "APP_DB_NAME_PROD_placeholder",
+        "APP_DB_URI": "APP_DB_URI_PROD_placeholder",
+        "APP_FRONTEND_AUDIENCE": "APP_FRONTEND_AUDIENCE_PROD_placeholder",
+        "APP_CORS_ORIGIN": "APP_CORS_ORIGIN_PROD_placeholder",
+        "AWS_S3_CHATBOT_ATTACHMENTS_BUCKET": "AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_PROD_placeholder"
+      }
+    },
+    "demo": {
+      "api_gateway_stage": "API_GATEWAY_STAGE_placeholder",
+      "environment_variables": {
+        "APP_DEBUG": "0",
+        "APP_STAGE": "demo",
+        "APP_DB_ENGINE": "APP_DB_ENGINE_DEMO_placeholder",
+        "APP_DB_NAME": "APP_DB_NAME_DEMO_placeholder",
+        "APP_DB_URI": "APP_DB_URI_DEMO_placeholder",
+        "APP_FRONTEND_AUDIENCE": "APP_FRONTEND_AUDIENCE_DEMO_placeholder",
+        "APP_CORS_ORIGIN": "APP_CORS_ORIGIN_DEMO_placeholder",
+        "AWS_S3_CHATBOT_ATTACHMENTS_BUCKET": "AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_DEMO_placeholder"
+      }
+    }
+  }
+}

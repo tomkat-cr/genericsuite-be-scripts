@@ -1,0 +1,42 @@
+{
+  "name": "genericsuite-be-scripts",
+  "version": "1.0.4",
+  "description": "GenericSuite Scripts (backend version)",
+  "author": "Carlos J. Ramirez",
+  "license": "ISC",
+  "files": [
+    ".chalice",
+    "scripts",
+    "Makefile",
+    "CHANGELOG.md",
+    "README.md"
+  ],
+  "scripts": {
+    "publish": "sh scripts/npm_publish.sh publish",
+    "pre-publish": "sh scripts/npm_publish.sh pre-publish"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tomkat-cr/genericsuite-be-scripts.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tomkat-cr/genericsuite-be-scripts/issues"
+  },
+  "homepage": "https://github.com/tomkat-cr/genericsuite-be-scripts#readme",
+  "keywords": [
+    "bash",
+    "genericsuite",
+    "aws",
+    "aws-lambda",
+    "aws-apigateway",
+    "aws-cloudformation",
+    "dynamodb",
+    "chalice",
+    "fastapi",
+    "flask",
+    "mongodb"
+  ],
+  "devDependencies": {
+    "office-addin-dev-certs": "^1.12.2"
+  }
+}
