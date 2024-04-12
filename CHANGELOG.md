@@ -17,6 +17,14 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
+## 1.0.5 (2024-04-11)
+---
+
+
+### Fixes
+Remove "set_env_vars.sh" from the AWS Lambda docker image [FA-258].
+
+
 ## 1.0.4 (2024-04-11)
 ---
 

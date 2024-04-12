@@ -255,7 +255,7 @@ set_env_vars_file() {
     # Replace @ with \@
     recover_at_sign
 
-    cat > "${TMP_BUILD_DIR}/set_env_vars.sh" <<END \
+#     cat > "${TMP_BUILD_DIR}/set_env_vars.sh" <<END \
 
 export APP_DB_ENGINE=$(eval echo \$APP_DB_ENGINE_${STAGE_UPPERCASE})
 export APP_DB_NAME=$(eval echo \$APP_DB_NAME_${STAGE_UPPERCASE})
@@ -286,8 +286,9 @@ export SMTP_PORT="${SMTP_PORT}"
 export SMTP_USER="${SMTP_USER}"
 export SMTP_PASSWORD="${SMTP_PASSWORD}"
 export SMTP_DEFAULT_SENDER="${SMTP_DEFAULT_SENDER}"
-END
-    set -o allexport; . "${TMP_BUILD_DIR}/set_env_vars.sh" ; set +o allexport ;
+
+# END
+    # set -o allexport; . "${TMP_BUILD_DIR}/set_env_vars.sh" ; set +o allexport ;
 
     ENV_VARIABLES="{
   CURRENT_FRAMEWORK=${CURRENT_FRAMEWORK},
@@ -1458,6 +1459,13 @@ docker_dependencies() {
   fi
 }
 
+show_date_time() {
+  if [ "${APP_TZ}" = "" ]; then
+    APP_TZ='America/New_York'
+  fi
+  TZ="${APP_TZ}" date
+}
+
 # ----------------------------
 
 # Default values before load .env
@@ -1568,7 +1576,7 @@ JSON_CONFIG_FILE="lambda-config-${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}.json"
 AWS_API_GATEWAY_NAME="${AWS_LAMBDA_FUNCTION_NAME}-${STAGE}"
 AWS_STACK_NAME="${AWS_LAMBDA_FUNCTION_NAME}-${STAGE}"
 MEMORY_SIZE="512"
-ARCHITECTURES="arm64"
+# ARCHITECTURES="arm64"
 
 if [ "${AWS_ACCOUNT_ID}" = "" ]; then
   echo "ERROR: missing AWS_ACCOUNT_ID"
@@ -1702,15 +1710,19 @@ echo ""
 ask_to_continue
 
 echo ""
+show_date_time
+
+echo ""
 perform_frontend_version_assignment
 
 docker_dependencies
 
 if [ "${ACTION}" = "down" ]; then
-    if [ ! -f "${TMP_BUILD_DIR}/set_env_vars.sh" ];then
+    # if [ ! -f "${TMP_BUILD_DIR}/set_env_vars.sh" ];then
+    if [ ! -f "${TMP_BUILD_DIR}/docker-compose-big-lambda-${TARGET_OS}.yml" ];then
         prepare_tmp_build_dir
     fi
-    set -o allexport; . "${TMP_BUILD_DIR}/set_env_vars.sh" ; set +o allexport ;
+    # set -o allexport; . "${TMP_BUILD_DIR}/set_env_vars.sh" ; set +o allexport ;
     docker-compose -f ${TMP_BUILD_DIR}/docker-compose-big-lambda-${TARGET_OS}.yml down
     docker ps
 fi
@@ -1801,3 +1813,6 @@ if [ "${ACTION}" = "package" ]; then
 
   build_docker
 fi
+
+echo ""
+show_date_time
