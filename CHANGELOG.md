@@ -17,9 +17,15 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
-## 1.0.5 (2024-04-11)
+## 1.0.6 (2024-04-12)
 ---
 
+### Fixes
+Fix issues in "big_lambdas_manager.sh" script with environment variables that contains values with @ due to the "set_env_vars.sh" removal.
+
+
+## 1.0.5 (2024-04-11)
+---
 
 ### Fixes
 Remove "set_env_vars.sh" from the AWS Lambda docker image [FA-258].

@@ -255,7 +255,7 @@ set_env_vars_file() {
     # Replace @ with \@
     recover_at_sign
 
-#     cat > "${TMP_BUILD_DIR}/set_env_vars.sh" <<END \
+    cat > "${TMP_BUILD_DIR}/set_env_vars.sh" <<END \
 
 export APP_DB_ENGINE=$(eval echo \$APP_DB_ENGINE_${STAGE_UPPERCASE})
 export APP_DB_NAME=$(eval echo \$APP_DB_NAME_${STAGE_UPPERCASE})
@@ -287,8 +287,9 @@ export SMTP_USER="${SMTP_USER}"
 export SMTP_PASSWORD="${SMTP_PASSWORD}"
 export SMTP_DEFAULT_SENDER="${SMTP_DEFAULT_SENDER}"
 
-# END
-    # set -o allexport; . "${TMP_BUILD_DIR}/set_env_vars.sh" ; set +o allexport ;
+END
+    set -o allexport; . "${TMP_BUILD_DIR}/set_env_vars.sh" ; set +o allexport ;
+    rm -f "${TMP_BUILD_DIR}/set_env_vars.sh"
 
     ENV_VARIABLES="{
   CURRENT_FRAMEWORK=${CURRENT_FRAMEWORK},
