@@ -53,7 +53,9 @@ fi
 
 if [ "${ERROR_MSG}" = "" ]; then
     echo "Verifying the AWS Cloudfront distribution..."
-    BUCKET_NAME="${AWS_S3_BUCKET_NAME_FE}"
+
+    # Replace [STAGE] in the AWS_S3_BUCKET_NAME_FE value with $ENV value
+    BUCKET_NAME=$(echo $AWS_S3_BUCKET_NAME_FE | perl -i -pe"s/\[STAGE\]/${ENV}/g")
 
     # Get CloudFront distribution ID
     echo "Getting CloudFront distribution ID for S3 Bucket: '${AWS_S3_BUCKET_NAME_FE}' at '${AWS_REGION}'"

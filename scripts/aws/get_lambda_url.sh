@@ -21,11 +21,11 @@ if [ "${ERROR_MSG}" = "" ]; then
     fi
 fi
 # API Gateway stage name
-if [ "${ERROR_MSG}" = "" ]; then
-    if [ "${AWS_API_GATEWAY_STAGE}" = "" ];then
-        ERROR_MSG="AWS_API_GATEWAY_STAGE is not set"
-    fi
-fi
+# if [ "${ERROR_MSG}" = "" ]; then
+#     if [ "${AWS_API_GATEWAY_STAGE}" = "" ];then
+#         ERROR_MSG="AWS_API_GATEWAY_STAGE is not set"
+#     fi
+# fi
 # Region of the S3 bucket
 if [ "${ERROR_MSG}" = "" ]; then
     if [ "${AWS_REGION}" = "" ];then

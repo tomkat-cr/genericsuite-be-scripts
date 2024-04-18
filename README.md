@@ -1,6 +1,6 @@
 # The GenericSuite Scripts (backend version).
 
-![GenericSuite Logo](https://github.com/tomkat-cr/genericsuite-fe/blob/main/src/lib/images/gs_logo_circle.png)
+![GenericSuite Logo](https://genericsuite.carlosjramirez.com/images/gs_logo_circle.svg)
 
 [GenericSuite](https://www.carlosjramirez.com/genericsuite/) is a versatile backend solution, designed to provide a comprehensive suite of features for Python APIs. It supports various frameworks including Chalice, FastAPI, and Flask, making it adaptable to a range of projects.<be/>
 This repository contains the backend scripts necessary to build and deploy APIs made by the backend version of [The GenericSuite](https://www.carlosjramirez.com/genericsuite/).
@@ -15,12 +15,6 @@ This repository contains the backend scripts necessary to build and deploy APIs 
 - **Local MongoDB Docker conntainer**: used by the test site and allows to have an offline local development environment.
 
 
-## Pre-requisites
-
-- Node version 18+, installed via [NVM (Node Package Manager)](https://nodejs.org/en/download/package-manager) or [NPM and Node](https://nodejs.org/en/download) install.
-- [The GenericSuite (backend version) pre-requisites](https://github.com/tomkat-cr/genericsuite-be?tab=readme-ov-file#pre-requisites).
-- For AI featured APIs: [The GenericSuite AI (backend version) installation guide](https://github.com/tomkat-cr/genericsuite-be-ai?tab=readme-ov-file#installation).
-
 ## Getting Started
 
 To get started with GenericSuite, follow these steps:
@@ -30,6 +24,10 @@ To get started with GenericSuite, follow these steps:
 Check [The GenericSuite Getting Started guide](https://github.com/tomkat-cr/genericsuite-be?tab=readme-ov-file#getting-started) for more details.
 
 ### Install the GenericSuite Backend Scripts
+
+```bash
+npm init
+```
 
 ```bash
 npm install -D genericsuite-be-scripts

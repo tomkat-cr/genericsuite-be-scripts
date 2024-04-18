@@ -249,7 +249,7 @@ set_env_vars_file() {
     echo "sh ${SCRIPTS_DIR}/../aws/set_chalice_cnf.sh ${STAGE} deploy"
     sh ${SCRIPTS_DIR}/../aws/set_chalice_cnf.sh ${STAGE} deploy
 
-    # Relooad env vars from .env file
+    # Reload env vars from .env file
     set -o allexport; . .env ; set +o allexport ;
 
     # Replace @ with \@
@@ -1589,8 +1589,9 @@ if [ "${AWS_LAMBDA_FUNCTION_NAME}" = "" ]; then
   exit_abort
 fi
 
+AWS_LAMBDA_FUNCTION_ROLE=$(eval echo \$AWS_LAMBDA_FUNCTION_ROLE_${STAGE_UPPERCASE})
 if [ "${AWS_LAMBDA_FUNCTION_ROLE}" = "" ]; then
-  echo "ERROR: missing AWS_LAMBDA_FUNCTION_ROLE"
+  echo "ERROR: missing AWS_LAMBDA_FUNCTION_ROLE. Check the value of AWS_LAMBDA_FUNCTION_ROLE_${STAGE_UPPERCASE}"
   exit_abort
 fi
 

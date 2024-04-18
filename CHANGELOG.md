@@ -17,6 +17,21 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
+## Unreleased
+---
+
+### New
+Add "make init_submodules" nd "init_json_configs.sh" to copy the basic JSON files.
+
+### Changes
+AWS_API_GATEWAY_STAGE env. var. removed.
+"run_aws.sh" ask for protocol http/https for all RUN_METHODs.
+"run_aws.sh" use APP_DIR / APP_MAIN_FILE env. vars. to specify the python entry point in gunicorn and uvicorn RUN_METHODs [FA-248].
+"set_fe_cloudfront_domain.sh" looks for a "[STAGE]" string in the "AWS_S3_BUCKET_NAME_FE" and replaces it with the `ENV` parameter value to handle the working stage.
+"big_lambdas_manager.sh" take into account the different "AWS_LAMBDA_FUNCTION_ROLE_*" env. vars.
+Remove not standard enpoints definitions from "template-sam.yml" [FA-248].
+
+
 ## 1.0.6 (2024-04-12)
 ---
 
@@ -29,6 +44,10 @@ Fix issues in "big_lambdas_manager.sh" script with environment variables that co
 
 ### Fixes
 Remove "set_env_vars.sh" from the AWS Lambda docker image [FA-258].
+
+### Changes
+"big_lambdas_manager.sh" use APP_DIR / APP_MAIN_FILE env. vars. to specify the python entry point in fastapi and flask CURRENT_FRAMEWORKs.
+"big_lambdas_manager.sh" shows start and finish date/time.
 
 
 ## 1.0.4 (2024-04-11)

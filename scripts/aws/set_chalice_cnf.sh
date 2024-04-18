@@ -150,7 +150,7 @@ perl -i -pe"s|GIT_SUBMODULE_LOCAL_PATH_placeholder|${GIT_SUBMODULE_LOCAL_PATH}|g
 perl -i -pe"s|APP_SECRET_KEY_placeholder|${APP_SECRET_KEY}|g" "${CONFIG_FILE}"
 perl -i -pe"s|APP_SUPERADMIN_EMAIL_placeholder|${APP_SUPERADMIN_EMAIL}|g" "${CONFIG_FILE}"
 
-perl -i -pe"s|API_GATEWAY_STAGE_placeholder|${AWS_API_GATEWAY_STAGE}|g" "${CONFIG_FILE}"
+# perl -i -pe"s|API_GATEWAY_STAGE_placeholder|${AWS_API_GATEWAY_STAGE}|g" "${CONFIG_FILE}"
 
 perl -i -pe"s|APP_DB_ENGINE_DEV_placeholder|${APP_DB_ENGINE_DEV}|g" "${CONFIG_FILE}"
 perl -i -pe"s|APP_DB_NAME_DEV_placeholder|${APP_DB_NAME_DEV}|g" "${CONFIG_FILE}"

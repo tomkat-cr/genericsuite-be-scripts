@@ -9,10 +9,52 @@ if [ "${APP_NAME}" = "" ]; then
     exit 1
 fi
 
+if [ "${CURRENT_FRAMEWORK}" = "" ]; then
+    echo "CURRENT_FRAMEWORK not set"
+    exit 1
+fi
+
 export APP_NAME_LOWERCASE=$(echo ${APP_NAME} | tr '[:upper:]' '[:lower:]')
 
-# APP_DIR='chalicelib'
-APP_DIR='lib'
+# Default App main code directory
+if [ "${APP_DIR}" = "" ]; then
+  # https://aws.github.io/chalice/topics/packaging.html
+  APP_DIR='.'
+  if [ "${CURRENT_FRAMEWORK}" = "fastapi" ]; then
+    # https://fastapi.tiangolo.com/tutorial/bigger-applications/?h=directory+structure#an-example-file-structure
+    APP_DIR='app'
+  fi
+  if [ "${CURRENT_FRAMEWORK}" = "flask" ]; then
+    # https://flask.palletsprojects.com/en/2.3.x/tutorial/layout/
+    APP_DIR='flaskr'
+  fi
+fi
+
+if [ ! -d "./${APP_DIR}" ]; then
+  echo "ERROR: APP_DIR './${APP_DIR}' not found"
+  exit 1
+fi
+
+# Default App entry point coode file
+if [ "${APP_MAIN_FILE}" = "" ]; then
+  # https://aws.github.io/chalice/topics/packaging.html
+  APP_MAIN_FILE='app'
+  if [ "${CURRENT_FRAMEWORK}" = "fastapi" ]; then
+    # https://fastapi.tiangolo.com/tutorial/bigger-applications/?h=directory+structure#an-example-file-structure
+    APP_MAIN_FILE='main'
+  fi
+  if [ "${CURRENT_FRAMEWORK}" = "flask" ]; then
+    # https://flask.palletsprojects.com/en/2.3.x/tutorial/factory/
+    APP_MAIN_FILE='__init__'
+  fi
+fi
+
+if [ ! -f "${APP_DIR}/${APP_MAIN_FILE}.py" ]; then
+  echo "ERROR: APP_DIR/APP_MAIN_FILE '"${APP_DIR}/${APP_MAIN_FILE}".py' not found"
+  exit 1
+fi
+
+
 AWS_STACK_NAME='${APP_NAME_LOWERCASE}-be-stack'
 
 SSL_KEY_PATH="./app.${APP_NAME_LOWERCASE}.local.key"
@@ -65,7 +107,13 @@ fi
 
 if [ "$1" = "clean" ]; then
     echo "Cleaning..."
-    cd ${REPO_BASEDIR}/${APP_DIR} ;
+    if [ "${APP_DIR}" = "." ]; then
+        if [ -d "${REPO_BASEDIR}/lib" ]; then
+            cd ${REPO_BASEDIR}/lib
+        else
+            cd ${REPO_BASEDIR}/chalicelib ;
+        fi
+    fi
     deactivate ;
     rm -rf __pycache__ ;
     rm -rf ../__pycache__ ;
@@ -107,21 +155,28 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
     export APP_FRONTEND_AUDIENCE=$(eval echo \$APP_FRONTEND_AUDIENCE_${STAGE_UPPERCASE})
     export APP_CORS_ORIGIN="$(eval echo \"\$APP_CORS_ORIGIN_${STAGE_UPPERCASE}\")"
     export AWS_S3_CHATBOT_ATTACHMENTS_BUCKET=$(eval echo \$AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_${STAGE_UPPERCASE})
-  
+
+    echo "Run over: 1) http [chalice], 2) https [chalice_docker], 3) use current [${RUN_METHOD}] (1/2/3) ?"
+    read RUN_PROTOCOL
+    while [[ ! $RUN_PROTOCOL =~ ^[123]$ ]]; do
+        echo "Please enter 1 or 2"
+        read RUN_PROTOCOL
+    done
+    if [ $RUN_PROTOCOL = "1" ]; then
+        RUN_PROTOCOL="http"
+    else
+        RUN_PROTOCOL="https"
+    fi
+
     if [ "${CURRENT_FRAMEWORK}" = "chalice" ]; then
-        echo "Run over: 1) http [chalice], 2) https [chalice_docker], 3) use current [${RUN_METHOD}] (1/2/3) ?"
-        read choice
-        while [[ ! $choice =~ ^[123]$ ]]; do
-            echo "Please enter 1 or 2"
-            read choice
-        done
-        if [ $choice = "2" ]; then
+        if [ $RUN_PROTOCOL = "https" ]; then
             RUN_METHOD="chalice_docker"
         else
             RUN_METHOD="chalice"
             make down_qa
         fi
     fi
+
     if [ "${RUN_METHOD}" = "chalice" ]; then
         echo "sh ${SCRIPTS_DIR}/set_chalice_cnf.sh ${STAGE}" http
         sh ${SCRIPTS_DIR}/set_chalice_cnf.sh ${STAGE} http
@@ -137,28 +192,50 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
     fi
 
     if [ "${RUN_METHOD}" = "gunicorn" ]; then
-        echo "pipenv run run gunicorn --bind 0.0.0.0:${PORT} app:application --reload --certfile=${SSL_CERT_PATH} --keyfile=${SSL_KEY_PATH}" --forwarded-allow-ips="${IP_ADDRESS}"
-        echo ""
-        pipenv run gunicorn  app:application \
-            --bind 0.0.0.0:${PORT} \
-            --reload \
-            --workers=2 \
-            --certfile="${SSL_CERT_PATH}" \
-            --keyfile="${SSL_KEY_PATH}" \
-            --ciphers="TLSv1.2" \
-            --proxy-protocol \
-            --limit-request-field_size=200000 \
-            --forwarded-allow-ips="${IP_ADDRESS},127.0.0.1,0.0.0.0" \
-            --do-handshake-on-connect \
-            --strip-header-spaces \
-            --env PORT=${PORT} \
-            --env APP_STAGE="${STAGE}"
+        if [ $RUN_PROTOCOL = "https" ]; then
+            echo "pipenv run run gunicorn --bind 0.0.0.0:${PORT} ${APP_DIR}.${APP_MAIN_FILE}:app --reload --certfile=${SSL_CERT_PATH} --keyfile=${SSL_KEY_PATH} --forwarded-allow-ips=${IP_ADDRESS}"
+            echo ""
+            pipenv run gunicorn ${APP_DIR}.${APP_MAIN_FILE}:app \
+                --bind 0.0.0.0:${PORT} \
+                --reload \
+                --workers=2 \
+                --certfile="${SSL_CERT_PATH}" \
+                --keyfile="${SSL_KEY_PATH}" \
+                --ciphers="TLSv1.2" \
+                --proxy-protocol \
+                --limit-request-field_size=200000 \
+                --forwarded-allow-ips="${IP_ADDRESS},127.0.0.1,0.0.0.0" \
+                --do-handshake-on-connect \
+                --strip-header-spaces \
+                --env PORT=${PORT} \
+                --env APP_STAGE="${STAGE}"
+        else
+            echo "pipenv run run gunicorn --bind 0.0.0.0:${PORT} ${APP_DIR}.${APP_MAIN_FILE}:app --reload  --forwarded-allow-ips=${IP_ADDRESS}"
+            echo ""
+            pipenv run gunicorn ${APP_DIR}.${APP_MAIN_FILE}:app \
+                --bind 0.0.0.0:${PORT} \
+                --reload \
+                --workers=2 \
+                --proxy-protocol \
+                --limit-request-field_size=200000 \
+                --forwarded-allow-ips="${IP_ADDRESS},127.0.0.1,0.0.0.0" \
+                --do-handshake-on-connect \
+                --strip-header-spaces \
+                --env PORT=${PORT} \
+                --env APP_STAGE="${STAGE}"
+        fi
     fi
 
     if [ "${RUN_METHOD}" = "uvicorn" ]; then
-        echo "pipenv run uvicorn app:asgi_app --ssl-keyfile=${SSL_KEY_PATH} --ssl-certfile=${SSL_CERT_PATH} --reload --host 0.0.0.0 --port ${PORT}"
-        echo ""
-        pipenv run uvicorn app:asgi_app --ssl-keyfile=${SSL_KEY_PATH} --ssl-certfile=${SSL_CERT_PATH} --reload --host 0.0.0.0 --port ${PORT}  # --ca-certs=${SSL_CA_CERT_PATH}
+        if [ $RUN_PROTOCOL = "https" ]; then
+            echo "pipenv run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app --ssl-keyfile=${SSL_KEY_PATH} --ssl-certfile=${SSL_CERT_PATH} --reload --host 0.0.0.0 --port ${PORT}"
+            echo ""
+            pipenv run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app --ssl-keyfile=${SSL_KEY_PATH} --ssl-certfile=${SSL_CERT_PATH} --reload --host 0.0.0.0 --port ${PORT}  # --ca-certs=${SSL_CA_CERT_PATH}
+        else
+            echo "pipenv run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app  --reload --host 0.0.0.0 --port ${PORT}"
+            echo ""
+            pipenv run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app --reload --host 0.0.0.0 --port ${PORT}
+        fi
     fi
 fi
 

@@ -197,6 +197,9 @@ run_prod: config clean_logs
 add_submodules:
 	sh node_modules/genericsuite-be-scripts/scripts/add_github_submodules.sh
 
+init_submodules:
+	sh node_modules/genericsuite-be-scripts/scripts/init_json_configs.sh
+
 # Local DNS server
 
 local_dns:
