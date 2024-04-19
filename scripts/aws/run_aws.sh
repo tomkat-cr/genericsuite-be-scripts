@@ -149,6 +149,7 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
     echo ""
 
     export IP_ADDRESS=$(sh ${SCRIPTS_DIR}/../get_localhost_ip.sh)
+    export APP_VERSION=$(cat ${REPO_BASEDIR}/version.txt)
     export APP_DB_ENGINE=$(eval echo \$APP_DB_ENGINE_${STAGE_UPPERCASE})
     export APP_DB_NAME=$(eval echo \$APP_DB_NAME_${STAGE_UPPERCASE})
     export APP_DB_URI=$(eval echo \$APP_DB_URI_${STAGE_UPPERCASE})
@@ -156,7 +157,7 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
     export APP_CORS_ORIGIN="$(eval echo \"\$APP_CORS_ORIGIN_${STAGE_UPPERCASE}\")"
     export AWS_S3_CHATBOT_ATTACHMENTS_BUCKET=$(eval echo \$AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_${STAGE_UPPERCASE})
 
-    echo "Run over: 1) http [chalice], 2) https [chalice_docker], 3) use current [${RUN_METHOD}] (1/2/3) ?"
+    echo "Run over: 1) http, 2) https, 3) use current [${RUN_METHOD}] (1/2/3) ?"
     read RUN_PROTOCOL
     while [[ ! $RUN_PROTOCOL =~ ^[123]$ ]]; do
         echo "Please enter 1 or 2"
@@ -174,6 +175,12 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
         else
             RUN_METHOD="chalice"
             make down_qa
+        fi
+    else
+        if [ $RUN_PROTOCOL = "http" ]; then
+            make down_qa
+            echo "NOTE: The warning '-i used with no filenames on the command line, reading from STDIN.' is normal..."
+            APP_CORS_ORIGIN=$(echo ${APP_CORS_ORIGIN} | perl -i -pe 's|https:\/\/|http:\/\/|')
         fi
     fi
 

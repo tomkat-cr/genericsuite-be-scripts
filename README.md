@@ -1,6 +1,12 @@
 # The GenericSuite Scripts (backend version).
 
-![GenericSuite Logo](https://genericsuite.carlosjramirez.com/images/gs_logo_circle.svg)
+<img 
+    align="right"
+    width="100"
+    height="100"
+    src="https://genericsuite.carlosjramirez.com/images/gs_logo_circle.svg"
+    title="GenericSuite logo by Carlos J. Ramirez"
+/>
 
 [GenericSuite](https://www.carlosjramirez.com/genericsuite/) is a versatile backend solution, designed to provide a comprehensive suite of features for Python APIs. It supports various frameworks including Chalice, FastAPI, and Flask, making it adaptable to a range of projects.<be/>
 This repository contains the backend scripts necessary to build and deploy APIs made by the backend version of [The GenericSuite](https://www.carlosjramirez.com/genericsuite/).
