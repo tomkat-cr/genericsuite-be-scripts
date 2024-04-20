@@ -153,7 +153,6 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
     export APP_DB_ENGINE=$(eval echo \$APP_DB_ENGINE_${STAGE_UPPERCASE})
     export APP_DB_NAME=$(eval echo \$APP_DB_NAME_${STAGE_UPPERCASE})
     export APP_DB_URI=$(eval echo \$APP_DB_URI_${STAGE_UPPERCASE})
-    export APP_FRONTEND_AUDIENCE=$(eval echo \$APP_FRONTEND_AUDIENCE_${STAGE_UPPERCASE})
     export APP_CORS_ORIGIN="$(eval echo \"\$APP_CORS_ORIGIN_${STAGE_UPPERCASE}\")"
     export AWS_S3_CHATBOT_ATTACHMENTS_BUCKET=$(eval echo \$AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_${STAGE_UPPERCASE})
 

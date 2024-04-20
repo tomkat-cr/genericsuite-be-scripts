@@ -37,7 +37,6 @@
         "APP_DB_ENGINE": "APP_DB_ENGINE_DEV_placeholder",
         "APP_DB_NAME": "APP_DB_NAME_DEV_placeholder",
         "APP_DB_URI": "APP_DB_URI_DEV_placeholder",
-        "APP_FRONTEND_AUDIENCE": "APP_FRONTEND_AUDIENCE_DEV_placeholder",
         "APP_CORS_ORIGIN": "APP_CORS_ORIGIN_DEV_placeholder",
         "AWS_S3_CHATBOT_ATTACHMENTS_BUCKET": "AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_DEV_placeholder"
       }
@@ -58,7 +57,6 @@
         "APP_DB_ENGINE": "APP_DB_ENGINE_QA_placeholder",
         "APP_DB_NAME": "APP_DB_NAME_QA_placeholder",
         "APP_DB_URI": "APP_DB_URI_QA_placeholder",
-        "APP_FRONTEND_AUDIENCE": "APP_FRONTEND_AUDIENCE_QA_placeholder",
         "APP_CORS_ORIGIN": "APP_CORS_ORIGIN_QA_placeholder",
         "AWS_S3_CHATBOT_ATTACHMENTS_BUCKET": "AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_QA_placeholder"
       }
@@ -71,7 +69,6 @@
         "APP_DB_ENGINE": "APP_DB_ENGINE_PROD_placeholder",
         "APP_DB_NAME": "APP_DB_NAME_PROD_placeholder",
         "APP_DB_URI": "APP_DB_URI_PROD_placeholder",
-        "APP_FRONTEND_AUDIENCE": "APP_FRONTEND_AUDIENCE_PROD_placeholder",
         "APP_CORS_ORIGIN": "APP_CORS_ORIGIN_PROD_placeholder",
         "AWS_S3_CHATBOT_ATTACHMENTS_BUCKET": "AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_PROD_placeholder"
       }
@@ -84,7 +81,6 @@
         "APP_DB_ENGINE": "APP_DB_ENGINE_DEMO_placeholder",
         "APP_DB_NAME": "APP_DB_NAME_DEMO_placeholder",
         "APP_DB_URI": "APP_DB_URI_DEMO_placeholder",
-        "APP_FRONTEND_AUDIENCE": "APP_FRONTEND_AUDIENCE_DEMO_placeholder",
         "APP_CORS_ORIGIN": "APP_CORS_ORIGIN_DEMO_placeholder",
         "AWS_S3_CHATBOT_ATTACHMENTS_BUCKET": "AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_DEMO_placeholder"
       }

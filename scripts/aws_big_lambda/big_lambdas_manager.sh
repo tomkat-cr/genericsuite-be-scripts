@@ -260,8 +260,11 @@ set_env_vars_file() {
 export APP_DB_ENGINE=$(eval echo \$APP_DB_ENGINE_${STAGE_UPPERCASE})
 export APP_DB_NAME=$(eval echo \$APP_DB_NAME_${STAGE_UPPERCASE})
 export APP_DB_URI=$(eval echo \$APP_DB_URI_${STAGE_UPPERCASE})
-export APP_FRONTEND_AUDIENCE=$(eval echo \$APP_FRONTEND_AUDIENCE_${STAGE_UPPERCASE})
-export APP_CORS_ORIGIN="$(eval echo \"\$APP_CORS_ORIGIN_${STAGE_UPPERCASE}\")"
+if [ "${STAGE_UPPERCASE}" = "QA" ]; then
+  export APP_CORS_ORIGIN="${APP_CORS_ORIGIN_QA_CLOUD}"
+else
+  export APP_CORS_ORIGIN="$(eval echo \"\$APP_CORS_ORIGIN_${STAGE_UPPERCASE}\")"
+fi
 export AWS_S3_CHATBOT_ATTACHMENTS_BUCKET=$(eval echo \$AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_${STAGE_UPPERCASE})
 export CURRENT_FRAMEWORK="${CURRENT_FRAMEWORK}"
 export DEFAULT_LANG="${DEFAULT_LANG}"
@@ -309,7 +312,6 @@ END
   SMTP_DEFAULT_SENDER=${SMTP_DEFAULT_SENDER},
   APP_SUPERADMIN_EMAIL=${APP_SUPERADMIN_EMAIL},
   SMTP_PORT=${SMTP_PORT},
-  APP_FRONTEND_AUDIENCE=${APP_FRONTEND_AUDIENCE},
   APP_DB_URI=${APP_DB_URI},
   OPENAI_TEMPERATURE=${OPENAI_TEMPERATURE},
   GOOGLE_API_KEY="${GOOGLE_API_KEY}"
@@ -341,7 +343,6 @@ END
   --env SMTP_DEFAULT_SENDER=\"${SMTP_DEFAULT_SENDER}\"
   --env APP_SUPERADMIN_EMAIL=\"${APP_SUPERADMIN_EMAIL}\"
   --env SMTP_PORT=\"${SMTP_PORT}\"
-  --env APP_FRONTEND_AUDIENCE=\"${APP_FRONTEND_AUDIENCE}\"
   --env APP_DB_URI=\"${APP_DB_URI}\"
   --env OPENAI_TEMPERATURE=\"${OPENAI_TEMPERATURE}\"
   --env GOOGLE_API_KEY=\"${GOOGLE_API_KEY}\"
@@ -374,27 +375,32 @@ prepare_tmp_build_dir() {
     echo "Removing existing: ${TMP_BUILD_DIR}"
     rm -rf "${TMP_BUILD_DIR}"
 
-    echo "Create directory: ${TMP_BUILD_DIR}/lib"
-    mkdir -p "${TMP_BUILD_DIR}"/lib
-
+    if [[ "${APP_DIR}" != "." && -d ${APP_DIR} ]]; then
+      echo "Creating directory: ${TMP_BUILD_DIR}/${APP_DIR}"
+      mkdir -p ${TMP_BUILD_DIR}/${APP_DIR}
+    fi
+    if [ -d lib ]; then
+      echo "Creating directory: ${TMP_BUILD_DIR}/lib"
+      mkdir -p "${TMP_BUILD_DIR}"/lib
+    fi
     if [ -d genericsuite ]; then
-      echo "Create directory: ${TMP_BUILD_DIR}/genericsuite"
+      echo "Creating directory: ${TMP_BUILD_DIR}/genericsuite"
       mkdir -p "${TMP_BUILD_DIR}"/genericsuite
     fi
     if [ -d genericsuite_ai ]; then
-      echo "Create directory: ${TMP_BUILD_DIR}/genericsuite_ai"
+      echo "Creating directory: ${TMP_BUILD_DIR}/genericsuite_ai"
       mkdir -p "${TMP_BUILD_DIR}"/genericsuite_ai
     fi
     if [ -d chalicelib ]; then
-      echo "Create directory: ${TMP_BUILD_DIR}/chalicelib"
+      echo "Creating directory: ${TMP_BUILD_DIR}/chalicelib"
       mkdir -p "${TMP_BUILD_DIR}"/chalicelib
     fi
     if [ -d fastapilib ]; then
-      echo "Create directory: ${TMP_BUILD_DIR}/fastapilib"
+      echo "Creating directory: ${TMP_BUILD_DIR}/fastapilib"
       mkdir -p "${TMP_BUILD_DIR}"/fastapilib
     fi
     if [ -d flasklib ]; then
-      echo "Create directory: ${TMP_BUILD_DIR}/flasklib"
+      echo "Creating directory: ${TMP_BUILD_DIR}/flasklib"
       mkdir -p "${TMP_BUILD_DIR}"/flasklib
     fi
 
@@ -437,9 +443,12 @@ prepare_tmp_build_dir() {
     cp ${SCRIPTS_DIR}/docker-compose-big-lambda-${TARGET_OS}.yml ${TMP_BUILD_DIR}/
 
     cp ${SCRIPTS_DIR}/Dockerfile-big-lambda-${TARGET_OS} ${TMP_BUILD_DIR}/Dockerfile
-    # For non-Chalice frameworks, change the initial run command: CMD [ "app.app" ] >> CMD [ "lib/app.app" ]
+    # For non-Chalice frameworks, change the initial run command:
+    # CMD [ "app.app" ] >> CMD [ "main.handler" ] or [ "index.handler" ]
     if [ "${APP_DIR}" != "." ]; then
-      perl -i -pe "s|CMD [ \"app.app\" ]|CMD [ \"${APP_DIR}.${APP_MAIN_FILE}:app\" ]|g" ${TMP_BUILD_DIR}/Dockerfile
+      echo "Running: 'perl -i -pe \"s|CMD [ \"app.app\" ]|CMD \[ \"${APP_DIR}.${APP_MAIN_FILE}:app\" \]|g\" ${TMP_BUILD_DIR}/Dockerfile'..."
+      echo "" > ${TMP_BUILD_DIR}/__init__.py
+      perl -i -pe "s|CMD \[ \"app.app\" \]|CMD \[ \"${APP_MAIN_FILE}.${APP_HANDLER}\" \]|g" ${TMP_BUILD_DIR}/Dockerfile
     fi
 
     cp ${SCRIPTS_DIR}/entry-${TARGET_OS}.sh ${TMP_BUILD_DIR}/
@@ -452,6 +461,7 @@ prepare_tmp_build_dir() {
     if [[ "${APP_DIR}" != "." && -d ${APP_DIR} ]]; then
       echo "Copy APP_DIR '${APP_DIR}' code files"
       cp -r ${APP_DIR}/* ${TMP_BUILD_DIR}/${APP_DIR}/
+      mv ${TMP_BUILD_DIR}/${APP_DIR}/${APP_MAIN_FILE}.py ${TMP_BUILD_DIR}/
     fi
     if [ -d lib ]; then
       echo "Copy 'lib' code files"
@@ -641,7 +651,6 @@ create_sam_yaml() {
   perl -i -pe "s|APP_CORS_ORIGIN:.*|APP_CORS_ORIGIN: ${APP_CORS_ORIGIN}|g" "./template.yml"
   perl -i -pe "s|APP_CORS_ORIGIN_placeholder|${APP_CORS_ORIGIN}|g" "./template.yml"
   perl -i -pe "s|http:\/\/localhost:3000|${APP_CORS_ORIGIN}|g" "./template.yml"
-  perl -i -pe "s|APP_FRONTEND_AUDIENCE:.*|APP_FRONTEND_AUDIENCE: ${APP_FRONTEND_AUDIENCE}|g" "./template.yml"
 
   perl -i -pe "s|APP_DB_ENGINE:.*|APP_DB_ENGINE: ${APP_DB_ENGINE}|g" "./template.yml"
   perl -i -pe "s|APP_DB_NAME:.*|APP_DB_NAME: ${APP_DB_NAME}|g" "./template.yml"
@@ -1471,7 +1480,6 @@ show_date_time() {
 
 # Default values before load .env
 
-
 # Action
 ACTION="$1"
 
@@ -1546,17 +1554,24 @@ if [ ! -d "./${APP_DIR}" ]; then
   exit 1
 fi
 
-# Default App entry point coode file
+# Default App entry point code file
 if [ "${APP_MAIN_FILE}" = "" ]; then
   # https://aws.github.io/chalice/topics/packaging.html
   APP_MAIN_FILE='app'
+  APP_HANDLER='app'
   if [ "${CURRENT_FRAMEWORK}" = "fastapi" ]; then
     # https://fastapi.tiangolo.com/tutorial/bigger-applications/?h=directory+structure#an-example-file-structure
+    # Deploying FastAPI as Lambda Function
+    # https://github.com/jordaneremieff/mangum/discussions/221
     APP_MAIN_FILE='main'
+    APP_HANDLER='handler'
   fi
   if [ "${CURRENT_FRAMEWORK}" = "flask" ]; then
     # https://flask.palletsprojects.com/en/2.3.x/tutorial/factory/
-    APP_MAIN_FILE='__init__'
+    # How to run Python Flask application in AWS Lambda
+    # https://www.cloudtechsimplified.com/run-python-flask-in-aws-lambda/
+    APP_MAIN_FILE=$(echo ${FLASK_APP} | perl -i -pe "s|.py||g") 
+    APP_HANDLER='handler'
   fi
 fi
 

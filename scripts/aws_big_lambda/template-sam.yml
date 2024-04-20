@@ -73,7 +73,6 @@ Resources:
           APP_STAGE: APP_STAGE_placeholder
           APP_SECRET_KEY: APP_SECRET_KEY_placeholder
           APP_SUPERADMIN_EMAIL: APP_SUPERADMIN_EMAIL_placeholder
-          APP_FRONTEND_AUDIENCE: APP_FRONTEND_AUDIENCE_placeholder
           APP_CORS_ORIGIN: APP_CORS_ORIGIN_placeholder
           APP_DB_ENGINE: APP_DB_ENGINE_placeholder
           APP_DB_NAME: APP_DB_NAME_placeholder

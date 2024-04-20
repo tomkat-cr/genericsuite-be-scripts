@@ -17,13 +17,14 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
-## Unreleased
+## 1.0.7 (2024-04-20)
 ---
 
 ### New
 Add "make init_submodules" and "init_json_configs.sh" to copy the basic JSON files [FA-246].
 
 ### Changes
+FastAPI enhanced support for deployments [FA-246].
 AWS_API_GATEWAY_STAGE env. var. removed [FA-248].
 "run_aws.sh" ask for protocol http/https for all RUN_METHODs [FA-248].
 "run_aws.sh" use APP_DIR / APP_MAIN_FILE env. vars. to specify the python entry point in gunicorn and uvicorn RUN_METHODs [FA-248].
@@ -83,7 +84,7 @@ Fix SAM template to include missing name and BinaryMediaTypes for the AWS API Ga
 
 ### New
 Add `make deploy_demo` and `make create_s3_bucket_demo` to manage the "demo" stage [FA-213].
-Add "demo" stage to APP_DB_ENGINE, APP_DB_NAME, APP_DB_URI, APP_FRONTEND_AUDIENCE, APP_CORS_ORIGIN, and AWS_S3_CHATBOT_ATTACHMENTS_BUCKET [FA-213].
+Add "demo" stage to APP_DB_ENGINE, APP_DB_NAME, APP_DB_URI, APP_CORS_ORIGIN, and AWS_S3_CHATBOT_ATTACHMENTS_BUCKET [FA-213].
 
 ### Changes
 "big_lambdas_manager.sh" uses get_ssl_cert_arn() to discover the ACM Certificate ARNs [FA-213].
