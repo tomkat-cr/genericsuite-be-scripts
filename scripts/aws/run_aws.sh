@@ -35,7 +35,7 @@ if [ ! -d "./${APP_DIR}" ]; then
   exit 1
 fi
 
-# Default App entry point coode file
+# Default App entry point code file
 if [ "${APP_MAIN_FILE}" = "" ]; then
   # https://aws.github.io/chalice/topics/packaging.html
   APP_MAIN_FILE='app'

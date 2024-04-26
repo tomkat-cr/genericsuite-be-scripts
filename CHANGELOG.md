@@ -17,6 +17,16 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
+## 1.0.8 (2024-04-26)
+---
+
+### New
+Add "npm_remove_ignored.sh" to remove files in ".gitignore" or ".npmignore".
+
+### Changes
+Change "npm_publish.sh" to implement "npm_remove_ignored.sh".
+
+
 ## 1.0.7 (2024-04-20)
 ---
 

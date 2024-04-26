@@ -10,6 +10,14 @@
 #
 # 2024-03-16 | CR
 #
+
+show_date_time() {
+  if [ "${APP_TZ}" = "" ]; then
+    APP_TZ='America/New_York'
+  fi
+  TZ="${APP_TZ}" date
+}
+
 REPO_BASEDIR="`pwd`"
 cd "`dirname "$0"`" ;
 SCRIPTS_DIR="`pwd`" ;
@@ -36,6 +44,13 @@ then
     exit 1
 fi
 
+bash ${SCRIPTS_DIR}/npm_remove_ignored.sh .gitignore
+# if ! bash ${SCRIPTS_DIR}/npm_remove_ignored.sh .gitignore
+# then
+#     echo "ERROR running: sh scripts/npm_remove_ignored.sh .gitignore"
+#     exit 1
+# fi
+
 if [ "${ACTION}" = "publish" ]; then
     echo ""
     echo "Are you sure you want to publish ${PACKAGE_NAME}:${PACKAGE_VERSION} (y/n)?"
@@ -47,3 +62,4 @@ fi
 
 echo ""
 echo "Done with ${ACTION} !"
+show_date_time
