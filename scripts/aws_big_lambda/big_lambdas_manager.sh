@@ -12,6 +12,7 @@ exit_abort() {
     echo ""
     echo "Aborting..."
     echo ""
+    remove_temp_files
     exit 1
 }
 
@@ -436,8 +437,8 @@ prepare_tmp_build_dir() {
     fi
 
     echo "Copy SAM related files"
-    cp ${SCRIPTS_DIR}/template.yml ${TMP_BUILD_DIR}/
-    cp ${SCRIPTS_DIR}/samconfig.toml ${TMP_BUILD_DIR}/
+    cp ${TMP_WORKING_DIR}/template.yml ${TMP_BUILD_DIR}/
+    cp ${TMP_WORKING_DIR}/samconfig.toml ${TMP_BUILD_DIR}/
     cp ${SCRIPTS_DIR}/run_api_gateway.sh ${TMP_BUILD_DIR}/
 
     cp ${SCRIPTS_DIR}/docker-compose-big-lambda-${TARGET_OS}.yml ${TMP_BUILD_DIR}/
@@ -588,28 +589,28 @@ create_sam_yaml() {
     cd ..
   else
     if [ -f "${REPO_BASEDIR}/scripts/aws_big_lambda/template-sam.yml" ]; then
-      cp "${REPO_BASEDIR}/scripts/aws_big_lambda/template-sam.yml" template.yml
+      cp "${REPO_BASEDIR}/scripts/aws_big_lambda/template-sam.yml" ${TMP_WORKING_DIR}/template.yml
     else
-      cp template-sam.yml template.yml
+      cp template-sam.yml ${TMP_WORKING_DIR}/template.yml
     fi
   fi
 
   if [ -f "${REPO_BASEDIR}/scripts/aws/update_additional_envvars.sh" ]; then
-      . "${REPO_BASEDIR}/scripts/aws/update_additional_envvars.sh" "./template.yml" "${REPO_BASEDIR}"
+      . "${REPO_BASEDIR}/scripts/aws/update_additional_envvars.sh" "${TMP_WORKING_DIR}/template.yml" "${REPO_BASEDIR}"
   fi
 
   # Replace @ with \@
   recover_at_sign
 
-  perl -i -pe "s|Runtime: python3.9|#|g" "./template.yml"
-  perl -i -pe "s|Runtime: python|#|g" "./template.yml"
-  perl -i -pe "s|CodeUri: ./deployment.zip|ImageUri: ${AWS_DOCKER_IMAGE_URI}|g" "./template.yml"
-  perl -i -pe "s|Handler: app.app|PackageType: Image|g" "./template.yml"
+  perl -i -pe "s|Runtime: python3.9|#|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|Runtime: python|#|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|CodeUri: ./deployment.zip|ImageUri: ${AWS_DOCKER_IMAGE_URI}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|Handler: app.app|PackageType: Image|g" "${TMP_WORKING_DIR}/template.yml"
 
   if [ "${DOMAIN_NAME}" = "" ];then
-    perl -i -pe "s|Domain:|# Domain:|g" "./template.yml"
-    perl -i -pe "s|DomainName: api.example.com|# DomainName: api.example.com|g" "./template.yml"
-    perl -i -pe "s|CertificateArn: CertificateArn_placeholder|# CertificateArn: CertificateArn_placeholder|g" "./template.yml"
+    perl -i -pe "s|Domain:|# Domain:|g" "${TMP_WORKING_DIR}/template.yml"
+    perl -i -pe "s|DomainName: api.example.com|# DomainName: api.example.com|g" "${TMP_WORKING_DIR}/template.yml"
+    perl -i -pe "s|CertificateArn: CertificateArn_placeholder|# CertificateArn: CertificateArn_placeholder|g" "${TMP_WORKING_DIR}/template.yml"
   else
     domain="${DOMAIN_NAME}"
     get_ssl_cert_arn
@@ -625,73 +626,73 @@ create_sam_yaml() {
       echo "ACM_CERTIFICATE_ARN: ${ACM_CERTIFICATE_ARN}" 
       echo ""
     fi
-    perl -i -pe "s|DomainName: api.example.com|DomainName: ${DOMAIN_NAME}|g" "./template.yml"
-    perl -i -pe "s|CertificateArn: CertificateArn_placeholder|CertificateArn: ${ACM_CERTIFICATE_ARN}|g" "./template.yml"
+    perl -i -pe "s|DomainName: api.example.com|DomainName: ${DOMAIN_NAME}|g" "${TMP_WORKING_DIR}/template.yml"
+    perl -i -pe "s|CertificateArn: CertificateArn_placeholder|CertificateArn: ${ACM_CERTIFICATE_ARN}|g" "${TMP_WORKING_DIR}/template.yml"
   fi        
-  perl -i -pe "s|StageName: api|StageName: ${STAGE}|g" "./template.yml"
+  perl -i -pe "s|StageName: api|StageName: ${STAGE}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|APP_NAME:.*|APP_NAME: ${APP_NAME}|g" "./template.yml"
-  perl -i -pe "s|APP_NAME_LOWERCASE_placeholder|${APP_NAME_LOWERCASE}|g" "./template.yml"
-  perl -i -pe "s|APP_NAME_placeholder|${APP_NAME}|g" "./template.yml"
+  perl -i -pe "s|APP_NAME:.*|APP_NAME: ${APP_NAME}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|APP_NAME_LOWERCASE_placeholder|${APP_NAME_LOWERCASE}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|APP_NAME_placeholder|${APP_NAME}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|CURRENT_FRAMEWORK_placeholder|${CURRENT_FRAMEWORK}|g" "./template.yml"
-  perl -i -pe "s|DEFAULT_LANG_placeholder|${DEFAULT_LANG}|g" "./template.yml"
+  perl -i -pe "s|CURRENT_FRAMEWORK_placeholder|${CURRENT_FRAMEWORK}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|DEFAULT_LANG_placeholder|${DEFAULT_LANG}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|AI_ASSISTANT_NAME:.*|AI_ASSISTANT_NAME: ${AI_ASSISTANT_NAME}|g" "./template.yml"
-  perl -i -pe "s|APP_VERSION:.*|APP_VERSION: ${APP_VERSION}|g" "./template.yml"
-  perl -i -pe "s|APP_DEBUG:.*|APP_DEBUG: ${APP_DEBUG}|g" "./template.yml"
+  perl -i -pe "s|AI_ASSISTANT_NAME:.*|AI_ASSISTANT_NAME: ${AI_ASSISTANT_NAME}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|APP_VERSION:.*|APP_VERSION: ${APP_VERSION}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|APP_DEBUG:.*|APP_DEBUG: ${APP_DEBUG}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|APP_STAGE:.*|APP_STAGE: ${STAGE}|g" "./template.yml"
-  perl -i -pe "s|APP_STAGE_placeholder|${STAGE}|g" "./template.yml"
+  perl -i -pe "s|APP_STAGE:.*|APP_STAGE: ${STAGE}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|APP_STAGE_placeholder|${STAGE}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|FLASK_APP:.*|FLASK_APP: ${FLASK_APP}|g" "./template.yml"
-  perl -i -pe "s|APP_SECRET_KEY:.*|APP_SECRET_KEY: ${APP_SECRET_KEY}|g" "./template.yml"
-  perl -i -pe "s|APP_SUPERADMIN_EMAIL:.*|APP_SUPERADMIN_EMAIL: ${APP_SUPERADMIN_EMAIL}|g" "./template.yml"
+  perl -i -pe "s|FLASK_APP:.*|FLASK_APP: ${FLASK_APP}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|APP_SECRET_KEY:.*|APP_SECRET_KEY: ${APP_SECRET_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|APP_SUPERADMIN_EMAIL:.*|APP_SUPERADMIN_EMAIL: ${APP_SUPERADMIN_EMAIL}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|APP_CORS_ORIGIN:.*|APP_CORS_ORIGIN: ${APP_CORS_ORIGIN}|g" "./template.yml"
-  perl -i -pe "s|APP_CORS_ORIGIN_placeholder|${APP_CORS_ORIGIN}|g" "./template.yml"
-  perl -i -pe "s|http:\/\/localhost:3000|${APP_CORS_ORIGIN}|g" "./template.yml"
+  perl -i -pe "s|APP_CORS_ORIGIN:.*|APP_CORS_ORIGIN: ${APP_CORS_ORIGIN}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|APP_CORS_ORIGIN_placeholder|${APP_CORS_ORIGIN}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|http:\/\/localhost:3000|${APP_CORS_ORIGIN}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|APP_DB_ENGINE:.*|APP_DB_ENGINE: ${APP_DB_ENGINE}|g" "./template.yml"
-  perl -i -pe "s|APP_DB_NAME:.*|APP_DB_NAME: ${APP_DB_NAME}|g" "./template.yml"
-  perl -i -pe "s|APP_DB_URI:.*|APP_DB_URI: ${APP_DB_URI}|g" "./template.yml"
+  perl -i -pe "s|APP_DB_ENGINE:.*|APP_DB_ENGINE: ${APP_DB_ENGINE}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|APP_DB_NAME:.*|APP_DB_NAME: ${APP_DB_NAME}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|APP_DB_URI:.*|APP_DB_URI: ${APP_DB_URI}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|GIT_SUBMODULE_URL:.*|GIT_SUBMODULE_URL: ${GIT_SUBMODULE_URL}|g" "./template.yml"
-  perl -i -pe "s|GIT_SUBMODULE_LOCAL_PATH:.*|GIT_SUBMODULE_LOCAL_PATH: ${GIT_SUBMODULE_LOCAL_PATH}|g" "./template.yml"
+  perl -i -pe "s|GIT_SUBMODULE_URL:.*|GIT_SUBMODULE_URL: ${GIT_SUBMODULE_URL}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|GIT_SUBMODULE_LOCAL_PATH:.*|GIT_SUBMODULE_LOCAL_PATH: ${GIT_SUBMODULE_LOCAL_PATH}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|AWS_S3_CHATBOT_ATTACHMENTS_BUCKET:.*|AWS_S3_CHATBOT_ATTACHMENTS_BUCKET: ${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET}|g" "./template.yml"
-  perl -i -pe "s|AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_placeholder|${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET}|g" "./template.yml"
+  perl -i -pe "s|AWS_S3_CHATBOT_ATTACHMENTS_BUCKET:.*|AWS_S3_CHATBOT_ATTACHMENTS_BUCKET: ${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_placeholder|${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|SMTP_SERVER:.*|SMTP_SERVER: ${SMTP_SERVER}|g" "./template.yml"
-  perl -i -pe "s|SMTP_USER:.*|SMTP_USER: ${SMTP_USER}|g" "./template.yml"
-  perl -i -pe "s|SMTP_PORT:.*|SMTP_PORT: ${SMTP_PORT}|g" "./template.yml"
-  perl -i -pe "s|SMTP_PASSWORD:.*|SMTP_PASSWORD: ${SMTP_PASSWORD}|g" "./template.yml"
-  perl -i -pe "s|SMTP_DEFAULT_SENDER:.*|SMTP_DEFAULT_SENDER: ${SMTP_DEFAULT_SENDER}|g" "./template.yml"
+  perl -i -pe "s|SMTP_SERVER:.*|SMTP_SERVER: ${SMTP_SERVER}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|SMTP_USER:.*|SMTP_USER: ${SMTP_USER}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|SMTP_PORT:.*|SMTP_PORT: ${SMTP_PORT}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|SMTP_PASSWORD:.*|SMTP_PASSWORD: ${SMTP_PASSWORD}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|SMTP_DEFAULT_SENDER:.*|SMTP_DEFAULT_SENDER: ${SMTP_DEFAULT_SENDER}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|OPENAI_TEMPERATURE:.*|OPENAI_TEMPERATURE: ${OPENAI_TEMPERATURE}|g" "./template.yml"
-  perl -i -pe "s|OPENAI_API_KEY:.*|OPENAI_API_KEY: ${OPENAI_API_KEY}|g" "./template.yml"
-  perl -i -pe "s|OPENAI_MODEL:.*|OPENAI_MODEL: ${OPENAI_MODEL}|g" "./template.yml"
+  perl -i -pe "s|OPENAI_TEMPERATURE:.*|OPENAI_TEMPERATURE: ${OPENAI_TEMPERATURE}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|OPENAI_API_KEY:.*|OPENAI_API_KEY: ${OPENAI_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|OPENAI_MODEL:.*|OPENAI_MODEL: ${OPENAI_MODEL}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe"s|GOOGLE_API_KEY:.*|GOOGLE_API_KEY: ${GOOGLE_API_KEY}|g" "./template.yml"
-  perl -i -pe"s|GOOGLE_CSE_ID:.*|GOOGLE_CSE_ID: ${GOOGLE_CSE_ID}|g" "./template.yml"
+  perl -i -pe"s|GOOGLE_API_KEY:.*|GOOGLE_API_KEY: ${GOOGLE_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe"s|GOOGLE_CSE_ID:.*|GOOGLE_CSE_ID: ${GOOGLE_CSE_ID}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe"s|LANGCHAIN_API_KEY:.*|LANGCHAIN_API_KEY: ${LANGCHAIN_API_KEY}|g" "./template.yml"
-  perl -i -pe"s|LANGCHAIN_PROJECT:.*|LANGCHAIN_PROJECT: ${LANGCHAIN_PROJECT}|g" "./template.yml"
+  perl -i -pe"s|LANGCHAIN_API_KEY:.*|LANGCHAIN_API_KEY: ${LANGCHAIN_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe"s|LANGCHAIN_PROJECT:.*|LANGCHAIN_PROJECT: ${LANGCHAIN_PROJECT}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe"s|HUGGINGFACE_API_KEY:.*|HUGGINGFACE_API_KEY: ${HUGGINGFACE_API_KEY}|g" "./template.yml"
-  perl -i -pe"s|HUGGINGFACE_ENDPOINT_URL:.*|HUGGINGFACE_ENDPOINT_URL: ${HUGGINGFACE_ENDPOINT_URL}|g" "./template.yml"
+  perl -i -pe"s|HUGGINGFACE_API_KEY:.*|HUGGINGFACE_API_KEY: ${HUGGINGFACE_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe"s|HUGGINGFACE_ENDPOINT_URL:.*|HUGGINGFACE_ENDPOINT_URL: ${HUGGINGFACE_ENDPOINT_URL}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|http:\/\/localhost:3000|${APP_CORS_ORIGIN}|g" "./template.yml"
-  perl -i -pe "s|stage=dev|stage=${STAGE}|g" "./template.yml"
+  perl -i -pe "s|http:\/\/localhost:3000|${APP_CORS_ORIGIN}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|stage=dev|stage=${STAGE}|g" "${TMP_WORKING_DIR}/template.yml"
 
   # Prepare samconfig.toml
   if [ -f "${REPO_BASEDIR}/scripts/aws_big_lambda/template-samconfig.toml" ]; then
-    cp "${REPO_BASEDIR}/scripts/aws_big_lambda/template-samconfig.toml" "./samconfig.toml"
+    cp "${REPO_BASEDIR}/scripts/aws_big_lambda/template-samconfig.toml" "${TMP_WORKING_DIR}/samconfig.toml"
   else
-    cp template-samconfig.toml samconfig.toml
+    cp template-samconfig.toml ${TMP_WORKING_DIR}/samconfig.toml
   fi
-  perl -i -pe "s|APP_NAME_LOWERCASE_placeholder|${APP_NAME_LOWERCASE}|g" "./samconfig.toml"
-  perl -i -pe "s|APP_NAME_placeholder|${APP_NAME}|g" "./samconfig.toml"
+  perl -i -pe "s|APP_NAME_LOWERCASE_placeholder|${APP_NAME_LOWERCASE}|g" "${TMP_WORKING_DIR}/samconfig.toml"
+  perl -i -pe "s|APP_NAME_placeholder|${APP_NAME}|g" "${TMP_WORKING_DIR}/samconfig.toml"
 }
 
 build_docker() {
@@ -838,11 +839,11 @@ deploy_with_sam() {
     sam deploy --guided
   else
     # Automatic SAM deployment (no prompts after the final confirmation)
-    echo sam deploy --template-file template.yml --stack-name ${AWS_STACK_NAME} --region ${AWS_REGION} --config-file samconfig.toml --capabilities CAPABILITY_IAM --no-confirm-changeset --no-disable-rollback ${SAM_FORCED} --save-params --resolve-image-repos
-    sam deploy --template-file template.yml --stack-name ${AWS_STACK_NAME} --region ${AWS_REGION} --config-file samconfig.toml --capabilities CAPABILITY_IAM --no-confirm-changeset --no-disable-rollback ${SAM_FORCED} --save-params --resolve-image-repos
+    echo sam deploy --template-file ${TMP_WORKING_DIR}/template.yml --stack-name ${AWS_STACK_NAME} --region ${AWS_REGION} --config-file ${TMP_WORKING_DIR}/samconfig.toml --capabilities CAPABILITY_IAM --no-confirm-changeset --no-disable-rollback ${SAM_FORCED} --save-params --resolve-image-repos
+    sam deploy --template-file ${TMP_WORKING_DIR}/template.yml --stack-name ${AWS_STACK_NAME} --region ${AWS_REGION} --config-file ${TMP_WORKING_DIR}/samconfig.toml --capabilities CAPABILITY_IAM --no-confirm-changeset --no-disable-rollback ${SAM_FORCED} --save-params --resolve-image-repos
     # Remove with perl the entire line beginning with "template_file = ..." from "samconfig.toml" file
     # Because it refers to a local path with some PII, like the username eventually.
-    perl -i -pe "s|template_file = .*\n$||g" samconfig.toml
+    perl -i -pe "s|template_file = .*\n$||g" ${TMP_WORKING_DIR}/samconfig.toml
   fi
   echo ""
   echo "DEPLOY_WITH_SAM - End"
@@ -1476,6 +1477,25 @@ show_date_time() {
   TZ="${APP_TZ}" date
 }
 
+verify_and_remove_file() {
+  if [ -f "${remove_file}" ];then
+    echo "Removing ${remove_file}..."
+    rm -rf ${remove_file}
+    echo "${remove_file} removed successfully."
+  fi
+}
+
+remove_temp_files() {
+  remove_file="${TMP_WORKING_DIR}/template.yml"
+  verify_and_remove_file
+  remove_file="${TMP_WORKING_DIR}/samconfig.toml"
+  verify_and_remove_file
+  remove_file="${TMP_BUILD_DIR}/template.yml"
+  verify_and_remove_file
+  remove_file="${TMP_BUILD_DIR}/samconfig.toml"
+  verify_and_remove_file
+}
+
 # ----------------------------
 
 # Default values before load .env
@@ -1514,7 +1534,8 @@ DEPLOYMENT_METHOD="deploy_with_sam"
 TARGET_OS="AL2"
 
 # Assumes it's run from the project root directory...
-set -o allexport; . .env ; set +o allexport ;
+# set -o allexport; . .env ; set +o allexport ;
+. ${SCRIPTS_DIR}/../set_app_dir_and_main_file.sh
 
 if [ "${CURRENT_FRAMEWORK}" = "" ]; then
     echo "ERROR: CURRENT_FRAMEWORK environment variable not defined"
@@ -1535,44 +1556,9 @@ if [ "${FRONTEND_DIRECTORY}" = "" ]; then
     fi
 fi
 
-# Default App main code directory
-if [ "${APP_DIR}" = "" ]; then
-  # https://aws.github.io/chalice/topics/packaging.html
-  APP_DIR='.'
-  if [ "${CURRENT_FRAMEWORK}" = "fastapi" ]; then
-    # https://fastapi.tiangolo.com/tutorial/bigger-applications/?h=directory+structure#an-example-file-structure
-    APP_DIR='app'
-  fi
-  if [ "${CURRENT_FRAMEWORK}" = "flask" ]; then
-    # https://flask.palletsprojects.com/en/2.3.x/tutorial/layout/
-    APP_DIR='flaskr'
-  fi
-fi
-
 if [ ! -d "./${APP_DIR}" ]; then
   echo "ERROR: APP_DIR './${APP_DIR}' not found"
   exit 1
-fi
-
-# Default App entry point code file
-if [ "${APP_MAIN_FILE}" = "" ]; then
-  # https://aws.github.io/chalice/topics/packaging.html
-  APP_MAIN_FILE='app'
-  APP_HANDLER='app'
-  if [ "${CURRENT_FRAMEWORK}" = "fastapi" ]; then
-    # https://fastapi.tiangolo.com/tutorial/bigger-applications/?h=directory+structure#an-example-file-structure
-    # Deploying FastAPI as Lambda Function
-    # https://github.com/jordaneremieff/mangum/discussions/221
-    APP_MAIN_FILE='main'
-    APP_HANDLER='handler'
-  fi
-  if [ "${CURRENT_FRAMEWORK}" = "flask" ]; then
-    # https://flask.palletsprojects.com/en/2.3.x/tutorial/factory/
-    # How to run Python Flask application in AWS Lambda
-    # https://www.cloudtechsimplified.com/run-python-flask-in-aws-lambda/
-    APP_MAIN_FILE=$(echo ${FLASK_APP} | perl -i -pe "s|.py||g") 
-    APP_HANDLER='handler'
-  fi
 fi
 
 if [ ! -f "${APP_DIR}/${APP_MAIN_FILE}.py" ]; then
@@ -1581,6 +1567,7 @@ if [ ! -f "${APP_DIR}/${APP_MAIN_FILE}.py" ]; then
 fi
 
 TMP_BUILD_DIR="/tmp/${APP_NAME_LOWERCASE}_backend_aws_tmp"
+TMP_WORKING_DIR="/tmp"
 
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --output json --no-paginate | jq -r '.Account')
 AWS_LAMBDA_FUNCTION_NAME_AND_STAGE=$(echo ${AWS_LAMBDA_FUNCTION_NAME}-${STAGE_UPPERCASE} | tr '[:upper:]' '[:lower:]')
@@ -1814,8 +1801,8 @@ fi
 
 if [ "${ACTION}" = "sam_validate" ]; then
   prepare_tmp_build_dir
-  echo sam validate -t ${SCRIPTS_DIR}/template.yml
-  sam validate -t ${SCRIPTS_DIR}/template.yml
+  echo sam validate -t ${TMP_WORKING_DIR}/template.yml
+  sam validate -t ${TMP_WORKING_DIR}/template.yml
 fi
 
 if [ "${ACTION}" = "package" ]; then
@@ -1830,6 +1817,8 @@ if [ "${ACTION}" = "package" ]; then
 
   build_docker
 fi
+
+remove_temp_files
 
 echo ""
 show_date_time

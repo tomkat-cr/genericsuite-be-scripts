@@ -96,8 +96,16 @@ if [ "$#" -ne 2 ]; then
     exit 1
 fi
 
+export REPO_BASEDIR="`pwd`"
+cd "`dirname "$0"`"
+export SCRIPTS_DIR="`pwd`"
+cd "${REPO_BASEDIR}"
+
+export TMP_WORKING_DIR="/tmp"
+
 # Load environment variables from .env
-set -o allexport ; source .env ; set +o allexport
+# set -o allexport ; source .env ; set +o allexport
+. ${SCRIPTS_DIR}/../set_app_dir_and_main_file.sh
 
 if [ "${CURRENT_FRAMEWORK}" = "" ]; then
     echo "CURRENT_FRAMEWORK environment variable must be defined"
@@ -108,32 +116,32 @@ if [ "${APP_NAME}" = "" ]; then
     echo "APP_NAME environment variable must be defined"
     exit 1
 fi
-export APP_NAME_LOWERCASE=$(echo ${APP_NAME} | tr '[:upper:]' '[:lower:]')
 
+export APP_NAME_LOWERCASE=$(echo ${APP_NAME} | tr '[:upper:]' '[:lower:]')
 export STAGE="$2"
 ACTION="$1"
 
-export REPO_BASEDIR="`pwd`"
-cd "`dirname "$0"`"
-export SCRIPTS_DIR="`pwd`"
+cd "${SCRIPTS_DIR}"
 
 echo ""
 echo "Local Backend Server over a secure connection"
 echo "Action: ${ACTION}"
-echo "STAGE: ${STAGE}"
+echo "Stage (STAGE): ${STAGE}"
 echo ""
-echo "APP_NAME: ${APP_NAME} (${APP_NAME_LOWERCASE})"
-echo "CURRENT_FRAMEWORK: ${CURRENT_FRAMEWORK}"
-echo "SCRIPTS_DIR: ${SCRIPTS_DIR}"
-echo "REPO_BASEDIR: ${REPO_BASEDIR}"
+echo "App name (APP_NAME): ${APP_NAME} (${APP_NAME_LOWERCASE})"
+echo "Current framework (CURRENT_FRAMEWORK): ${CURRENT_FRAMEWORK}"
+echo "Python entry point (APP_DIR.APP_MAIN_FILE): ${APP_DIR}.${APP_MAIN_FILE}"
+echo ""
+echo "Scripts directory (SCRIPTS_DIR): ${SCRIPTS_DIR}"
+echo "Repository base directory (REPO_BASEDIR): ${REPO_BASEDIR}"
 echo ""
 
 prepare_nginx_conf() {
     echo "Preparing Nginx configuration..."
     echo ""
     cd "${SCRIPTS_DIR}"
-    cp ${SCRIPTS_DIR}/nginx.conf.template ${SCRIPTS_DIR}/nginx.conf.tmp
-    perl -i -pe "s|APP_NAME_LOWERCASE_placeholder|${APP_NAME_LOWERCASE}|g" "${SCRIPTS_DIR}/nginx.conf.tmp"
+    cp ${SCRIPTS_DIR}/nginx.conf.template ${TMP_WORKING_DIR}/nginx.conf.tmp
+    perl -i -pe "s|APP_NAME_LOWERCASE_placeholder|${APP_NAME_LOWERCASE}|g" "${TMP_WORKING_DIR}/nginx.conf.tmp"
 }
 
 if [ "${ACTION}" = "" ] || [ "${ACTION}" = "run" ]; then

@@ -11,6 +11,9 @@ services:
       - ${HOME}/.aws:/root/.aws
     environment:
       - STAGE=${STAGE}
+      - APP_DIR=${APP_DIR}
+      - APP_MAIN_FILE=${APP_MAIN_FILE}
+      - APP_HANDLER=${APP_HANDLER}
     entrypoint: /var/scripts/docker_entrypoint.sh
 
   nginx:
@@ -27,7 +30,7 @@ services:
     environment:
       - APP_NAME_LOWERCASE=${APP_NAME_LOWERCASE}
     volumes:
-      - ${SCRIPTS_DIR}/nginx.conf.tmp:/etc/nginx/nginx.conf
+      - ${TMP_WORKING_DIR}/nginx.conf.tmp:/etc/nginx/nginx.conf
       - ${REPO_BASEDIR}/app.${APP_NAME_LOWERCASE}.local.key:/etc/nginx/ssl/app.${APP_NAME_LOWERCASE}.local.key
       - ${REPO_BASEDIR}/app.${APP_NAME_LOWERCASE}.local.crt:/etc/nginx/ssl/app.${APP_NAME_LOWERCASE}.local.crt
       - ${REPO_BASEDIR}/app.${APP_NAME_LOWERCASE}.local.chain.crt:/etc/nginx/ssl/app.${APP_NAME_LOWERCASE}.local.chain.crt

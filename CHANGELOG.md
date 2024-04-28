@@ -17,14 +17,31 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
+## 1.0.9 (2024-04-28)
+---
+
+### New
+Add "set_app_dir_and_main_file.sh" to Loads .env file and sets APP_DIR, APP_MAIN_FILE and APP_HANDLER environment variables with the Python entry point for uvicorn and gunicorn [FA-248].
+Add ".npmignore" to the ".chalice" and "scripts/aws_big_lambda" directories [FA-258].
+
+### Changes
+Change "run_aws.sh", "secure_local_server/run.sh" and "big_lambdas_manager.sh" to implement "set_app_dir_and_main_file.sh" [FA-248] and [FA-98].
+Change "run_aws.sh" to call "secure_local_server/run.sh" for "gunicorn" and "uvicorn" RUN_METHODs and "https" RUN_PROTOCOL [FA-248].
+Change "big_lambdas_manager.sh" and "run_local_dns.sh" to build templates and configuration files in "/tmp" [FA-248] and [FA-98].
+
+### Fixes
+Fix error "KeyError: 'APP_DB_NAME'" in "secure_local_server/docker_entrypoint.sh" by setting APP_DB_ENGINE, APP_DB_NAME, APP_DB_URI, APP_CORS_ORIGIN, AWS_S3_CHATBOT_ATTACHMENTS_BUCKET env. vars. before calling uvicorn and gunicorn [FA-248].
+Fix the lack of responses issue calling the backend over https for "gunicorn" and "uvicorn" RUN_METHODs, by removing the SSL certificates path parameters in uvicorn and gunicorn calls in "secure_local_server/docker_entrypoint.sh", because the Nginx service takes care about SSL handling [FA-248].
+
+
 ## 1.0.8 (2024-04-26)
 ---
 
 ### New
-Add "npm_remove_ignored.sh" to remove files in ".gitignore" or ".npmignore".
+Add "npm_remove_ignored.sh" to remove files in ".gitignore" or ".npmignore" [FA-84].
 
 ### Changes
-Change "npm_publish.sh" to implement "npm_remove_ignored.sh".
+Change "npm_publish.sh" to implement "npm_remove_ignored.sh" [FA-84].
 
 
 ## 1.0.7 (2024-04-20)
