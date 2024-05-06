@@ -11,17 +11,12 @@
 # 2024-03-16 | CR
 #
 
-show_date_time() {
-  if [ "${APP_TZ}" = "" ]; then
-    APP_TZ='America/New_York'
-  fi
-  TZ="${APP_TZ}" date
-}
-
 REPO_BASEDIR="`pwd`"
 cd "`dirname "$0"`" ;
 SCRIPTS_DIR="`pwd`" ;
 cd "${REPO_BASEDIR}"
+
+sh ${SCRIPTS_DIR}/show_date_time.sh
 
 ACTION="$1"
 if [ -z "${ACTION}" ]; then
@@ -62,4 +57,5 @@ fi
 
 echo ""
 echo "Done with ${ACTION} !"
-show_date_time
+
+sh ${SCRIPTS_DIR}/show_date_time.sh

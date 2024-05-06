@@ -17,17 +17,19 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
-## 1.0.9 (2024-04-28)
+## 1.0.9 (2024-05-06)
 ---
 
 ### New
-Add "set_app_dir_and_main_file.sh" to Loads .env file and sets APP_DIR, APP_MAIN_FILE and APP_HANDLER environment variables with the Python entry point for uvicorn and gunicorn [FA-248].
+Add "set_app_dir_and_main_file.sh" to load the ".env" file and set APP_DIR, APP_MAIN_FILE and APP_HANDLER environment variables with the Python entry point for uvicorn and gunicorn [FA-248].
 Add ".npmignore" to the ".chalice" and "scripts/aws_big_lambda" directories [FA-258].
+Add: "show_date_time.sh" to replace the repetitive code to show current date/time in bash scripts.
 
 ### Changes
 Change "run_aws.sh", "secure_local_server/run.sh" and "big_lambdas_manager.sh" to implement "set_app_dir_and_main_file.sh" [FA-248] and [FA-98].
 Change "run_aws.sh" to call "secure_local_server/run.sh" for "gunicorn" and "uvicorn" RUN_METHODs and "https" RUN_PROTOCOL [FA-248].
 Change "big_lambdas_manager.sh" and "run_local_dns.sh" to build templates and configuration files in "/tmp" [FA-248] and [FA-98].
+Redirect README instructions to the GenericSuite Documentation [GS-73].
 
 ### Fixes
 Fix error "KeyError: 'APP_DB_NAME'" in "secure_local_server/docker_entrypoint.sh" by setting APP_DB_ENGINE, APP_DB_NAME, APP_DB_URI, APP_CORS_ORIGIN, AWS_S3_CHATBOT_ATTACHMENTS_BUCKET env. vars. before calling uvicorn and gunicorn [FA-248].

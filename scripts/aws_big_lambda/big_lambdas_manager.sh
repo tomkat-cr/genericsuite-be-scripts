@@ -1470,13 +1470,6 @@ docker_dependencies() {
   fi
 }
 
-show_date_time() {
-  if [ "${APP_TZ}" = "" ]; then
-    APP_TZ='America/New_York'
-  fi
-  TZ="${APP_TZ}" date
-}
-
 verify_and_remove_file() {
   if [ -f "${remove_file}" ];then
     echo "Removing ${remove_file}..."
@@ -1497,6 +1490,8 @@ remove_temp_files() {
 }
 
 # ----------------------------
+
+sh ${SCRIPTS_DIR}/../show_date_time.sh
 
 # Default values before load .env
 
@@ -1714,7 +1709,7 @@ echo ""
 ask_to_continue
 
 echo ""
-show_date_time
+sh ${SCRIPTS_DIR}/../show_date_time.sh
 
 echo ""
 perform_frontend_version_assignment
@@ -1821,4 +1816,4 @@ fi
 remove_temp_files
 
 echo ""
-show_date_time
+sh ${SCRIPTS_DIR}/../show_date_time.sh
