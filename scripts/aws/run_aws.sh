@@ -153,7 +153,11 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
         if [ ${RUN_PROTOCOL} = "http" ]; then
             make down_qa
             echo "NOTE: The warning '-i used with no filenames on the command line, reading from STDIN.' is normal..."
-            export APP_CORS_ORIGIN=$(echo ${APP_CORS_ORIGIN} | perl -i -pe 's|https:\/\/|http:\/\/|')
+            echo ">> Old APP_CORS_ORIGIN: ${APP_CORS_ORIGIN}"
+            if [ "${APP_CORS_ORIGIN}" != "*"]; then
+                export APP_CORS_ORIGIN="$(echo ${APP_CORS_ORIGIN} | perl -i -pe 's|https:\/\/|http:\/\/|')"
+            fi
+            echo ">> New APP_CORS_ORIGIN: ${APP_CORS_ORIGIN}"
         fi
     fi
 

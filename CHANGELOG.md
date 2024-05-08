@@ -32,8 +32,9 @@ Change "big_lambdas_manager.sh" and "run_local_dns.sh" to build templates and co
 Redirect README instructions to the GenericSuite Documentation [GS-73].
 
 ### Fixes
-Fix error "KeyError: 'APP_DB_NAME'" in "secure_local_server/docker_entrypoint.sh" by setting APP_DB_ENGINE, APP_DB_NAME, APP_DB_URI, APP_CORS_ORIGIN, AWS_S3_CHATBOT_ATTACHMENTS_BUCKET env. vars. before calling uvicorn and gunicorn [FA-248].
+Fix error "KeyError: 'APP_DB_NAME'" starting the app with "secure_local_server/docker_entrypoint.sh" by setting APP_DB_ENGINE, APP_DB_NAME, APP_DB_URI, APP_CORS_ORIGIN, AWS_S3_CHATBOT_ATTACHMENTS_BUCKET env. vars. before calling uvicorn and gunicorn [FA-248].
 Fix the lack of responses issue calling the backend over https for "gunicorn" and "uvicorn" RUN_METHODs, by removing the SSL certificates path parameters in uvicorn and gunicorn calls in "secure_local_server/docker_entrypoint.sh", because the Nginx service takes care about SSL handling [FA-248].
+Fix the frontend "Network error" running the app over local MongoDB when APP_CORS_ORIGIN is "*".
 
 
 ## 1.0.8 (2024-04-26)
