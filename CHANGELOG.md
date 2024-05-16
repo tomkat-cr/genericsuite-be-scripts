@@ -17,19 +17,26 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
-## 1.0.9 (2024-05-06)
+## 1.0.9 (2024-05-09)
 ---
 
 ### New
 Add "set_app_dir_and_main_file.sh" to load the ".env" file and set APP_DIR, APP_MAIN_FILE and APP_HANDLER environment variables with the Python entry point for uvicorn and gunicorn [FA-248].
 Add ".npmignore" to the ".chalice" and "scripts/aws_big_lambda" directories [FA-258].
-Add: "show_date_time.sh" to replace the repetitive code to show current date/time in bash scripts.
+Add "get_domain_name_dev.sh" to support mask the S3 URL and avoid AWS over-billing attacks [GS-72].
+Add STORAGE_URL_SEED and APP_HOST_NAME env. vars. to ".env.example", big lambda deployment, run_aws, secure_local_server and Chalice config [GS-72].
+Add "run_generate_seed.sh" and "generate_seed.py" to suggest the STORAGE_URL_SEED value.
+Add "show_date_time.sh" to replace the repetitive code to show current date/time in bash scripts.
 
 ### Changes
 Change "run_aws.sh", "secure_local_server/run.sh" and "big_lambdas_manager.sh" to implement "set_app_dir_and_main_file.sh" [FA-248] and [FA-98].
 Change "run_aws.sh" to call "secure_local_server/run.sh" for "gunicorn" and "uvicorn" RUN_METHODs and "https" RUN_PROTOCOL [FA-248].
 Change "big_lambdas_manager.sh" and "run_local_dns.sh" to build templates and configuration files in "/tmp" [FA-248] and [FA-98].
 Redirect README instructions to the GenericSuite Documentation [GS-73].
+Unify the domain name getting with "get_domain_name.sh".
+Change the way "big_lambdas_manager.sh" replace env. vars. using "*_placeholder".
+Local DNS configuration /tmp/named-to-add.conf is added to /etc/bind/named.conf.local instead of /etc/bind/named.conf.
+"db_mongo_backup.sh" and "db_mongo_restore.sh" enhanced to handle zip files.
 
 ### Fixes
 Fix error "KeyError: 'APP_DB_NAME'" starting the app with "secure_local_server/docker_entrypoint.sh" by setting APP_DB_ENGINE, APP_DB_NAME, APP_DB_URI, APP_CORS_ORIGIN, AWS_S3_CHATBOT_ATTACHMENTS_BUCKET env. vars. before calling uvicorn and gunicorn [FA-248].

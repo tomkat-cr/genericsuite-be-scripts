@@ -560,25 +560,9 @@ create_sam_yaml() {
   echo ""
 
   # Prepare domain name
-  if [ "${APP_DOMAIN_NAME}" = "" ];then
-    APP_DOMAIN_NAME="${APP_NAME_LOWERCASE}.com"
-  fi
-
-  DOMAIN_NAME=""
-  if [ "${STAGE}" = "prod" ];then
-    DOMAIN_NAME="api.${APP_DOMAIN_NAME}"
-  else
-    if [ "${STAGE}" = "qa" ];then
-      DOMAIN_NAME="api-qa.${APP_DOMAIN_NAME}"
-    else
-      if [ "${STAGE}" = "staging" ];then
-        DOMAIN_NAME="api-staging.${APP_DOMAIN_NAME}"
-      else
-        if [ "${STAGE}" = "demo" ];then
-          DOMAIN_NAME="api-demo.${APP_DOMAIN_NAME}"
-        fi
-      fi
-    fi
+  . ${SCRIPTS_DIR}/../get_domain_name.sh "${STAGE}"
+  if [ "${DOMAIN_NAME}" = "" ];then
+    exit_abort
   fi
 
   # Prepare samconfig.toml
@@ -629,61 +613,62 @@ create_sam_yaml() {
     perl -i -pe "s|DomainName: api.example.com|DomainName: ${DOMAIN_NAME}|g" "${TMP_WORKING_DIR}/template.yml"
     perl -i -pe "s|CertificateArn: CertificateArn_placeholder|CertificateArn: ${ACM_CERTIFICATE_ARN}|g" "${TMP_WORKING_DIR}/template.yml"
   fi        
-  perl -i -pe "s|StageName: api|StageName: ${STAGE}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|APP_NAME:.*|APP_NAME: ${APP_NAME}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|APP_NAME_LOWERCASE_placeholder|${APP_NAME_LOWERCASE}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|StageName: api|StageName: ${STAGE}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|http:\/\/localhost:3000|${APP_CORS_ORIGIN}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|stage=dev|stage=${STAGE}|g" "${TMP_WORKING_DIR}/template.yml"
+
+  # perl -i -pe "s|APP_NAME:.*|APP_NAME: ${APP_NAME}|g" "${TMP_WORKING_DIR}/template.yml"
   perl -i -pe "s|APP_NAME_placeholder|${APP_NAME}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|APP_NAME_LOWERCASE_placeholder|${APP_NAME_LOWERCASE}|g" "${TMP_WORKING_DIR}/template.yml"
 
   perl -i -pe "s|CURRENT_FRAMEWORK_placeholder|${CURRENT_FRAMEWORK}|g" "${TMP_WORKING_DIR}/template.yml"
   perl -i -pe "s|DEFAULT_LANG_placeholder|${DEFAULT_LANG}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|AI_ASSISTANT_NAME:.*|AI_ASSISTANT_NAME: ${AI_ASSISTANT_NAME}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|APP_VERSION:.*|APP_VERSION: ${APP_VERSION}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|APP_DEBUG:.*|APP_DEBUG: ${APP_DEBUG}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|AI_ASSISTANT_NAME_placeholder|${AI_ASSISTANT_NAME}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|APP_VERSION_placeholder|${APP_VERSION}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|APP_HOST_NAME_placeholder|${DOMAIN_NAME}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|APP_DEBUG_placeholder|${APP_DEBUG}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|APP_STAGE:.*|APP_STAGE: ${STAGE}|g" "${TMP_WORKING_DIR}/template.yml"
+  # perl -i -pe "s|APP_STAGE:.*|APP_STAGE: ${STAGE}|g" "${TMP_WORKING_DIR}/template.yml"
   perl -i -pe "s|APP_STAGE_placeholder|${STAGE}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|FLASK_APP:.*|FLASK_APP: ${FLASK_APP}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|APP_SECRET_KEY:.*|APP_SECRET_KEY: ${APP_SECRET_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|APP_SUPERADMIN_EMAIL:.*|APP_SUPERADMIN_EMAIL: ${APP_SUPERADMIN_EMAIL}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|FLASK_APP_placeholder|${FLASK_APP}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|APP_SECRET_KEY_placeholder|${APP_SECRET_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|STORAGE_URL_SEED_placeholder|${STORAGE_URL_SEED}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|APP_SUPERADMIN_EMAIL_placeholder|${APP_SUPERADMIN_EMAIL}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|APP_CORS_ORIGIN:.*|APP_CORS_ORIGIN: ${APP_CORS_ORIGIN}|g" "${TMP_WORKING_DIR}/template.yml"
+  # perl -i -pe "s|APP_CORS_ORIGIN:.*|APP_CORS_ORIGIN: ${APP_CORS_ORIGIN}|g" "${TMP_WORKING_DIR}/template.yml"
   perl -i -pe "s|APP_CORS_ORIGIN_placeholder|${APP_CORS_ORIGIN}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|http:\/\/localhost:3000|${APP_CORS_ORIGIN}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|APP_DB_ENGINE:.*|APP_DB_ENGINE: ${APP_DB_ENGINE}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|APP_DB_NAME:.*|APP_DB_NAME: ${APP_DB_NAME}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|APP_DB_URI:.*|APP_DB_URI: ${APP_DB_URI}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|APP_DB_ENGINE_placeholder|${APP_DB_ENGINE}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|APP_DB_NAME_placeholder|${APP_DB_NAME}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|APP_DB_URI_placeholder|${APP_DB_URI}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|GIT_SUBMODULE_URL:.*|GIT_SUBMODULE_URL: ${GIT_SUBMODULE_URL}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|GIT_SUBMODULE_LOCAL_PATH:.*|GIT_SUBMODULE_LOCAL_PATH: ${GIT_SUBMODULE_LOCAL_PATH}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|GIT_SUBMODULE_URL_placeholder|${GIT_SUBMODULE_URL}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|GIT_SUBMODULE_LOCAL_PATH_placeholder|${GIT_SUBMODULE_LOCAL_PATH}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|AWS_S3_CHATBOT_ATTACHMENTS_BUCKET:.*|AWS_S3_CHATBOT_ATTACHMENTS_BUCKET: ${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET}|g" "${TMP_WORKING_DIR}/template.yml"
+  # perl -i -pe "s|AWS_S3_CHATBOT_ATTACHMENTS_BUCKET:.*|AWS_S3_CHATBOT_ATTACHMENTS_BUCKET: ${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET}|g" "${TMP_WORKING_DIR}/template.yml"
   perl -i -pe "s|AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_placeholder|${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|SMTP_SERVER:.*|SMTP_SERVER: ${SMTP_SERVER}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|SMTP_USER:.*|SMTP_USER: ${SMTP_USER}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|SMTP_PORT:.*|SMTP_PORT: ${SMTP_PORT}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|SMTP_PASSWORD:.*|SMTP_PASSWORD: ${SMTP_PASSWORD}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|SMTP_DEFAULT_SENDER:.*|SMTP_DEFAULT_SENDER: ${SMTP_DEFAULT_SENDER}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|SMTP_SERVER_placeholder|${SMTP_SERVER}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|SMTP_USER_placeholder|${SMTP_USER}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|SMTP_PORT_placeholder|${SMTP_PORT}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|SMTP_PASSWORD_placeholder|${SMTP_PASSWORD}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|SMTP_DEFAULT_SENDER_placeholder|${SMTP_DEFAULT_SENDER}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|OPENAI_TEMPERATURE:.*|OPENAI_TEMPERATURE: ${OPENAI_TEMPERATURE}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|OPENAI_API_KEY:.*|OPENAI_API_KEY: ${OPENAI_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|OPENAI_MODEL:.*|OPENAI_MODEL: ${OPENAI_MODEL}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|OPENAI_TEMPERATURE_placeholder|${OPENAI_TEMPERATURE}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|OPENAI_API_KEY_placeholder|${OPENAI_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|OPENAI_MODEL_placeholder|${OPENAI_MODEL}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe"s|GOOGLE_API_KEY:.*|GOOGLE_API_KEY: ${GOOGLE_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe"s|GOOGLE_CSE_ID:.*|GOOGLE_CSE_ID: ${GOOGLE_CSE_ID}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe"s|GOOGLE_API_KEY_placeholder|${GOOGLE_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe"s|GOOGLE_CSE_ID_placeholder|${GOOGLE_CSE_ID}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe"s|LANGCHAIN_API_KEY:.*|LANGCHAIN_API_KEY: ${LANGCHAIN_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe"s|LANGCHAIN_PROJECT:.*|LANGCHAIN_PROJECT: ${LANGCHAIN_PROJECT}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe"s|LANGCHAIN_API_KEY_placeholder|${LANGCHAIN_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe"s|LANGCHAIN_PROJECT_placeholder|${LANGCHAIN_PROJECT}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe"s|HUGGINGFACE_API_KEY:.*|HUGGINGFACE_API_KEY: ${HUGGINGFACE_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe"s|HUGGINGFACE_ENDPOINT_URL:.*|HUGGINGFACE_ENDPOINT_URL: ${HUGGINGFACE_ENDPOINT_URL}|g" "${TMP_WORKING_DIR}/template.yml"
-
-  perl -i -pe "s|http:\/\/localhost:3000|${APP_CORS_ORIGIN}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|stage=dev|stage=${STAGE}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe"s|HUGGINGFACE_API_KEY_placeholder|${HUGGINGFACE_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe"s|HUGGINGFACE_ENDPOINT_URL_placeholder|${HUGGINGFACE_ENDPOINT_URL}|g" "${TMP_WORKING_DIR}/template.yml"
 
   # Prepare samconfig.toml
   if [ -f "${REPO_BASEDIR}/scripts/aws_big_lambda/template-samconfig.toml" ]; then
@@ -1491,8 +1476,6 @@ remove_temp_files() {
 
 # ----------------------------
 
-sh ${SCRIPTS_DIR}/../show_date_time.sh
-
 # Default values before load .env
 
 # Action
@@ -1528,23 +1511,26 @@ DEPLOYMENT_METHOD="deploy_with_sam"
 # TARGET_OS="Alpine"
 TARGET_OS="AL2"
 
+# Iniitial date/time
+sh ${SCRIPTS_DIR}/../show_date_time.sh
+
 # Assumes it's run from the project root directory...
 # set -o allexport; . .env ; set +o allexport ;
 . ${SCRIPTS_DIR}/../set_app_dir_and_main_file.sh
 
 if [ "${CURRENT_FRAMEWORK}" = "" ]; then
-    echo "ERROR: CURRENT_FRAMEWORK environment variable not defined"
+    echo "ERROR: CURRENT_FRAMEWORK environment variable not set"
     exit 1
 fi
 if [ "${APP_NAME}" = "" ]; then
-    echo "ERROR: APP_NAME environment variable not defined"
+    echo "ERROR: APP_NAME environment variable not set"
     exit 1
 fi
 export APP_NAME_LOWERCASE=$(echo ${APP_NAME} | tr '[:upper:]' '[:lower:]')
 
 if [ "${FRONTEND_DIRECTORY}" = "" ]; then
     if [ "${FRONTEND_PATH}" = "" ]; then
-        echo "FRONTEND_PATH environment variable is not defined"
+        echo "ERROR: FRONTEND_PATH environment variable not set"
         exit 1
     else
         FRONTEND_DIRECTORY="${FRONTEND_PATH}"
@@ -1559,6 +1545,16 @@ fi
 if [ ! -f "${APP_DIR}/${APP_MAIN_FILE}.py" ]; then
   echo "ERROR: APP_DIR/APP_MAIN_FILE '"${APP_DIR}/${APP_MAIN_FILE}".py' not found"
   exit 1
+fi
+
+if [ "${APP_DOMAIN_NAME}" = "" ]; then
+    echo "ERROR: APP_HOST_NAME not set"
+    exit 1
+fi
+
+if [ "${STORAGE_URL_SEED}" = "" ]; then
+    echo "ERROR: STORAGE_URL_SEED not set"
+    exit 1
 fi
 
 TMP_BUILD_DIR="/tmp/${APP_NAME_LOWERCASE}_backend_aws_tmp"
@@ -1577,23 +1573,23 @@ MEMORY_SIZE="512"
 # ARCHITECTURES="arm64"
 
 if [ "${AWS_ACCOUNT_ID}" = "" ]; then
-  echo "ERROR: missing AWS_ACCOUNT_ID"
+  echo "ERROR: AWS_ACCOUNT_ID not set"
   exit_abort
 fi
 
 if [ "${AWS_LAMBDA_FUNCTION_NAME}" = "" ]; then
-  echo "ERROR: missing AWS_LAMBDA_FUNCTION_NAME"
+  echo "ERROR: AWS_LAMBDA_FUNCTION_NAME not set"
   exit_abort
 fi
 
 AWS_LAMBDA_FUNCTION_ROLE=$(eval echo \$AWS_LAMBDA_FUNCTION_ROLE_${STAGE_UPPERCASE})
 if [ "${AWS_LAMBDA_FUNCTION_ROLE}" = "" ]; then
-  echo "ERROR: missing AWS_LAMBDA_FUNCTION_ROLE. Check the value of AWS_LAMBDA_FUNCTION_ROLE_${STAGE_UPPERCASE}"
+  echo "ERROR: AWS_LAMBDA_FUNCTION_ROLE not set. Check the value of AWS_LAMBDA_FUNCTION_ROLE_${STAGE_UPPERCASE}"
   exit_abort
 fi
 
 if [ "${AWS_REGION}" = "" ]; then
-  echo "ERROR: missing AWS_REGION"
+  echo "ERROR: AWS_REGION not set"
   exit_abort
 fi
 
@@ -1709,6 +1705,8 @@ echo ""
 ask_to_continue
 
 echo ""
+
+# Start date/time
 sh ${SCRIPTS_DIR}/../show_date_time.sh
 
 echo ""
@@ -1816,4 +1814,6 @@ fi
 remove_temp_files
 
 echo ""
+
+# End date/time
 sh ${SCRIPTS_DIR}/../show_date_time.sh

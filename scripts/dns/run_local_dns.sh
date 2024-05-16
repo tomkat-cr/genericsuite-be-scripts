@@ -186,6 +186,10 @@ EOF
     echo "  4) Add the 'IP address' to the DNS Servers in your computer's 'Network > DNS servers' settings. The new DNS Server 'IP address' must be the first one in the list of DNS servers."
     echo "  5) Restart the computer's WiFi or LAN network connection."
     echo ""
+    echo "If you change the App you're developing, make sure to do:"
+    echo "  1) Run 'make local_dns_rebuild'"
+    echo "  1) Run 'make restart_qa'"
+    echo ""
 fi
 
 docker ps

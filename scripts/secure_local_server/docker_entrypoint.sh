@@ -4,7 +4,8 @@
 # Make sure it's executable:
 # chmod +x scripts/secure_local_server/docker_entrypoint.sh
 
-cd /app
+REPO_BASEDIR="/app"
+cd "${REPO_BASEDIR}"
 
 # Load environment variables from .env
 set -o allexport ; . .env ; set +o allexport
@@ -26,6 +27,12 @@ SSL_CERT_PATH="./app.${APP_NAME_LOWERCASE}.local.chain.crt"
 SSL_CA_CERT_PATH="./ca.crt"
 
 PORT="8000"
+
+source /var/scripts/get_domain_name.sh "${STAGE}"
+if [ "${DOMAIN_NAME}" = "" ];then
+    exit 1
+fi
+export APP_HOST_NAME="${DOMAIN_NAME}"
 
 export APP_VERSION=$(cat version.txt)
 export APP_DB_ENGINE=$(eval echo \$APP_DB_ENGINE_${STAGE_UPPERCASE})

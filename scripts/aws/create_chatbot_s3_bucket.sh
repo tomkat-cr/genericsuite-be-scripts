@@ -34,4 +34,6 @@ if [ "${AWS_S3_CHATBOT_ATTACHMENTS_CREATION}" = "1" ]; then
   if [ $1 = "demo" ]; then
     sh ${SCRIPTS_DIR}/aws/create_s3_bucket.sh ${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_DEMO}
   fi
+else
+  echo "AWS_S3_CHATBOT_ATTACHMENTS_CREATION is not set to 1"
 fi

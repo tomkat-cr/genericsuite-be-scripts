@@ -68,10 +68,12 @@ Resources:
           APP_NAME: APP_NAME_placeholder
           AI_ASSISTANT_NAME: AI_ASSISTANT_NAME_placeholder
           APP_VERSION: APP_VERSION_placeholder
+          APP_HOST_NAME: APP_HOST_NAME_placeholder
           FLASK_APP: FLASK_APP_placeholder
           APP_DEBUG: APP_DEBUG_placeholder
           APP_STAGE: APP_STAGE_placeholder
           APP_SECRET_KEY: APP_SECRET_KEY_placeholder
+          STORAGE_URL_SEED: STORAGE_URL_SEED_placeholder
           APP_SUPERADMIN_EMAIL: APP_SUPERADMIN_EMAIL_placeholder
           APP_CORS_ORIGIN: APP_CORS_ORIGIN_placeholder
           APP_DB_ENGINE: APP_DB_ENGINE_placeholder

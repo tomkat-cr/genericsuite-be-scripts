@@ -4,4 +4,5 @@
 if [ "${APP_TZ}" = "" ]; then
   APP_TZ='America/New_York'
 fi
+echo ""
 TZ="${APP_TZ}" date

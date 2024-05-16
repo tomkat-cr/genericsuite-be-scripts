@@ -21,6 +21,16 @@ if [ "${CURRENT_FRAMEWORK}" = "" ]; then
     exit 1
 fi
 
+if [ "${APP_DOMAIN_NAME}" = "" ]; then
+    echo "ERROR: APP_HOST_NAME not set"
+    exit 1
+fi
+
+if [ "${STORAGE_URL_SEED}" = "" ]; then
+    echo "ERROR: STORAGE_URL_SEED not set"
+    exit 1
+fi
+
 if [ ! -d "./${APP_DIR}" ]; then
   echo "ERROR: APP_DIR './${APP_DIR}' not found"
   exit 1
@@ -124,23 +134,34 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
 
     export IP_ADDRESS=$(sh ${SCRIPTS_DIR}/../get_localhost_ip.sh)
     export APP_VERSION=$(cat ${REPO_BASEDIR}/version.txt)
+
+    echo "Run over: 1) http, 2) https ?"
+    read RUN_PROTOCOL
+    while [[ ! ${RUN_PROTOCOL} =~ ^[12]$ ]]; do
+        echo "Please enter 1 or 2"
+        read RUN_PROTOCOL
+    done
+    if [ "${RUN_PROTOCOL}" = "1" ]; then
+        export RUN_PROTOCOL="http"
+    else
+        export RUN_PROTOCOL="https"
+    fi
+
+    if [ "${STAGE}" = "dev" ];then
+        . ${SCRIPTS_DIR}/../get_domain_name_dev.sh "${STAGE}" "${APP_DOMAIN_NAME}" "${SCRIPTS_DIR}/.."
+    else
+        . ${SCRIPTS_DIR}/../get_domain_name.sh "${STAGE}"
+    fi
+    if [ "${DOMAIN_NAME}" = "" ];then
+        exit 1
+    fi
+    export APP_HOST_NAME="${DOMAIN_NAME}"
+
     export APP_DB_ENGINE=$(eval echo \$APP_DB_ENGINE_${STAGE_UPPERCASE})
     export APP_DB_NAME=$(eval echo \$APP_DB_NAME_${STAGE_UPPERCASE})
     export APP_DB_URI=$(eval echo \$APP_DB_URI_${STAGE_UPPERCASE})
     export APP_CORS_ORIGIN="$(eval echo \"\$APP_CORS_ORIGIN_${STAGE_UPPERCASE}\")"
     export AWS_S3_CHATBOT_ATTACHMENTS_BUCKET=$(eval echo \$AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_${STAGE_UPPERCASE})
-
-    echo "Run over: 1) http, 2) https, 3) use current [${RUN_METHOD}] (1/2/3) ?"
-    read RUN_PROTOCOL
-    while [[ ! ${RUN_PROTOCOL} =~ ^[123]$ ]]; do
-        echo "Please enter 1 or 2"
-        read RUN_PROTOCOL
-    done
-    if [ "${RUN_PROTOCOL}" = "1" ]; then
-        RUN_PROTOCOL="http"
-    else
-        RUN_PROTOCOL="https"
-    fi
 
     if [ "${CURRENT_FRAMEWORK}" = "chalice" ]; then
         if [ ${RUN_PROTOCOL} = "https" ]; then
@@ -153,11 +174,9 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
         if [ ${RUN_PROTOCOL} = "http" ]; then
             make down_qa
             echo "NOTE: The warning '-i used with no filenames on the command line, reading from STDIN.' is normal..."
-            echo ">> Old APP_CORS_ORIGIN: ${APP_CORS_ORIGIN}"
             if [ "${APP_CORS_ORIGIN}" != "*"]; then
                 export APP_CORS_ORIGIN="$(echo ${APP_CORS_ORIGIN} | perl -i -pe 's|https:\/\/|http:\/\/|')"
             fi
-            echo ">> New APP_CORS_ORIGIN: ${APP_CORS_ORIGIN}"
         fi
     fi
 
@@ -205,6 +224,11 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
             echo ""
             pipenv run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app --reload --host 0.0.0.0 --port ${PORT}
         fi
+    fi
+
+    # Stop local NGINX
+    if [ "${STAGE}" = "dev" ];then
+        sh ${SCRIPTS_DIR}/../get_domain_name_dev.sh "stop_local_ngnx" "${APP_DOMAIN_NAME}" "${SCRIPTS_DIR}/.."
     fi
 fi
 
