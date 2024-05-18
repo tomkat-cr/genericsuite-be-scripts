@@ -7,7 +7,8 @@ services:
       dockerfile: Dockerfile
     volumes:
       - ${REPO_BASEDIR}:/app
-      # - ${SCRIPTS_DIR}:/var/scripts
+      # - ${REPO_BASEDIR}/../genericsuite-be:/genericsuite-be
+      # - ${REPO_BASEDIR}/../genericsuite-be-ai:/genericsuite-be-ai
       - ${SCRIPTS_DIR}/..:/var/scripts
       - ${HOME}/.aws:/root/.aws
     environment:
@@ -15,6 +16,8 @@ services:
       - APP_DIR=${APP_DIR}
       - APP_MAIN_FILE=${APP_MAIN_FILE}
       - APP_HANDLER=${APP_HANDLER}
+      - LOCAL_GE_BE_AI_REPO=${LOCAL_GE_BE_AI_REPO}
+      - LOCAL_GE_BE_REPO=${LOCAL_GE_BE_REPO}
     entrypoint: /var/scripts/secure_local_server/docker_entrypoint.sh
 
   nginx:

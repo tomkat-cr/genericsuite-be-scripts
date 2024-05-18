@@ -1773,6 +1773,8 @@ if [ "${ACTION}" = "sam_deploy" ]; then
   else
     deploy_without_sam
   fi
+  # ECR image cleaning
+  sh ${SCRIPTS_DIR}/../aws/clean_ecr_images.sh ${STAGE} 1
 fi
 
 if [ "${ACTION}" = "tmp_dir" ]; then
