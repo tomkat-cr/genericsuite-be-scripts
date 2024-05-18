@@ -17,7 +17,17 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
-## 1.0.9 (2024-05-09)
+## 1.0.10 (2024-05-17)
+---
+
+### New
+Add "verify_base_names()" to "big_lambdas_manager.sh", to check mandatory env. vars. to have the "*_placeholder" in the SAM template.yml before deployment.
+
+## Fixes
+Fix the "/var/scripts/get_domain_name.sh not found" error running the development backend envir. over https.
+
+
+## 1.0.9 (2024-05-17)
 ---
 
 ### New

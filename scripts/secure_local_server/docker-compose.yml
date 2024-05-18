@@ -7,14 +7,15 @@ services:
       dockerfile: Dockerfile
     volumes:
       - ${REPO_BASEDIR}:/app
-      - ${SCRIPTS_DIR}:/var/scripts
+      # - ${SCRIPTS_DIR}:/var/scripts
+      - ${SCRIPTS_DIR}/..:/var/scripts
       - ${HOME}/.aws:/root/.aws
     environment:
       - STAGE=${STAGE}
       - APP_DIR=${APP_DIR}
       - APP_MAIN_FILE=${APP_MAIN_FILE}
       - APP_HANDLER=${APP_HANDLER}
-    entrypoint: /var/scripts/docker_entrypoint.sh
+    entrypoint: /var/scripts/secure_local_server/docker_entrypoint.sh
 
   nginx:
     container_name: sls-nginx

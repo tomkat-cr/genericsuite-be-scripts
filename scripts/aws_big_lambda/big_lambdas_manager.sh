@@ -552,6 +552,24 @@ get_ssl_cert_arn() {
     fi
 }
 
+verify_base_names() {
+    base_names=("APP_DB_URI" "APP_DB_NAME" "APP_DB_ENGINE" "APP_NAME" "APP_SECRET_KEY" "APP_SUPERADMIN_EMAIL" "APP_HOST_NAME" "STORAGE_URL_SEED" "GIT_SUBMODULE_LOCAL_PATH")
+    ERROR_FLAG=0
+    
+    for base_name in "${base_names[@]}"; do
+        param_name_placeholder="${base_name}_placeholder"
+        if ! grep -q "$param_name_placeholder" "${TMP_WORKING_DIR}/template.yml"; then
+            echo "ERROR: $param_name_placeholder not found in ${TMP_WORKING_DIR}/template.yml"
+            ERROR_FLAG=1
+        fi
+    done
+    
+    if [ $ERROR_FLAG -eq 1 ]; then
+        echo ""
+        echo "^^^ Errors found while verifying base names in ${TMP_WORKING_DIR}/template.yml"
+    fi
+}
+
 create_sam_yaml() {
   # https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-function.html
 
@@ -613,6 +631,11 @@ create_sam_yaml() {
     perl -i -pe "s|DomainName: api.example.com|DomainName: ${DOMAIN_NAME}|g" "${TMP_WORKING_DIR}/template.yml"
     perl -i -pe "s|CertificateArn: CertificateArn_placeholder|CertificateArn: ${ACM_CERTIFICATE_ARN}|g" "${TMP_WORKING_DIR}/template.yml"
   fi        
+
+  verify_base_names
+  if [ $ERROR_FLAG -eq 1 ]; then
+    exit_abort
+  fi
 
   perl -i -pe "s|StageName: api|StageName: ${STAGE}|g" "${TMP_WORKING_DIR}/template.yml"
   perl -i -pe "s|http:\/\/localhost:3000|${APP_CORS_ORIGIN}|g" "${TMP_WORKING_DIR}/template.yml"
@@ -1464,6 +1487,7 @@ verify_and_remove_file() {
 }
 
 remove_temp_files() {
+  echo ""
   remove_file="${TMP_WORKING_DIR}/template.yml"
   verify_and_remove_file
   remove_file="${TMP_WORKING_DIR}/samconfig.toml"
