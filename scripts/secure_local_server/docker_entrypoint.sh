@@ -26,6 +26,7 @@ then
     echo ""
     echo "Error installing OS dependencies"
     exit 1
+fi
 echo ""
 echo "Installing Python dependencies..."
 # pip install --trusted-host pypi.python.org -r requirements.txt

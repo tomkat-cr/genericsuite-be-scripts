@@ -176,6 +176,194 @@ Resources:
         - video/webm
 
         paths:
+
+          /asset/{item_id}/{response_type}:
+            get:
+              parameters:
+                - name: item_id
+                  in: "path"
+                  required: true
+                  type: "string"
+                - name: response_type
+                  in: "path"
+                  required: true
+                  type: "string"
+              # consumes:
+              # - application/json
+              produces:
+              - application/json
+              - application/octet-stream
+              - application/x-tar
+              - application/zip
+              - audio/basic
+              - audio/ogg
+              - audio/mp4
+              - audio/mpeg
+              - audio/wav
+              - audio/webm
+              - image/png
+              - image/jpg
+              - image/jpeg
+              - image/gif
+              - video/ogg
+              - video/mpeg
+              - video/webm
+              - text/csv
+              responses:
+                '200':
+                  description: 200 response
+                  schema:
+                    $ref: '#/definitions/Empty'
+              x-amazon-apigateway-integration:
+                # timeoutInMillis: 180000 # Does not work, only 30000 (3 seconds) max allowed
+                responses:
+                  default:
+                    statusCode: '200'
+                responseTemplates:
+                  application/json: '{"statusCode": 200}'
+                  application/octet-stream: '{"statusCode": 200}'
+                  application/x-tar: '{"statusCode": 200}'
+                  application/zip: '{"statusCode": 200}'
+                  audio/basic: '{"statusCode": 200}'
+                  audio/ogg: '{"statusCode": 200}'
+                  audio/mp4: '{"statusCode": 200}'
+                  audio/mpeg: '{"statusCode": 200}'
+                  audio/wav: '{"statusCode": 200}'
+                  audio/webm: '{"statusCode": 200}'
+                  image/png: '{"statusCode": 200}'
+                  image/jpg: '{"statusCode": 200}'
+                  image/jpeg: '{"statusCode": 200}'
+                  image/gif: '{"statusCode": 200}'
+                  video/ogg: '{"statusCode": 200}'
+                  video/mpeg: '{"statusCode": 200}'
+                  video/webm: '{"statusCode": 200}'
+                  text/csv: '{"statusCode": 200}'
+                uri:
+                  Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${APIHandler.Arn}/invocations
+                passthroughBehavior: when_no_match
+                httpMethod: POST
+                # Content type conversions in API Gateway
+                # https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-payload-encodings-workflow.html
+                # contentHandling: CONVERT_TO_TEXT # Does not work
+                # contentHandling: - # Does not work
+                # contentHandling: CONVERT_TO_BINARY # Does not work
+                type: aws_proxy
+              summary: Get Asset endpoint.
+              description: Get asset (image, audio, or any other file type) stored in S3.
+
+          /asset/{item_id}:
+            get:
+              parameters:
+                - name: item_id
+                  in: "path"
+                  required: true
+                  type: "string"
+              produces:
+              - application/json
+              - application/octet-stream
+              - application/x-tar
+              - application/zip
+              - audio/basic
+              - audio/ogg
+              - audio/mp4
+              - audio/mpeg
+              - audio/wav
+              - audio/webm
+              - image/png
+              - image/jpg
+              - image/jpeg
+              - image/gif
+              - video/ogg
+              - video/mpeg
+              - video/webm
+              - text/csv
+              responses:
+                '200':
+                  description: 200 response
+                  schema:
+                    $ref: '#/definitions/Empty'
+              x-amazon-apigateway-integration:
+                responses:
+                  default:
+                    statusCode: '200'
+                responseTemplates:
+                  application/json: '{"statusCode": 200}'
+                  application/octet-stream: '{"statusCode": 200}'
+                  application/x-tar: '{"statusCode": 200}'
+                  application/zip: '{"statusCode": 200}'
+                  audio/basic: '{"statusCode": 200}'
+                  audio/ogg: '{"statusCode": 200}'
+                  audio/mp4: '{"statusCode": 200}'
+                  audio/mpeg: '{"statusCode": 200}'
+                  audio/wav: '{"statusCode": 200}'
+                  audio/webm: '{"statusCode": 200}'
+                  image/png: '{"statusCode": 200}'
+                  image/jpg: '{"statusCode": 200}'
+                  image/jpeg: '{"statusCode": 200}'
+                  image/gif: '{"statusCode": 200}'
+                  video/ogg: '{"statusCode": 200}'
+                  video/mpeg: '{"statusCode": 200}'
+                  video/webm: '{"statusCode": 200}'
+                  text/csv: '{"statusCode": 200}'
+                uri:
+                  Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${APIHandler.Arn}/invocations
+                passthroughBehavior: when_no_match
+                httpMethod: POST
+                type: aws_proxy
+              summary: Get Asset endpoint.
+              description: Get asset (image, audio, or any other file type) stored in S3.
+
+
+          /asset/{item_id}/{response_type}:
+            get:
+              consumes:
+              - application/json
+              produces:
+              - application/json
+              responses:
+                '200':
+                  description: 200 response
+                  schema:
+                    $ref: '#/definitions/Empty'
+              x-amazon-apigateway-integration:
+                responses:
+                  default:
+                    statusCode: '200'
+                uri:
+                  Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${APIHandler.Arn}/invocations
+                passthroughBehavior: when_no_match
+                httpMethod: POST
+                contentHandling: CONVERT_TO_TEXT
+                type: aws_proxy
+              summary: 'Get asset (image, audio, or any other file type stored in S3) for a specified response_type'
+            options:
+              consumes:
+              - application/json
+              produces:
+              - application/json
+              responses:
+                '200':
+                  description: 200 response
+                  schema:
+                    $ref: '#/definitions/Empty'
+                  headers:
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Origin:
+                      type: string
+                    Access-Control-Allow-Headers:
+                      type: string
+                    Access-Control-Expose-Headers:
+                      type: string
+                    Access-Control-Max-Age:
+                      type: string
+                    Access-Control-Allow-Credentials:
+                      type: string
+              x-amazon-apigateway-integration:
+                responses:
+                  default:
+                    statusCode: '200'
+
           /menu_options:
             get:
               consumes:
@@ -237,6 +425,7 @@ Resources:
                 passthroughBehavior: when_no_match
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
+
           /menu_options/element:
             post:
               consumes:
@@ -298,6 +487,7 @@ Resources:
                 passthroughBehavior: when_no_match
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
+
           /users:
             get:
               consumes:
@@ -422,6 +612,7 @@ Resources:
                 passthroughBehavior: when_no_match
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
+
           /users/test:
             get:
               consumes:
@@ -483,6 +674,7 @@ Resources:
                 passthroughBehavior: when_no_match
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
+
           /users/login:
             get:
               consumes:
@@ -565,6 +757,7 @@ Resources:
                 passthroughBehavior: when_no_match
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
+
           /users/supad-create:
             post:
               consumes:
@@ -626,6 +819,7 @@ Resources:
                 passthroughBehavior: when_no_match
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
+
           /ai/chatbot:
             post:
               consumes:
@@ -699,6 +893,7 @@ Resources:
                 passthroughBehavior: when_no_match
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
+
           /ai/image_to_text:
             post:
               consumes:
@@ -770,6 +965,7 @@ Resources:
                 passthroughBehavior: when_no_match
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
+
           /ai/voice_to_text:
             post:
               consumes:
@@ -841,6 +1037,7 @@ Resources:
                 passthroughBehavior: when_no_match
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
+
           /ai_chatbot_conversations:
             get:
               consumes:
@@ -981,6 +1178,7 @@ Resources:
                 passthroughBehavior: when_no_match
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
+
           /general_config:
             get:
               consumes:
@@ -1121,6 +1319,7 @@ Resources:
                 passthroughBehavior: when_no_match
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
+
           /users_config:
             get:
               consumes:

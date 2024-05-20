@@ -65,7 +65,7 @@ echo "$repositories"
 
 # Loop through each repository
 for repository in $repositories; do
-    # Get a list of images sorted by creation date in reverse order (newest first)
+    # Get a list of images sorted by creation date (newest last)
     images=$(aws ecr describe-images --repository-name $repository --query 'sort_by(imageDetails,& imagePushedAt)[*].imageDigest' --output text)
 
     echo ""
@@ -97,7 +97,7 @@ for repository in $repositories; do
     for image in $images; do
         echo "Image: $image | Repository: $repository"
         # Image name, version and date
-        image_tags=$(aws ecr describe-images --repository-name $repository --image-ids imageDigest=$image --query 'imageDetails[0].imageTags[0]' --output text)
+        image_tags=$(aws ecr describe-images --repository-name $repository --image-ids imageDigest=$image --query 'imageDetails[0].imageTags' --output text)
         image_date=$(aws ecr describe-images --repository-name $repository --image-ids imageDigest=$image --query 'imageDetails[0].imagePushedAt' --output text)
         echo "Tag: ${image_tags}, Date pushed: ${image_date}"
         # Delete the image if it's not in the list of images to keep

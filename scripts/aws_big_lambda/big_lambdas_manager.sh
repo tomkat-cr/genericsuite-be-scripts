@@ -8,6 +8,14 @@
 
 DEBUG="0"
 
+yes_or_no() {
+  read choice
+  while [[ ! $choice =~ ^[YyNn]$ ]]; do
+    echo "Please enter Y or N"
+    read choice
+  done
+}
+
 exit_abort() {
     echo ""
     echo "Aborting..."
@@ -23,23 +31,16 @@ fi
 
 ask_to_continue() {
     echo "Continue (Y/n)?"
-    read choice
-    while [[ ! $choice =~ ^[YyNn]$ ]]; do
-        echo "Please enter Y or N"
-        read choice
-    done
+    yes_or_no
     if [ $choice = "n" ]; then
         exit_abort
     fi
 }    
 
 ask_for_force_ecr_image_creation() {
+  echo "----"
   echo "Do you want to perform the AWS ECR image creation (Y/n)?"
-  read choice
-  while [[ ! $choice =~ ^[YyNn]$ ]]; do
-    echo "Please enter Y or N"
-    read choice
-  done
+  yes_or_no
   if [[ $choice =~ ^[Yy]$ ]]; then
     FORCE_ECR_IMAGE_CREATION="1"
   else
@@ -47,8 +48,51 @@ ask_for_force_ecr_image_creation() {
   fi
 }
 
+show_existing_ecr_images() {
+    echo ""
+    echo "----"
+    echo "Existing ECR images:"
+    echo ""
+    # Prefix to filter repositories
+    prefix="${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}"
+
+    # Get a list of repositories filtered by prefix
+    repositories=$(aws ecr describe-repositories --query "repositories[?starts_with(repositoryName, '$prefix')].repositoryName" --output text)
+
+    # Loop through each repository
+    for repository in $repositories; do
+        # Get a list of images sorted by creation date (newest last)
+        images=$(aws ecr describe-images --repository-name $repository --query 'sort_by(imageDetails,& imagePushedAt)[*].imageDigest' --output text)
+
+        # Count the number of images
+        num_images=$(echo "$images" | wc -w)
+        echo "Number of images: $num_images"
+
+        # Loop through each image
+        echo ""
+        for image in $images; do
+            echo "Image: $image | Repository: $repository"
+            # Image name, version and date
+            image_tags=$(aws ecr describe-images --repository-name $repository --image-ids imageDigest=$image --query 'imageDetails[0].imageTags' --output text)
+            image_date=$(aws ecr describe-images --repository-name $repository --image-ids imageDigest=$image --query 'imageDetails[0].imagePushedAt' --output text)
+            echo "       Tag: ${image_tags}, Date pushed: ${image_date}"
+            echo ""
+        done
+    done
+}
+
+ask_to_show_existing_ecr_images() {
+  echo "---"
+  echo "Do you want to see the existing ECT images (y/n)?"
+  yes_or_no
+  if [[ $choice =~ ^[Yy]$ ]]; then
+    show_existing_ecr_images
+  fi
+}
+
 ask_for_app_version() {
     APP_VERSION=$(cat ${REPO_BASEDIR}/version.txt)
+    echo "----"
     echo "What will be the new App version? (press Enter for default: ${APP_VERSION})"
     read new_version
     if [ "${new_version}" != "" ]; then
@@ -56,11 +100,7 @@ ask_for_app_version() {
     fi
     echo "New App version will be: ${APP_VERSION}"
     echo "Are you sure (Y/n)?"
-    read choice
-    while [[ ! $choice =~ ^[YyNn]$ ]]; do
-        echo "Please enter Y or N"
-        read choice
-    done
+    yes_or_no
     if [[ ! $choice =~ ^[Yy]$ ]]; then
         exit_abort
     fi
@@ -68,12 +108,10 @@ ask_for_app_version() {
 }
 
 ask_for_frontend_version_assignment() {
+  echo ""
+  echo "----"
   echo "Do you want to assign the version ${APP_VERSION} to the frontend '${FRONTEND_DIRECTORY}' (Y/n)?"
-  read choice
-  while [[ ! $choice =~ ^[YyNn]$ ]]; do
-    echo "Please enter Y or N"
-    read choice
-  done
+  yes_or_no
   if [[ $choice =~ ^[Yy]$ ]]; then
     if [ -d "${FRONTEND_DIRECTORY}" ]; then
       echo "The frontend path '${FRONTEND_DIRECTORY}' exists..."
@@ -110,24 +148,39 @@ perform_frontend_version_assignment() {
   fi
 }
 
+remember_endpoint_definitions() {
+  echo ""
+  echo "**********************************************************************************"
+  echo "* WARNING:                                                                       *"
+  echo "* Please remember each Endpoint in your App must be defined in the SAM Template: *"
+  echo "*     RestAPI > Properties > DefinitionBody > paths                              *"
+  echo "**********************************************************************************"
+  echo ""
+  echo "If you decide to continue, I assume it was done..."
+  echo ""
+  ask_to_continue
+}
+
+
 ask_for_sam_guided_deployment() {
-    echo "Do you want to do a SAM Automatic (not guided) Deployment (y/n)?"
-    read choice
-    while [[ ! $choice =~ ^[YyNn]$ ]]; do
-        echo "Please enter Y or N"
-        read choice
-    done
+    echo ""
+    echo "----"
+    echo "SAM Deployment Methods:"
+    echo ""
+    echo "SAM Automatic Deployment: all parameters will be supplied to SAM by this script."
+    echo "SAM Guided Deployment: SAM will ask questions needed to perform the process."
+    echo ""
+    echo "Do you want to do a SAM Automatic Deployment (y/n)?"
+    yes_or_no
     if [[ $choice =~ ^[Yy]$ ]]; then
       SAM_GUIDED="n"
     else
       SAM_GUIDED="y"
     fi
+    echo ""
+    echo "----"
     echo "Do you want to Force Upload in the SAM Deployment (y/n)?"
-    read choice
-    while [[ ! $choice =~ ^[YyNn]$ ]]; do
-        echo "Please enter Y or N"
-        read choice
-    done
+    yes_or_no
     if [[ $choice =~ ^[Yy]$ ]]; then
       SAM_FORCED="--force-upload"
     else
@@ -140,6 +193,7 @@ write_new_app_version() {
 }
 
 ask_for_docker_image_version() {
+    echo "----"
     echo "What will be the Docker Image version to use? (e.g. latest or a version number)."
     echo "(press Enter for default: ${APP_VERSION})"
     read new_version
@@ -152,11 +206,7 @@ ask_for_docker_image_version() {
     echo "Docker image version to be used: ${DOCKER_IMAGE_VERSION}"
     echo "Image URI: ${AWS_DOCKER_IMAGE_URI_BASE}/${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}:${DOCKER_IMAGE_VERSION}"
     echo "Do you agree with that (Y/n)?"
-    read choice
-    while [[ ! $choice =~ ^[YyNn]$ ]]; do
-        echo "Please enter Y or N"
-        read choice
-    done
+    yes_or_no
     if [[ ! $choice =~ ^[Yy]$ ]]; then
         exit_abort
     fi
@@ -164,12 +214,9 @@ ask_for_docker_image_version() {
 }
 
 ask_for_docker_system_prune() {
+    echo "----"
     echo "Do you want to perform a Docker System Prune to have more free disk space (y/n)?"
-    read choice
-    while [[ ! $choice =~ ^[YyNn]$ ]]; do
-        echo "Please enter Y or N"
-        read choice
-    done
+    yes_or_no
     if [[ $choice =~ ^[Yy]$ ]]; then
       DOCKER_PRUNE="y"
     else
@@ -206,22 +253,23 @@ verify_docker_image_exist() {
         echo "Verifying ECR repository URI: ${AWS_DOCKER_IMAGE_URI}..."
         if aws ecr describe-images --repository-name ${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE} --region ${AWS_REGION} --image-ids imageTag=${DOCKER_IMAGE_VERSION} >/dev/null 2>&1
         then
-            echo "ECR repository URI exists..."
+            echo ""
+            echo ">> ECR repository URI exists..."
             if [ "${FORCE_ECR_IMAGE_CREATION}" = "1" ];then
-                echo "and it'll be overwritten..."
+                echo "   and it'll be overwritten..."
             else
-                echo "and it'll remain the same"
+                echo "   and it'll remain the same"
             fi
         else
+            echo ""
             if [ "${FORCE_ECR_IMAGE_CREATION}" = "0" ];then
                 ERROR_MSG="ERROR: Docker image version '${DOCKER_IMAGE_VERSION}' does not exist in the ECR repository: ${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}, and the image creation wasn't ordered..."
-                echo ${ERROR_MSG}
+                echo ">> ${ERROR_MSG}"
             else
-                echo "ECR repository URI does not exists and it'll be created..."
+                echo ">> ECR repository URI does not exists and it'll be created..."
             fi
         fi
     fi
-    echo ""
 }
 
 recover_at_sign() {
@@ -703,10 +751,58 @@ create_sam_yaml() {
   perl -i -pe "s|APP_NAME_placeholder|${APP_NAME}|g" "${TMP_WORKING_DIR}/samconfig.toml"
 }
 
+verify_requirements_with_local_dependencies() {
+    echo ""
+    LOCAL_DEPENDENCIES_ERROR=""
+    # Verify "Local" dependencies
+    if grep -q "-e ..\/genericsuite-be-ai" "${REPO_BASEDIR}/requirements.txt"; then
+        echo "Local Genericsuite-BE-AI found in requirements.txt..."
+        echo "It was installed with e.g. pipenv install ../genericsuite-be-ai"
+        LOCAL_DEPENDENCIES_ERROR="1"
+    fi
+    if grep -q "-e ..\/genericsuite-be" "${REPO_BASEDIR}/requirements.txt"; then
+        echo "Local Genericsuite-BE found in requirements.txt..."
+        echo "It was installed with e.g. pipenv install ../genericsuite-be"
+        LOCAL_DEPENDENCIES_ERROR="1"
+    fi
+    # Local dependecies are not allowed because it makes the docker image for deployment creation to fail
+    if [ "${LOCAL_DEPENDENCIES_ERROR}" = "1" ]; then
+        echo ""
+        echo "Please install these dependencies from Pypi or a Git repository."
+        echo "If you are using Pipenv, you can install these dependencies with:"
+        echo "   pipenv install genericsuite-ai"
+        echo "   pipenv install genericsuite"
+        echo "   or"
+        echo "   pipenv install git+https://github.com/tomkat-cr/genericsuite-be-ai"
+        echo "   pipenv install git+https://github.com/tomkat-cr/genericsuite-be@branch_name"
+        exit_abort
+    fi
+    # Verify "Git" dependencies
+    if grep -q "genericsuite-ai@ git" "${REPO_BASEDIR}/requirements.txt"; then
+        echo "Git Genericsuite-BE-AI found in requirements.txt..."
+        LOCAL_DEPENDENCIES_ERROR="1"
+    fi
+    if grep -q "genericsuite@ git" "${REPO_BASEDIR}/requirements.txt"; then
+        echo "Git Genericsuite-BE found in requirements.txt..."
+        LOCAL_DEPENDENCIES_ERROR="1"
+    fi
+    # Local dependecies are allowed but warn about it just in case a commit+push is needed...
+    if [ "${LOCAL_DEPENDENCIES_ERROR}" = "1" ]; then
+        echo ""
+        echo "**************************************************************************"
+        echo "* WARNING: Did you remember to do the commit+push on those repositories? *"
+        echo "**************************************************************************"
+        echo ""
+        echo "If you decide to continue, I assume it was done..."
+        ask_to_continue
+    fi
+}
+
 build_docker() {
     if [[ Pipfile -nt requirements.txt ]]; then
       make requirements
     fi
+    verify_requirements_with_local_dependencies
 
     docker_system_prune
 
@@ -846,9 +942,13 @@ deploy_with_sam() {
     echo "sam deploy --guided"
     sam deploy --guided
   else
+    DEPLOYMENT_ERROR="0"
     # Automatic SAM deployment (no prompts after the final confirmation)
-    echo sam deploy --template-file ${TMP_WORKING_DIR}/template.yml --stack-name ${AWS_STACK_NAME} --region ${AWS_REGION} --config-file ${TMP_WORKING_DIR}/samconfig.toml --capabilities CAPABILITY_IAM --no-confirm-changeset --no-disable-rollback ${SAM_FORCED} --save-params --resolve-image-repos
-    sam deploy --template-file ${TMP_WORKING_DIR}/template.yml --stack-name ${AWS_STACK_NAME} --region ${AWS_REGION} --config-file ${TMP_WORKING_DIR}/samconfig.toml --capabilities CAPABILITY_IAM --no-confirm-changeset --no-disable-rollback ${SAM_FORCED} --save-params --resolve-image-repos
+    echo "sam deploy --template-file ${TMP_WORKING_DIR}/template.yml --stack-name ${AWS_STACK_NAME} --region ${AWS_REGION} --config-file ${TMP_WORKING_DIR}/samconfig.toml --capabilities CAPABILITY_IAM --no-confirm-changeset --no-disable-rollback ${SAM_FORCED} --save-params --resolve-image-repos"
+    if ! sam deploy --template-file ${TMP_WORKING_DIR}/template.yml --stack-name ${AWS_STACK_NAME} --region ${AWS_REGION} --config-file ${TMP_WORKING_DIR}/samconfig.toml --capabilities CAPABILITY_IAM --no-confirm-changeset --no-disable-rollback ${SAM_FORCED} --save-params --resolve-image-repos
+    then
+      DEPLOYMENT_ERROR="1"
+    fi
     # Remove with perl the entire line beginning with "template_file = ..." from "samconfig.toml" file
     # Because it refers to a local path with some PII, like the username eventually.
     perl -i -pe "s|template_file = .*\n$||g" ${TMP_WORKING_DIR}/samconfig.toml
@@ -856,15 +956,12 @@ deploy_with_sam() {
   echo ""
   echo "DEPLOY_WITH_SAM - End"
   echo ""
-  echo "Current directory:"
-  pwd
-  echo ""
 }
 
 deploy_without_sam() {
+    DEPLOYMENT_ERROR="o"
 
     # Deploy Lambda Function
-
     if [  "${FORCE_LAMBDA_CREATION}" = "1" ]; then
       echo ""
       echo "aws lambda delete-function --function-name ${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}"
@@ -892,6 +989,9 @@ deploy_without_sam() {
         --memory-size ${MEMORY_SIZE:-512} \
         | jq
         # --architectures ${ARCHITECTURES:-arm64}
+      if [ ! $? -eq 0 ]; then
+        DEPLOYMENT_ERROR="1"
+      fi
     else
       echo aws lambda update-function-code \
         --function-name ${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE} \
@@ -902,6 +1002,9 @@ deploy_without_sam() {
         --function-name ${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE} \
         --image-uri ${AWS_DOCKER_IMAGE_URI} \
         --region ${AWS_REGION} | jq
+      if [ ! $? -eq 0 ]; then
+        DEPLOYMENT_ERROR="1"
+      fi
     fi
     echo ""
 
@@ -994,9 +1097,12 @@ deploy_without_sam() {
       --principal apigateway.amazonaws.com \
       --source-arn "arn:aws:execute-api:${AWS_REGION}:${AWS_ACCOUNT_ID}:${API_ID}/*/*/${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}" \
       | jq
-
-    echo ""
-    echo "Trigger added successfully."
+    if [ ! $? -eq 0 ]; then
+      DEPLOYMENT_ERROR="1"
+    else
+      echo ""
+      echo "Trigger added successfully."
+    fi
 
     # List API Gateway resources
     echo ""
@@ -1030,6 +1136,9 @@ deploy_without_sam() {
             --type AWS_PROXY \
             --integration-http-method ${resource_method} \
             --uri arn:aws:apigateway:${AWS_REGION}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}/invocations | jq
+            if [ ! $? -eq 0 ]; then
+              DEPLOYMENT_ERROR="1"
+            fi
         done
       fi
     done
@@ -1481,8 +1590,12 @@ docker_dependencies() {
 verify_and_remove_file() {
   if [ -f "${remove_file}" ];then
     echo "Removing ${remove_file}..."
-    rm -rf ${remove_file}
-    echo "${remove_file} removed successfully."
+    if rm -rf ${remove_file}
+    then
+      echo "Ok"
+    else
+      echo "RM Error"
+    fi
   fi
 }
 
@@ -1628,8 +1741,6 @@ echo "3) Frontend Directory (FRONTEND_DIRECTORY): ${FRONTEND_DIRECTORY}"
 echo ""
 echo "==========================="
 
-echo ""
-
 if [[ "${ACTION}" = "sam_validate" || "${ACTION}" = "package" ]]; then
   COPY_VERSION_TO_FRONTEND="0"
   if [ "${ACTION}" = "package" ]; then
@@ -1645,7 +1756,13 @@ if [[ "${ACTION}" = "sam_validate" || "${ACTION}" = "package" ]]; then
   SAM_GUIDED="n"
   SAM_FORCED="--force-upload"
 else
+  remember_endpoint_definitions
+  echo ""
+
   ask_for_force_ecr_image_creation
+  echo ""
+
+  ask_to_show_existing_ecr_images
   echo ""
 
   ask_for_app_version
@@ -1661,18 +1778,15 @@ else
     exit_abort
   fi
 
-  echo ""
   ask_for_sam_guided_deployment
   echo ""
 
   if [[ "${ACTION}" = "build_docker" || "${ACTION}" = "sam_deploy" ]]; then
     ask_for_docker_system_prune
-    echo ""
   else
     DOCKER_PRUNE="is_not_the_case"
   fi
 
-  echo ""
   ask_for_frontend_version_assignment
 fi
 
@@ -1774,7 +1888,10 @@ if [ "${ACTION}" = "sam_deploy" ]; then
     deploy_without_sam
   fi
   # ECR image cleaning
-  sh ${SCRIPTS_DIR}/../aws/clean_ecr_images.sh ${STAGE} 1
+  cd "${REPO_BASEDIR}"
+  if [ "${DEPLOYMENT_ERROR}" = "0" ]; then
+    sh ${SCRIPTS_DIR}/../aws/clean_ecr_images.sh ${STAGE} 1
+  fi
 fi
 
 if [ "${ACTION}" = "tmp_dir" ]; then
@@ -1839,7 +1956,16 @@ fi
 
 remove_temp_files
 
-echo ""
+if [ "${DEPLOYMENT_ERROR}" != "" ]; then
+  echo ""
+  echo ">>> FINAL DEPLOYMENT RESULT:"
+  if [ "${DEPLOYMENT_ERROR}" = "0" ]; then
+    echo ">>> Deployment done"
+  else
+    echo "^^^ Deployment WITH ERRORS ^^^"
+  fi
+fi
 
 # End date/time
+echo ""
 sh ${SCRIPTS_DIR}/../show_date_time.sh
