@@ -157,6 +157,9 @@ create_s3_bucket_demo:
 create_aws_config:
 	sh node_modules/genericsuite-be-scripts/scripts/aws/create_aws_config.sh
 
+generate_sam_dynamodb:
+	sh node_modules/genericsuite-be-scripts/scripts/aws_big_lambda/generate_sam_dynamodb/run_generate_sam_dynamodb.sh
+
 ## Deployment
 
 deploy_qa: create_s3_bucket_qa

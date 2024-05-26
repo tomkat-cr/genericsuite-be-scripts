@@ -17,12 +17,14 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
+## Unreleased
 ## 1.0.10 (2024-05-18)
 ---
 
 ### New
 Add "verify_base_names()" to "big_lambdas_manager.sh", to check mandatory env. vars. to have the "*_placeholder" in the SAM template.yml before deployment.
 Add "clean_ecr_images.sh" to keep only 2 AWS ECR images for each App/Stage [GS-80].
+Add DynamoDB tables creation from the JSON configs to the SAM template [GS-84].
 
 ## Changes
 Enhance "secure_local_server/run.sh" to resume the sls-backend docker image logs if it's already running (avoiding reinstall all dependecies), and also allows to have the local GE BE and BE AI repos for faster development.
