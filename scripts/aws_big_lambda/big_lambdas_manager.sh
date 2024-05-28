@@ -1975,7 +1975,11 @@ if [ "${ACTION}" = "sam_run_local" ]; then
   prepare_tmp_build_dir
   # Build local SAM project
   cd "${TMP_BUILD_DIR}"
-  sam build
+  if ! sam build --use-container
+  then
+    echo "ERROR: sam build failed"
+    exit_abort
+  fi
   # Run local SAM project
   echo ""
   echo "Local AWS started: 'sam local start-api'"
