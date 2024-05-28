@@ -165,6 +165,9 @@ generate_sam_dynamodb:
 deploy_qa: create_s3_bucket_qa
 	sh node_modules/genericsuite-be-scripts/scripts/aws_big_lambda/big_lambdas_manager.sh sam_deploy qa
 
+deploy_run_local_qa: create_s3_bucket_qa
+	sh node_modules/genericsuite-be-scripts/scripts/aws_big_lambda/big_lambdas_manager.sh sam_run_local qa
+
 deploy_validate_qa: create_s3_bucket_qa
 	sh node_modules/genericsuite-be-scripts/scripts/aws_big_lambda/big_lambdas_manager.sh sam_validate qa
 

@@ -309,10 +309,14 @@ set_env_vars_file() {
 export APP_DB_ENGINE=$(eval echo \$APP_DB_ENGINE_${STAGE_UPPERCASE})
 export APP_DB_NAME=$(eval echo \$APP_DB_NAME_${STAGE_UPPERCASE})
 export APP_DB_URI=$(eval echo \$APP_DB_URI_${STAGE_UPPERCASE})
-if [ "${STAGE_UPPERCASE}" = "QA" ]; then
-  export APP_CORS_ORIGIN="${APP_CORS_ORIGIN_QA_CLOUD}"
+if [ "${ACTION}" = "sam_run_local" ]; then
+  export APP_CORS_ORIGIN="http://app.${APP_NAME_LOWERCASE}.local:${FRONTEND_LOCAL_PORT}"
 else
-  export APP_CORS_ORIGIN="$(eval echo \"\$APP_CORS_ORIGIN_${STAGE_UPPERCASE}\")"
+  if [ "${STAGE_UPPERCASE}" = "QA" ]; then
+    export APP_CORS_ORIGIN="${APP_CORS_ORIGIN_QA_CLOUD}"
+  else
+    export APP_CORS_ORIGIN="$(eval echo \"\$APP_CORS_ORIGIN_${STAGE_UPPERCASE}\")"
+  fi
 fi
 export AWS_S3_CHATBOT_ATTACHMENTS_BUCKET=$(eval echo \$AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_${STAGE_UPPERCASE})
 export CURRENT_FRAMEWORK="${CURRENT_FRAMEWORK}"
@@ -479,10 +483,10 @@ prepare_tmp_build_dir() {
     cp app.${APP_NAME_LOWERCASE}.local.chain.crt ${TMP_BUILD_DIR}/
     cp ca.crt ${TMP_BUILD_DIR}/
 
-    if [ -d .chalice/deployment/deployment.zip ]; then
-      echo "Copy deployment.zip file"
-      cp .chalice/deployment/deployment.zip ${TMP_BUILD_DIR}/
-    fi
+    # if [ -d .chalice/deployment/deployment.zip ]; then
+    #   echo "Copy deployment.zip file"
+    #   cp .chalice/deployment/deployment.zip ${TMP_BUILD_DIR}/
+    # fi
 
     echo "Copy SAM related files"
     cp ${TMP_WORKING_DIR}/template.yml ${TMP_BUILD_DIR}/
@@ -652,10 +656,21 @@ create_sam_yaml() {
   # Replace @ with \@
   recover_at_sign
 
-  perl -i -pe "s|Runtime: python3.9|#|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|Runtime: python|#|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|CodeUri: ./deployment.zip|ImageUri: ${AWS_DOCKER_IMAGE_URI}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|Handler: app.app|PackageType: Image|g" "${TMP_WORKING_DIR}/template.yml"
+  # perl -i -pe "s|Runtime: python3.9|#|g" "${TMP_WORKING_DIR}/template.yml"
+  # perl -i -pe "s|Runtime: python|# Runtime: python|g" "${TMP_WORKING_DIR}/template.yml"
+  # perl -i -pe "s|CodeUri: ./deployment.zip|ImageUri: ${AWS_DOCKER_IMAGE_URI}|g" "${TMP_WORKING_DIR}/template.yml"
+  # perl -i -pe "s|Handler: app.app|PackageType: Image|g" "${TMP_WORKING_DIR}/template.yml"
+  RESTORE_DOMAIN_NAME="${DOMAIN_NAME}"
+  # if [ "${CODE_URI_PATH}" != "" ]; then
+  if [ "${ACTION}" = "sam_run_local" ]; then
+    perl -i -pe "s|CodeUri:.*|CodeUri: ${CODE_URI_PATH}|g" "${TMP_WORKING_DIR}/template.yml"
+    perl -i -pe "s|Handler: app.app|Handler: ${APP_MAIN_FILE}.${APP_HANDLER}|g" "${TMP_WORKING_DIR}/template.yml"
+    DOMAIN_NAME=""
+  else
+    perl -i -pe "s|Runtime: python|# Runtime: python|g" "${TMP_WORKING_DIR}/template.yml"
+    perl -i -pe "s|CodeUri:.*|ImageUri: ${AWS_DOCKER_IMAGE_URI}|g" "${TMP_WORKING_DIR}/template.yml"
+    perl -i -pe "s|Handler: app.app|PackageType: Image|g" "${TMP_WORKING_DIR}/template.yml"
+  fi
 
   if [ "${DOMAIN_NAME}" = "" ];then
     perl -i -pe "s|Domain:|# Domain:|g" "${TMP_WORKING_DIR}/template.yml"
@@ -679,6 +694,7 @@ create_sam_yaml() {
     perl -i -pe "s|DomainName: api.example.com|DomainName: ${DOMAIN_NAME}|g" "${TMP_WORKING_DIR}/template.yml"
     perl -i -pe "s|CertificateArn: CertificateArn_placeholder|CertificateArn: ${ACM_CERTIFICATE_ARN}|g" "${TMP_WORKING_DIR}/template.yml"
   fi        
+  DOMAIN_NAME="${RESTORE_DOMAIN_NAME}"
 
   verify_base_names
   if [ $ERROR_FLAG -eq 1 ]; then
@@ -824,7 +840,7 @@ build_docker() {
     rm app.${APP_NAME_LOWERCASE}.local.crt
     rm app.${APP_NAME_LOWERCASE}.local.chain.crt
     rm ca.crt
-    rm deployment.zip
+    # rm deployment.zip
     rm template.yml
     rm samconfig.toml
     rm run_api_gateway.sh
@@ -1544,9 +1560,9 @@ test_lambda_docker() {
 }
 
 test_nginx() {
-    echo "3)" curl -XPOST "https://app.${APP_NAME_LOWERCASE}.local:${NGINX_PORT}/users/login"
+    echo "3)" curl -XPOST "https://app.${APP_NAME_LOWERCASE}.local:${BACKEND_LOCAL_PORT}/users/login"
     echo ""
-    curl -XPOST "https://app.${APP_NAME_LOWERCASE}.local:${NGINX_PORT}/users/login"
+    curl -XPOST "https://app.${APP_NAME_LOWERCASE}.local:${BACKEND_LOCAL_PORT}/users/login"
     echo ""
     echo "3.5)" docker logs local-lambda-nginx
     echo ""
@@ -1636,7 +1652,8 @@ cd "${REPO_BASEDIR}"
 
 LAMBDA_PORT="9000"
 API_GATEWAY_PORT="8080"
-NGINX_PORT="5001"
+FRONTEND_LOCAL_PORT=3000
+BACKEND_LOCAL_PORT=5001
 LOCAL_LAMBDA_DOCKER_NAME="local-lambda-backend"
 
 FORCE_LAMBDA_CREATION="0"
@@ -1741,7 +1758,7 @@ echo "3) Frontend Directory (FRONTEND_DIRECTORY): ${FRONTEND_DIRECTORY}"
 echo ""
 echo "==========================="
 
-if [[ "${ACTION}" = "sam_validate" || "${ACTION}" = "package" ]]; then
+if [[ "${ACTION}" = "sam_validate" || "${ACTION}" = "package" || "${ACTION}" = "sam_run_local" ]]; then
   COPY_VERSION_TO_FRONTEND="0"
   if [ "${ACTION}" = "package" ]; then
     APP_VERSION="package_test"
@@ -1823,7 +1840,8 @@ if [ "${DEBUG}" = "1" ];then
   echo "AWS_LAMBDA_FUNCTION_NAME_AND_STAGE: ${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}"
   echo "LAMBDA_PORT: ${LAMBDA_PORT}"
   echo "API_GATEWAY_PORT: ${LAMBDA_PORT}"
-  echo "NGINX_PORT: ${NGINX_PORT}"
+  echo "BACKEND_LOCAL_PORT: ${BACKEND_LOCAL_PORT}"
+  echo "FRONTEND_LOCAL_PORT: ${FRONTEND_LOCAL_PORT}"
 fi
 echo ""
 echo "Docker parameters:"
@@ -1941,6 +1959,37 @@ if [ "${ACTION}" = "sam_validate" ]; then
   sam validate -t ${TMP_WORKING_DIR}/template.yml
 fi
 
+if [ "${ACTION}" = "sam_run_local" ]; then
+  # Build the project using the temp dir root path
+  CODE_URI_PATH="."
+  # Avoid removing temporary files
+  REMOVE_TEMP_FILES="0"
+  cd "${REPO_BASEDIR}"
+  # Re-build requirements if Pipfile changed
+  if [[ Pipfile -nt requirements.txt ]]; then
+    make requirements
+  fi
+  # Verify local requirements and avoid "-e ../genericsuite..."
+  verify_requirements_with_local_dependencies
+  # Prepare SAM template.yml
+  prepare_tmp_build_dir
+  # Build local SAM project
+  cd "${TMP_BUILD_DIR}"
+  sam build
+  # Run local SAM project
+  echo ""
+  echo "Local AWS started: 'sam local start-api'"
+  echo "From:"
+  echo "${TMP_WORKING_DIR}"
+  echo ""
+  sam local start-api --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT}
+  # Restore requirements.txt
+  if [ -f "${REPO_BASEDIR}/requirements.txt.bak" ]; then
+    cp "${REPO_BASEDIR}/requirements.txt.bak" "${REPO_BASEDIR}/requirements.txt"
+    rm "${REPO_BASEDIR}/requirements.txt.bak"
+  fi
+fi
+
 if [ "${ACTION}" = "package" ]; then
   DOCKER_IMAGE_NAME="${DOCKER_IMAGE_NAME}_${APP_VERSION}"
   echo "Removing docker image docker-image:${DOCKER_IMAGE_NAME}..."
@@ -1954,7 +2003,11 @@ if [ "${ACTION}" = "package" ]; then
   build_docker
 fi
 
-remove_temp_files
+if [ "${REMOVE_TEMP_FILES}" = "0" ]; then
+  echo "WARNING: temp files not removed..."
+else
+  remove_temp_files
+fi
 
 if [ "${DEPLOYMENT_ERROR}" != "" ]; then
   echo ""

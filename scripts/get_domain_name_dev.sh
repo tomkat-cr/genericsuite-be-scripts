@@ -125,7 +125,7 @@ enable_bridge_proxy() {
   echo "  Proxy Pass:"
   echo "    FROM: ${DEV_MASK_EXT_HOSTNAME}"
   echo "    TRHU: 127.0.0.1:${DEV_MASK_INT_PORT_443}"
-  echo "    TO: http://${DOMAIN_IP}:${APP_LOCAL_PORT}"
+  echo "    TO: http://${DOMAIN_IP}:${BACKEND_LOCAL_PORT}"
   echo ""
 
   # If the nginx docker container nginx-dev-mask-ext is running, stop it
@@ -176,7 +176,7 @@ http {
 END
   # perl -pi -e "s/HOSTNAME_placeholder/${DOMAIN_IP}/g" ${TMP_BUILD_DIR}/get_domain_name_nginx.conf
   perl -pi -e "s/HOSTNAME_placeholder/${DOMAIN_NAME_ONLY}/g" ${TMP_BUILD_DIR}/get_domain_name_nginx.conf
-  perl -pi -e "s/PROXY_PASS_placeholder/http:\/\/${DOMAIN_IP}:${APP_LOCAL_PORT}/g" ${TMP_BUILD_DIR}/get_domain_name_nginx.conf
+  perl -pi -e "s/PROXY_PASS_placeholder/http:\/\/${DOMAIN_IP}:${BACKEND_LOCAL_PORT}/g" ${TMP_BUILD_DIR}/get_domain_name_nginx.conf
 
   # Start the nginx docker container
   echo "Starting nginx docker container 'nginx-dev-mask-ext'..."
@@ -327,11 +327,11 @@ if [ "${STAGE}" = "dev" ];then
   if [ "${APP_LOCAL_DOMAIN_NAME}" != "" ]; then
     export DOMAIN_NAME="${APP_LOCAL_DOMAIN_NAME}"
   else
-    if [ "${APP_LOCAL_PORT}" = "" ]; then
-        export APP_LOCAL_PORT="5001"
+    if [ "${BACKEND_LOCAL_PORT}" = "" ]; then
+        export BACKEND_LOCAL_PORT="5001"
     fi
     DOMAIN_NAME_ONLY="app.${APP_NAME_LOWERCASE}.local"
-    export DOMAIN_NAME="${DOMAIN_NAME_ONLY}:${APP_LOCAL_PORT}"
+    export DOMAIN_NAME="${DOMAIN_NAME_ONLY}:${BACKEND_LOCAL_PORT}"
     if [ "${NGROK_ENABLED}" == "1" ]; then
       enable_ngrok
     else

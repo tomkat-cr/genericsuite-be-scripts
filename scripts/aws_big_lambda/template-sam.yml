@@ -1,6 +1,8 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
+
 Outputs:
+
   RestAPIId:
     Value:
       Ref: RestAPI
@@ -15,7 +17,9 @@ Outputs:
   EndpointURL:
     Value:
       Fn::Sub: https://${RestAPI}.execute-api.${AWS::Region}.${AWS::URLSuffix}/api/
+
 Resources:
+
   LambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties: 
@@ -103,6 +107,7 @@ Resources:
         - LambdaExecutionRole
         # - DefaultRole
         - Arn
+
   APIHandlerInvokePermission:
     Type: AWS::Lambda::Permission
     Properties:
@@ -115,7 +120,6 @@ Resources:
         - arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${RestAPIId}/*
         - RestAPIId:
             Ref: RestAPI
-
 
   RestAPI:
     Type: AWS::Serverless::Api

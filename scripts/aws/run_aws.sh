@@ -65,8 +65,8 @@ if [ "$ENV_FILESPEC" != "" ]; then
     set -o allexport; source ${ENV_FILESPEC}; set +o allexport ;
 fi
 
-if [ "$PORT" = "" ]; then
-    PORT="5001"
+if [ "$BACKEND_LOCAL_PORT" = "" ]; then
+    BACKEND_LOCAL_PORT="5001"
 fi
 
 if [ "$2" = "" ]; then
@@ -127,7 +127,7 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
 
     echo ""
     echo "Stage: ${STAGE}"
-    echo "Port: ${PORT}"
+    echo "Port: ${BACKEND_LOCAL_PORT}"
     echo "Run method (RUN_METHOD): ${RUN_METHOD}"
     echo "Python entry point (APP_DIR.APP_MAIN_FILE): ${APP_DIR}.${APP_MAIN_FILE}"
     echo ""
@@ -186,9 +186,9 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
         echo "sh ${SCRIPTS_DIR}/set_chalice_cnf.sh ${STAGE}" http
         sh ${SCRIPTS_DIR}/set_chalice_cnf.sh ${STAGE} http
         echo ""
-        echo "pipenv run chalice local --host 0.0.0.0 --port ${PORT} --stage ${STAGE}"
+        echo "pipenv run chalice local --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT} --stage ${STAGE}"
         echo ""
-        pipenv run chalice local --host 0.0.0.0 --port ${PORT} --stage ${STAGE} --autoreload
+        pipenv run chalice local --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT} --stage ${STAGE} --autoreload
     fi
 
     if [ "${RUN_METHOD}" = "chalice_docker" ]; then
@@ -201,10 +201,10 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
             echo "${SCRIPTS_DIR}/../secure_local_server/run.sh"
             ${SCRIPTS_DIR}/../secure_local_server/run.sh "run" ${STAGE}
         else
-            echo "pipenv run run gunicorn --bind 0.0.0.0:${PORT} ${APP_DIR}.${APP_MAIN_FILE}:app --reload  --forwarded-allow-ips=${IP_ADDRESS}"
+            echo "pipenv run run gunicorn --bind 0.0.0.0:${BACKEND_LOCAL_PORT} ${APP_DIR}.${APP_MAIN_FILE}:app --reload  --forwarded-allow-ips=${IP_ADDRESS}"
             echo ""
             pipenv run gunicorn ${APP_DIR}.${APP_MAIN_FILE}:app \
-                --bind 0.0.0.0:${PORT} \
+                --bind 0.0.0.0:${BACKEND_LOCAL_PORT} \
                 --reload \
                 --workers=2 \
                 --proxy-protocol \
@@ -212,7 +212,7 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
                 --forwarded-allow-ips="${IP_ADDRESS},127.0.0.1,0.0.0.0" \
                 --do-handshake-on-connect \
                 --strip-header-spaces \
-                --env PORT=${PORT} \
+                --env PORT=${BACKEND_LOCAL_PORT} \
                 --env APP_STAGE="${STAGE}"
         fi
     fi
@@ -222,9 +222,9 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
             echo "${SCRIPTS_DIR}/../secure_local_server/run.sh"
             ${SCRIPTS_DIR}/../secure_local_server/run.sh "run" ${STAGE}
         else
-            echo "pipenv run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app  --reload --host 0.0.0.0 --port ${PORT}"
+            echo "pipenv run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app  --reload --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT}"
             echo ""
-            pipenv run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app --reload --host 0.0.0.0 --port ${PORT}
+            pipenv run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app --reload --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT}
         fi
     fi
 
@@ -237,9 +237,9 @@ fi
 if [ "$1" = "run" ]; then
     cd ${REPO_BASEDIR}
     echo ""
-    echo "PRODUCCION RUNNING: pipenv run chalice local --port ${PORT} --stage PROD"
+    echo "PRODUCCION RUNNING: pipenv run chalice local --port ${BACKEND_LOCAL_PORT} --stage PROD"
     echo ""
-    pipenv run chalice local --host 0.0.0.0 --port ${PORT} --stage prod
+    pipenv run chalice local --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT} --stage prod
 fi
 
 if [ "$1" = "deploy" ]; then

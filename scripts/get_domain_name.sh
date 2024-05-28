@@ -37,11 +37,11 @@ if [ "${STAGE}" = "dev" ];then
       export DOMAIN_NAME="${APP_LOCAL_DOMAIN_NAME}"
     else
       APP_NAME_LOWERCASE=$(echo ${APP_NAME} | tr '[:upper:]' '[:lower:]')
-      if [ "${APP_LOCAL_PORT}" = "" ]; then
-          export APP_LOCAL_PORT="5001"
+      if [ "${BACKEND_LOCAL_PORT}" = "" ]; then
+          export BACKEND_LOCAL_PORT="5001"
       fi
       DOMAIN_NAME_ONLY="app.${APP_NAME_LOWERCASE}.local"
-      export DOMAIN_NAME="${DOMAIN_NAME_ONLY}:${APP_LOCAL_PORT}"
+      export DOMAIN_NAME="${DOMAIN_NAME_ONLY}:${BACKEND_LOCAL_PORT}"
     fi
   fi
 fi

@@ -25,9 +25,12 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 Add "verify_base_names()" to "big_lambdas_manager.sh", to check mandatory env. vars. to have the "*_placeholder" in the SAM template.yml before deployment.
 Add "clean_ecr_images.sh" to keep only 2 AWS ECR images for each App/Stage [GS-80].
 Add DynamoDB tables creation from the JSON configs to the SAM template [GS-84].
+Add "sam_run_local" to big lambdas to test the API Gateway and Lambda function with SAM local.
 
 ## Changes
 Enhance "secure_local_server/run.sh" to resume the sls-backend docker image logs if it's already running (avoiding reinstall all dependecies), and also allows to have the local GE BE and BE AI repos for faster development.
+Standarize BACKEND_LOCAL_PORT and FRONTEND_LOCAL_PORT env. vars.
+Ignore the ".chalice/deployment/deployment.zip" file in big lambdas.
 
 ## Fixes
 Fix the "/var/scripts/get_domain_name.sh not found" error running the development backend envir. over https.

@@ -40,6 +40,10 @@ echo ""
 # Get env vars from ".env" file
 set -o allexport; . .env ; set +o allexport ;
 
+if [ "${FRONTEND_LOCAL_PORT}" = "" ]; then
+    FRONTEND_LOCAL_PORT="3000"
+fi
+
 if [ "${ACTION}" = "down" ]; then
     docker-compose -f ${SCRIPTS_DIR}/dns/docker-compose.yml down
 fi
@@ -172,7 +176,7 @@ EOF
     echo "All is set!"
     echo ""
     echo "Local DNS domain '${DNS_DOMAIN_NAME}' is pointing to IP address '${IP_ADDRESS}'."
-    echo "Now the App can be accessed by using: http://${DNS_DOMAIN_NAME}:3000"
+    echo "Now the App can be accessed by using: http://${DNS_DOMAIN_NAME}:${FRONTEND_LOCAL_PORT}"
     if [ "${IP_ADDRESS_VPN}" != "" ]; then
         echo "VPN IP address: ${IP_ADDRESS_VPN}"
     fi
