@@ -21,6 +21,8 @@ exit_abort() {
     echo "Aborting..."
     echo ""
     remove_temp_files
+    echo ""
+    sh ${SCRIPTS_DIR}/../show_date_time.sh
     exit 1
 }
 
@@ -814,12 +816,18 @@ verify_requirements_with_local_dependencies() {
     fi
 }
 
-build_docker() {
+requirements_rebuild() {
+    cd "${REPO_BASEDIR}"
+    REQUIREMENTS_REBUILD="0"
     if [[ Pipfile -nt requirements.txt ]]; then
+      REQUIREMENTS_REBUILD="1"
       make requirements
     fi
-    verify_requirements_with_local_dependencies
+}
 
+build_docker() {
+    requirements_rebuild
+    verify_requirements_with_local_dependencies
     docker_system_prune
 
     echo "Building Docker image..."
@@ -1964,29 +1972,50 @@ if [ "${ACTION}" = "sam_run_local" ]; then
   CODE_URI_PATH="."
   # Avoid removing temporary files
   REMOVE_TEMP_FILES="0"
-  cd "${REPO_BASEDIR}"
+
   # Re-build requirements if Pipfile changed
-  if [[ Pipfile -nt requirements.txt ]]; then
-    make requirements
-  fi
+  requirements_rebuild
+  # cd "${REPO_BASEDIR}"
+  # if [[ Pipfile -nt requirements.txt ]]; then
+  #   make requirements
+  # fi
+
   # Verify local requirements and avoid "-e ../genericsuite..."
   verify_requirements_with_local_dependencies
   # Prepare SAM template.yml
   prepare_tmp_build_dir
   # Build local SAM project
   cd "${TMP_BUILD_DIR}"
-  if ! sam build --use-container
+  echo ""
+  echo "Local SAM build started: 'sam build'"
+  echo "From:"
+  echo "${TMP_WORKING_DIR}"
+  echo ""
+  SAM_BUILD_OPTIONS=""
+  if [ "${REQUIREMENTS_REBUILD}" = "1" ]; then
+    SAM_BUILD_OPTIONS="${SAM_BUILD_OPTIONS} --debug"
+    # SAM_BUILD_OPTIONS="${SAM_BUILD_OPTIONS} --use-container"
+  fi
+  # "sam build" is always needed...
+  # if ! sam build --use-container --debug
+  # if ! sam build --debug
+  if ! sam build ${SAM_BUILD_OPTIONS}
   then
+    echo ""
     echo "ERROR: sam build failed"
     exit_abort
   fi
   # Run local SAM project
   echo ""
-  echo "Local AWS started: 'sam local start-api'"
+  echo "Local SAM started: 'sam local start-api'"
   echo "From:"
   echo "${TMP_WORKING_DIR}"
   echo ""
-  sam local start-api --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT}
+  # Python 3.10 Lambda image throws Segmentation Violation when running locally
+  # https://github.com/aws/aws-lambda-base-images/issues/100
+  # work around the issue by passing the "-d" option to "sam local" which puts sam in debug mode, which in turns disables multi-threading, preventing the crash
+  #
+  sam local start-api -d 8888 --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT}
   # Restore requirements.txt
   if [ -f "${REPO_BASEDIR}/requirements.txt.bak" ]; then
     cp "${REPO_BASEDIR}/requirements.txt.bak" "${REPO_BASEDIR}/requirements.txt"
