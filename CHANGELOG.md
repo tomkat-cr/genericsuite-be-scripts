@@ -17,26 +17,88 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
-## Unreleased
+## 1.0.10 (2024-05-18)
 ---
 
 ### New
-Add "make init_submodules" nd "init_json_configs.sh" to copy the basic JSON files.
+Add "verify_base_names()" to "big_lambdas_manager.sh", to check mandatory env. vars. to have the "*_placeholder" in the SAM template.yml before deployment.
+Add "clean_ecr_images.sh" to keep only 2 AWS ECR images for each App/Stage [GS-80].
+Add DynamoDB tables creation from the JSON configs to the SAM template [GS-84].
+Add "sam_run_local" to big lambdas to test the API Gateway and Lambda function with SAM local.
+
+## Changes
+Enhance "secure_local_server/run.sh" to resume the sls-backend docker image logs if it's already running (avoiding reinstall all dependecies), and also allows to have the local GE BE and BE AI repos for faster development.
+Standarize BACKEND_LOCAL_PORT and FRONTEND_LOCAL_PORT env. vars.
+Ignore the ".chalice/deployment/deployment.zip" file in big lambdas.
+
+## Fixes
+Fix the "/var/scripts/get_domain_name.sh not found" error running the development backend environment over https.
+Fix error "cp: /tmp/sls/nginx.conf.tmp: No such file or directory" running the app over https.
+
+
+## 1.0.9 (2024-05-17)
+---
+
+### New
+Add "set_app_dir_and_main_file.sh" to load the ".env" file and set APP_DIR, APP_MAIN_FILE and APP_HANDLER environment variables with the Python entry point for uvicorn and gunicorn [FA-248].
+Add ".npmignore" to the ".chalice" and "scripts/aws_big_lambda" directories [FA-258].
+Add "get_domain_name_dev.sh" to support mask the S3 URL and avoid AWS over-billing attacks [GS-72].
+Add STORAGE_URL_SEED and APP_HOST_NAME env. vars. to ".env.example", big lambda deployment, run_aws, secure_local_server and Chalice config [GS-72].
+Add "run_generate_seed.sh" and "generate_seed.py" to suggest the STORAGE_URL_SEED value.
+Add "show_date_time.sh" to replace the repetitive code to show current date/time in bash scripts.
 
 ### Changes
-AWS_API_GATEWAY_STAGE env. var. removed.
-"run_aws.sh" ask for protocol http/https for all RUN_METHODs.
+Change "run_aws.sh", "secure_local_server/run.sh" and "big_lambdas_manager.sh" to implement "set_app_dir_and_main_file.sh" [FA-248] and [FA-98].
+Change "run_aws.sh" to call "secure_local_server/run.sh" for "gunicorn" and "uvicorn" RUN_METHODs and "https" RUN_PROTOCOL [FA-248].
+Change "big_lambdas_manager.sh" and "run_local_dns.sh" to build templates and configuration files in "/tmp" [FA-248] and [FA-98].
+Redirect README instructions to the GenericSuite Documentation [GS-73].
+Unify the domain name getting with "get_domain_name.sh".
+Change the way "big_lambdas_manager.sh" replace env. vars. using "*_placeholder".
+Local DNS configuration /tmp/named-to-add.conf is added to /etc/bind/named.conf.local instead of /etc/bind/named.conf.
+"db_mongo_backup.sh" and "db_mongo_restore.sh" enhanced to handle zip files.
+
+### Fixes
+Fix error "KeyError: 'APP_DB_NAME'" starting the app with "secure_local_server/docker_entrypoint.sh" by setting APP_DB_ENGINE, APP_DB_NAME, APP_DB_URI, APP_CORS_ORIGIN, AWS_S3_CHATBOT_ATTACHMENTS_BUCKET env. vars. before calling uvicorn and gunicorn [FA-248].
+Fix the lack of responses issue calling the backend over https for "gunicorn" and "uvicorn" RUN_METHODs, by removing the SSL certificates path parameters in uvicorn and gunicorn calls in "secure_local_server/docker_entrypoint.sh", because the Nginx service takes care about SSL handling [FA-248].
+Fix the frontend "Network error" running the app over local MongoDB when APP_CORS_ORIGIN is "*".
+
+
+## 1.0.8 (2024-04-26)
+---
+
+### New
+Add "npm_remove_ignored.sh" to remove files in ".gitignore" or ".npmignore" [FA-84].
+
+### Changes
+Change "npm_publish.sh" to implement "npm_remove_ignored.sh" [FA-84].
+
+
+## 1.0.7 (2024-04-20)
+---
+
+### New
+Add "make init_submodules" and "init_json_configs.sh" to copy the basic JSON files [FA-246].
+
+### Changes
+FastAPI enhanced support for deployments [FA-246].
+AWS_API_GATEWAY_STAGE env. var. removed [FA-248].
+"run_aws.sh" ask for protocol http/https for all RUN_METHODs [FA-248].
 "run_aws.sh" use APP_DIR / APP_MAIN_FILE env. vars. to specify the python entry point in gunicorn and uvicorn RUN_METHODs [FA-248].
 "set_fe_cloudfront_domain.sh" looks for a "[STAGE]" string in the "AWS_S3_BUCKET_NAME_FE" and replaces it with the `ENV` parameter value to handle the working stage.
 "big_lambdas_manager.sh" take into account the different "AWS_LAMBDA_FUNCTION_ROLE_*" env. vars.
 Remove not standard enpoints definitions from "template-sam.yml" [FA-248].
+Change: README with main image from the official documentation site [FA-246].
+Change: Homepage pointed to "https://genericsuite.carlosjramirez.com/Backend-Development/GenericSuite-Scripts/" [FA-257].
+
+### Fixes
+Fix "run_aws.sh" to replace "https" with "http" in APP_CORS_ORIGIN when CURRENT_FRAMEWORK is not chalice and add APP_VERSION env. var. assignment.
 
 
 ## 1.0.6 (2024-04-12)
 ---
 
 ### Fixes
-Fix issues in "big_lambdas_manager.sh" script with environment variables that contains values with @ due to the "set_env_vars.sh" removal.
+Fix issues in "big_lambdas_manager.sh" script with environment variables that contains values with @ due to the "set_env_vars.sh" removal [FA-98].
 
 
 ## 1.0.5 (2024-04-11)
@@ -46,8 +108,8 @@ Fix issues in "big_lambdas_manager.sh" script with environment variables that co
 Remove "set_env_vars.sh" from the AWS Lambda docker image [FA-258].
 
 ### Changes
-"big_lambdas_manager.sh" use APP_DIR / APP_MAIN_FILE env. vars. to specify the python entry point in fastapi and flask CURRENT_FRAMEWORKs.
-"big_lambdas_manager.sh" shows start and finish date/time.
+"big_lambdas_manager.sh" use APP_DIR / APP_MAIN_FILE env. vars. to specify the python entry point in fastapi and flask CURRENT_FRAMEWORKs [FA-98].
+"big_lambdas_manager.sh" shows start and finish date/time [FA-98].
 
 
 ## 1.0.4 (2024-04-11)
@@ -78,7 +140,7 @@ Fix SAM template to include missing name and BinaryMediaTypes for the AWS API Ga
 
 ### New
 Add `make deploy_demo` and `make create_s3_bucket_demo` to manage the "demo" stage [FA-213].
-Add "demo" stage to APP_DB_ENGINE, APP_DB_NAME, APP_DB_URI, APP_FRONTEND_AUDIENCE, APP_CORS_ORIGIN, and AWS_S3_CHATBOT_ATTACHMENTS_BUCKET [FA-213].
+Add "demo" stage to APP_DB_ENGINE, APP_DB_NAME, APP_DB_URI, APP_CORS_ORIGIN, and AWS_S3_CHATBOT_ATTACHMENTS_BUCKET [FA-213].
 
 ### Changes
 "big_lambdas_manager.sh" uses get_ssl_cert_arn() to discover the ACM Certificate ARNs [FA-213].

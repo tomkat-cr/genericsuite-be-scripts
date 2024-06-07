@@ -18,7 +18,7 @@ if [ -f "${REPO_BASEDIR}/.env" ]; then
     ENV_FILESPEC="${REPO_BASEDIR}/.env"
 fi
 if [ "$ENV_FILESPEC" = "" ]; then
-    echo "'.env' file doesn't exist"
+    echo "ERROR: '.env' file doesn't exist"
     exit 1   
 fi
 
@@ -26,14 +26,23 @@ set -o allexport; . ${ENV_FILESPEC}; set +o allexport ;
 
 APP_VERSION=$(cat ${REPO_BASEDIR}/version.txt)
 if [ "${APP_NAME}" = "" ]; then
-    echo "APP_NAME not set"
+    echo "ERROR: APP_NAME not set"
     exit 1
 fi
 
 export APP_NAME_LOWERCASE=$(echo ${APP_NAME} | tr '[:upper:]' '[:lower:]')
 
 if [ "${CURRENT_FRAMEWORK}" = "" ]; then
-    echo "CURRENT_FRAMEWORK not set"
+    echo "ERROR: CURRENT_FRAMEWORK not set"
+    exit 1
+fi
+
+if [ "${APP_DOMAIN_NAME}" = "" ]; then
+    echo "ERROR: APP_HOST_NAME not set"
+    exit 1
+fi
+if [ "${STORAGE_URL_SEED}" = "" ]; then
+    echo "ERROR: STORAGE_URL_SEED not set"
     exit 1
 fi
 
@@ -41,20 +50,38 @@ if [[ "${CURRENT_FRAMEWORK}" != "chalice" && "${CURRENT_FRAMEWORK}" != "chalice_
     echo "CURRENT_FRAMEWORK '${CURRENT_FRAMEWORK}' doesn't need 'set_chalice_cnf.sh' script to run..."
     exit 0
 fi
+
 echo "Running 'set_chalice_cnf.sh' to config '${CURRENT_FRAMEWORK}'..."
 
 CONFIG_FILE="${REPO_BASEDIR}/.chalice/config.json"
 CONFIG_TEMPLATE="${REPO_BASEDIR}/.chalice/config-example.json"
 
-if [ ! -f "${CONFIG_FILE}" ]; then
-    echo "Config file doesn't exist"
+# if [ ! -f "${CONFIG_FILE}" ]; then
+#     echo "ERROR: Config file doesn't exist"
+#     exit 1
+# fi
+
+if [ ! -f "${CONFIG_TEMPLATE}" ]; then
+    echo "ERROR: Config Template file doesn't exist"
     exit 1
 fi
 
-if [ ! -f "${CONFIG_TEMPLATE}" ]; then
-    echo "Config Template file doesn't exist"
+# Prepare domain names
+. ${SCRIPTS_DIR}/../get_domain_name.sh "dev"
+if [ "${DOMAIN_NAME}" = "" ];then
     exit 1
 fi
+DOMAIN_NAME_DEV="${DOMAIN_NAME}"
+. ${SCRIPTS_DIR}/../get_domain_name.sh "qa"
+DOMAIN_NAME_QA="${DOMAIN_NAME}"
+. ${SCRIPTS_DIR}/../get_domain_name.sh "staging"
+DOMAIN_NAME_STAGING="${DOMAIN_NAME}"
+. ${SCRIPTS_DIR}/../get_domain_name.sh "demo"
+DOMAIN_NAME_DEMO="${DOMAIN_NAME}"
+. ${SCRIPTS_DIR}/../get_domain_name.sh "prod"
+DOMAIN_NAME_PROD="${DOMAIN_NAME}"
+echo ">> Done with Domain Names assignment..."
+echo ""
 
 if [ "${TARGET_STAGE}" = "qa" ] && [ "${TARGET_ACTION}" = "deploy" ]; then
     perl -i -pe "s|APP_CORS_ORIGIN_QA=.*|APP_CORS_ORIGIN_QA=${APP_CORS_ORIGIN_QA_CLOUD}|g" "${ENV_FILESPEC}"
@@ -77,7 +104,10 @@ if [ "${TARGET_STAGE}" == "mongo_docker" ]; then
     APP_DB_URI_DEV="mongodb://root:example@127.0.0.1:27017/"
 fi
 
+echo ""
+echo ">> Copying '${CONFIG_TEMPLATE}' to '${CONFIG_FILE}'"
 cp -f "${CONFIG_TEMPLATE}" "${CONFIG_FILE}"
+echo ""
 
 # Remove things not needed in the deployment
 if [ "${TARGET_STAGE}" = "qa" ] && [ "${TARGET_ACTION}" = "deploy" ]; then
@@ -86,10 +116,6 @@ if [ "${TARGET_STAGE}" = "qa" ] && [ "${TARGET_ACTION}" = "deploy" ]; then
     perl -i -pe "s|\"certificate_arn_key.*||g" "${CONFIG_FILE}"
     perl -i -pe "s|\"certificate_path.*||g" "${CONFIG_FILE}"
     perl -i -pe "s|\"private_key_path.*||g" "${CONFIG_FILE}"
-fi
-
-if [ -f "${REPO_BASEDIR}/scripts/aws/update_additional_envvars.sh" ]; then
-    . "${REPO_BASEDIR}/scripts/aws/update_additional_envvars.sh" "${CONFIG_FILE}" "${REPO_BASEDIR}"
 fi
 
 # Replace @ with \@
@@ -128,6 +154,13 @@ perl -i -pe"s|APP_STAGE_placeholder|${APP_STAGE}|g" "${CONFIG_FILE}"
 perl -i -pe"s|CURRENT_FRAMEWORK_placeholder|${CURRENT_FRAMEWORK}|g" "${CONFIG_FILE}"
 perl -i -pe"s|DEFAULT_LANG_placeholder|${DEFAULT_LANG}|g" "${CONFIG_FILE}"
 
+perl -i -pe"s|GIT_SUBMODULE_URL_placeholder|${GIT_SUBMODULE_URL}|g" "${CONFIG_FILE}"
+perl -i -pe"s|GIT_SUBMODULE_LOCAL_PATH_placeholder|${GIT_SUBMODULE_LOCAL_PATH}|g" "${CONFIG_FILE}"
+
+perl -i -pe"s|APP_SUPERADMIN_EMAIL_placeholder|${APP_SUPERADMIN_EMAIL}|g" "${CONFIG_FILE}"
+perl -i -pe"s|APP_SECRET_KEY_placeholder|${APP_SECRET_KEY}|g" "${CONFIG_FILE}"
+perl -i -pe"s|STORAGE_URL_SEED_placeholder|${STORAGE_URL_SEED}|g" "${CONFIG_FILE}"
+
 perl -i -pe"s|OPENAI_API_KEY_placeholder|${OPENAI_API_KEY}|g" "${CONFIG_FILE}"
 perl -i -pe"s|OPENAI_MODEL_placeholder|${OPENAI_MODEL}|g" "${CONFIG_FILE}"
 perl -i -pe"s|OPENAI_TEMPERATURE_placeholder|${OPENAI_TEMPERATURE}|g" "${CONFIG_FILE}"
@@ -144,48 +177,49 @@ perl -i -pe"s|SMTP_USER_placeholder|${SMTP_USER}|g" "${CONFIG_FILE}"
 perl -i -pe"s|SMTP_PASSWORD_placeholder|${SMTP_PASSWORD}|g" "${CONFIG_FILE}"
 perl -i -pe"s|SMTP_DEFAULT_SENDER_placeholder|${SMTP_DEFAULT_SENDER}|g" "${CONFIG_FILE}"
 
-perl -i -pe"s|GIT_SUBMODULE_URL_placeholder|${GIT_SUBMODULE_URL}|g" "${CONFIG_FILE}"
-perl -i -pe"s|GIT_SUBMODULE_LOCAL_PATH_placeholder|${GIT_SUBMODULE_LOCAL_PATH}|g" "${CONFIG_FILE}"
-
-perl -i -pe"s|APP_SECRET_KEY_placeholder|${APP_SECRET_KEY}|g" "${CONFIG_FILE}"
-perl -i -pe"s|APP_SUPERADMIN_EMAIL_placeholder|${APP_SUPERADMIN_EMAIL}|g" "${CONFIG_FILE}"
-
 # perl -i -pe"s|API_GATEWAY_STAGE_placeholder|${AWS_API_GATEWAY_STAGE}|g" "${CONFIG_FILE}"
 
+perl -i -pe"s|APP_HOST_NAME_DEV_placeholder|${DOMAIN_NAME_DEV}|g" "${CONFIG_FILE}"
 perl -i -pe"s|APP_DB_ENGINE_DEV_placeholder|${APP_DB_ENGINE_DEV}|g" "${CONFIG_FILE}"
 perl -i -pe"s|APP_DB_NAME_DEV_placeholder|${APP_DB_NAME_DEV}|g" "${CONFIG_FILE}"
 perl -i -pe"s|APP_DB_URI_DEV_placeholder|${APP_DB_URI_DEV}|g" "${CONFIG_FILE}"
-perl -i -pe"s|APP_FRONTEND_AUDIENCE_DEV_placeholder|${APP_FRONTEND_AUDIENCE_DEV}|g" "${CONFIG_FILE}"
 perl -i -pe"s|APP_CORS_ORIGIN_DEV_placeholder|${APP_CORS_ORIGIN_DEV}|g" "${CONFIG_FILE}"
 perl -i -pe"s|AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_DEV_placeholder|${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_DEV}|g" "${CONFIG_FILE}"
 
+perl -i -pe"s|APP_HOST_NAME_QA_placeholder|${DOMAIN_NAME_QA}|g" "${CONFIG_FILE}"
 perl -i -pe"s|APP_DB_ENGINE_QA_placeholder|${APP_DB_ENGINE_QA}|g" "${CONFIG_FILE}"
 perl -i -pe"s|APP_DB_NAME_QA_placeholder|${APP_DB_NAME_QA}|g" "${CONFIG_FILE}"
 perl -i -pe"s|APP_DB_URI_QA_placeholder|${APP_DB_URI_QA}|g" "${CONFIG_FILE}"
-perl -i -pe"s|APP_FRONTEND_AUDIENCE_QA_placeholder|${APP_FRONTEND_AUDIENCE_QA}|g" "${CONFIG_FILE}"
+
+echo "perl -i -pe\"s|APP_CORS_ORIGIN_QA_placeholder|${APP_CORS_ORIGIN_QA}|g\" \"${CONFIG_FILE}\""
 perl -i -pe"s|APP_CORS_ORIGIN_QA_placeholder|${APP_CORS_ORIGIN_QA}|g" "${CONFIG_FILE}"
+
 perl -i -pe"s|AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_QA_placeholder|${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_QA}|g" "${CONFIG_FILE}"
 
+perl -i -pe"s|APP_HOST_NAME_STAGING_placeholder|${DOMAIN_NAME_STAGING}|g" "${CONFIG_FILE}"
 perl -i -pe"s|APP_DB_ENGINE_STAGING_placeholder|${APP_DB_ENGINE_STAGING}|g" "${CONFIG_FILE}"
 perl -i -pe"s|APP_DB_NAME_STAGING_placeholder|${APP_DB_NAME_STAGING}|g" "${CONFIG_FILE}"
 perl -i -pe"s|APP_DB_URI_STAGING_placeholder|${APP_DB_URI_STAGING}|g" "${CONFIG_FILE}"
-perl -i -pe"s|APP_FRONTEND_AUDIENCE_STAGING_placeholder|${APP_FRONTEND_AUDIENCE_STAGING}|g" "${CONFIG_FILE}"
 perl -i -pe"s|APP_CORS_ORIGIN_STAGING_placeholder|${APP_CORS_ORIGIN_STAGING}|g" "${CONFIG_FILE}"
 perl -i -pe"s|AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_STAGING_placeholder|${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_STAGING}|g" "${CONFIG_FILE}"
 
-perl -i -pe"s|APP_DB_ENGINE_PROD_placeholder|${APP_DB_ENGINE_PROD}|g" "${CONFIG_FILE}"
-perl -i -pe"s|APP_DB_NAME_PROD_placeholder|${APP_DB_NAME_PROD}|g" "${CONFIG_FILE}"
-perl -i -pe"s|APP_DB_URI_PROD_placeholder|${APP_DB_URI_PROD}|g" "${CONFIG_FILE}"
-perl -i -pe"s|APP_FRONTEND_AUDIENCE_PROD_placeholder|${APP_FRONTEND_AUDIENCE_PROD}|g" "${CONFIG_FILE}"
-perl -i -pe"s|APP_CORS_ORIGIN_PROD_placeholder|${APP_CORS_ORIGIN_PROD}|g" "${CONFIG_FILE}"
-perl -i -pe"s|AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_PROD_placeholder|${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_PROD}|g" "${CONFIG_FILE}"
-
+perl -i -pe"s|APP_HOST_NAME_DEMO_placeholder|${DOMAIN_NAME_DEMO}|g" "${CONFIG_FILE}"
 perl -i -pe"s|APP_DB_ENGINE_DEMO_placeholder|${APP_DB_ENGINE_DEMO}|g" "${CONFIG_FILE}"
 perl -i -pe"s|APP_DB_NAME_DEMO_placeholder|${APP_DB_NAME_DEMO}|g" "${CONFIG_FILE}"
 perl -i -pe"s|APP_DB_URI_DEMO_placeholder|${APP_DB_URI_DEMO}|g" "${CONFIG_FILE}"
-perl -i -pe"s|APP_FRONTEND_AUDIENCE_DEMO_placeholder|${APP_FRONTEND_AUDIENCE_DEMO}|g" "${CONFIG_FILE}"
 perl -i -pe"s|APP_CORS_ORIGIN_DEMO_placeholder|${APP_CORS_ORIGIN_DEMO}|g" "${CONFIG_FILE}"
 perl -i -pe"s|AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_DEMO_placeholder|${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_DEMO}|g" "${CONFIG_FILE}"
+
+perl -i -pe"s|APP_HOST_NAME_PROD_placeholder|${DOMAIN_NAME_PROD}|g" "${CONFIG_FILE}"
+perl -i -pe"s|APP_DB_ENGINE_PROD_placeholder|${APP_DB_ENGINE_PROD}|g" "${CONFIG_FILE}"
+perl -i -pe"s|APP_DB_NAME_PROD_placeholder|${APP_DB_NAME_PROD}|g" "${CONFIG_FILE}"
+perl -i -pe"s|APP_DB_URI_PROD_placeholder|${APP_DB_URI_PROD}|g" "${CONFIG_FILE}"
+perl -i -pe"s|APP_CORS_ORIGIN_PROD_placeholder|${APP_CORS_ORIGIN_PROD}|g" "${CONFIG_FILE}"
+perl -i -pe"s|AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_PROD_placeholder|${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_PROD}|g" "${CONFIG_FILE}"
+
+if [ -f "${REPO_BASEDIR}/scripts/aws/update_additional_envvars.sh" ]; then
+    . "${REPO_BASEDIR}/scripts/aws/update_additional_envvars.sh" "${CONFIG_FILE}" "${REPO_BASEDIR}"
+fi
 
 # if [ "${TARGET_ACTION}" = "deploy" ]; then
 #     cat "${CONFIG_FILE}"

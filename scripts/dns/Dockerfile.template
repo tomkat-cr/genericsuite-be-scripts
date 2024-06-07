@@ -1,14 +1,20 @@
-# Utiliza una imagen base
+# Local DNS Server
+
 FROM sameersbn/bind:latest
 
-# ARG APP_NAME_LOWERCASE
-# ENV APP_NAME_LOWERCASE=${APP_NAME_LOWERCASE}
 ARG APP_NAME_LOWERCASE=APP_NAME_LOWERCASE_placeholder
 
-# Copia el archivo de zona desde el host al contenedor
+# Copy the zone config file
 COPY ./config/zones/app.${APP_NAME_LOWERCASE}.local /etc/bind/zones/app.${APP_NAME_LOWERCASE}.local
-COPY ./config/named-to-add.conf /tmp/named-to-add.conf
-RUN cat /tmp/named-to-add.conf >> /etc/bind/named.conf
 
-# Establece el comando de inicio del servidor DNS
+# Add the zone to add to main bind config
+COPY ./config/named-to-add.conf /tmp/named-to-add.conf
+RUN cat /tmp/named-to-add.conf >> /etc/bind/named.conf.local
+# RUN cat /tmp/named-to-add.conf >> /etc/bind/named.conf
+
+# DNS server bootstrap
+# named -g -c /etc/bind/named.conf -u bind -f
 CMD ["named", "-g", "-c", "/etc/bind/named.conf", "-u", "bind", "-f"]
+
+# Check logs
+# docker logs -f dns-server

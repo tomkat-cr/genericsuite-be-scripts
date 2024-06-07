@@ -57,14 +57,19 @@ chalicelib/src
 gunicorn.access.log
 gunicorn.error.log
 logs/app_general.log
+
+# Other files
 scripts/aws_big_lambda/lambda-config-*.json
 scripts/aws_big_lambda/template.yml
 scripts/aws_big_lambda/samconfig.toml
-response.json
-scripts/dns/config/zones/*
+scripts/dns/config/zones
 scripts/dns/config/named-to-add.conf
 scripts/secure_local_server/nginx.conf
 scripts/secure_local_server/nginx.conf.tmp
 scripts/vps/docker-compose.yml
 scripts/vps/docker-compose.tmp.yml
 scripts/dns/Dockerfile
+
+response.json
+
+tmp

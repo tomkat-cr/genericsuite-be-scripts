@@ -2,7 +2,14 @@
 # scripts/aws/run_aws.sh
 # 2023-02-02 | CR
 #
-set -o allexport ; . .env ; set +o allexport ;
+
+REPO_BASEDIR="`pwd`"
+cd "`dirname "$0"`"
+SCRIPTS_DIR="`pwd`"
+cd "${REPO_BASEDIR}"
+
+# set -o allexport ; . .env ; set +o allexport ;
+. ${SCRIPTS_DIR}/../set_app_dir_and_main_file.sh
 
 if [ "${APP_NAME}" = "" ]; then
     echo "APP_NAME not set"
@@ -14,20 +21,14 @@ if [ "${CURRENT_FRAMEWORK}" = "" ]; then
     exit 1
 fi
 
-export APP_NAME_LOWERCASE=$(echo ${APP_NAME} | tr '[:upper:]' '[:lower:]')
+if [ "${APP_DOMAIN_NAME}" = "" ]; then
+    echo "ERROR: APP_HOST_NAME not set"
+    exit 1
+fi
 
-# Default App main code directory
-if [ "${APP_DIR}" = "" ]; then
-  # https://aws.github.io/chalice/topics/packaging.html
-  APP_DIR='.'
-  if [ "${CURRENT_FRAMEWORK}" = "fastapi" ]; then
-    # https://fastapi.tiangolo.com/tutorial/bigger-applications/?h=directory+structure#an-example-file-structure
-    APP_DIR='app'
-  fi
-  if [ "${CURRENT_FRAMEWORK}" = "flask" ]; then
-    # https://flask.palletsprojects.com/en/2.3.x/tutorial/layout/
-    APP_DIR='flaskr'
-  fi
+if [ "${STORAGE_URL_SEED}" = "" ]; then
+    echo "ERROR: STORAGE_URL_SEED not set"
+    exit 1
 fi
 
 if [ ! -d "./${APP_DIR}" ]; then
@@ -35,25 +36,12 @@ if [ ! -d "./${APP_DIR}" ]; then
   exit 1
 fi
 
-# Default App entry point coode file
-if [ "${APP_MAIN_FILE}" = "" ]; then
-  # https://aws.github.io/chalice/topics/packaging.html
-  APP_MAIN_FILE='app'
-  if [ "${CURRENT_FRAMEWORK}" = "fastapi" ]; then
-    # https://fastapi.tiangolo.com/tutorial/bigger-applications/?h=directory+structure#an-example-file-structure
-    APP_MAIN_FILE='main'
-  fi
-  if [ "${CURRENT_FRAMEWORK}" = "flask" ]; then
-    # https://flask.palletsprojects.com/en/2.3.x/tutorial/factory/
-    APP_MAIN_FILE='__init__'
-  fi
-fi
-
 if [ ! -f "${APP_DIR}/${APP_MAIN_FILE}.py" ]; then
   echo "ERROR: APP_DIR/APP_MAIN_FILE '"${APP_DIR}/${APP_MAIN_FILE}".py' not found"
   exit 1
 fi
 
+export APP_NAME_LOWERCASE=$(echo ${APP_NAME} | tr '[:upper:]' '[:lower:]')
 
 AWS_STACK_NAME='${APP_NAME_LOWERCASE}-be-stack'
 
@@ -66,11 +54,6 @@ SSL_CA_CERT_PATH="./ca.crt"
 # RUN_METHOD="chalice"
 RUN_METHOD="chalice_docker"
 
-REPO_BASEDIR="`pwd`"
-cd "`dirname "$0"`"
-SCRIPTS_DIR="`pwd`"
-cd "${REPO_BASEDIR}"
-
 echo "SCRIPTS_DIR: ${SCRIPTS_DIR}"
 echo "REPO_BASEDIR: ${REPO_BASEDIR}"
 
@@ -82,8 +65,8 @@ if [ "$ENV_FILESPEC" != "" ]; then
     set -o allexport; source ${ENV_FILESPEC}; set +o allexport ;
 fi
 
-if [ "$PORT" = "" ]; then
-    PORT="5001"
+if [ "$BACKEND_LOCAL_PORT" = "" ]; then
+    BACKEND_LOCAL_PORT="5001"
 fi
 
 if [ "$2" = "" ]; then
@@ -143,37 +126,59 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
     cd ${REPO_BASEDIR}
 
     echo ""
-    echo "Stage = ${STAGE}"
-    echo "Port = ${PORT}"
-    echo "RUN_METHOD = ${RUN_METHOD}"
+    echo "Stage: ${STAGE}"
+    echo "Port: ${BACKEND_LOCAL_PORT}"
+    echo "Run method (RUN_METHOD): ${RUN_METHOD}"
+    echo "Python entry point (APP_DIR.APP_MAIN_FILE): ${APP_DIR}.${APP_MAIN_FILE}"
     echo ""
 
     export IP_ADDRESS=$(sh ${SCRIPTS_DIR}/../get_localhost_ip.sh)
-    export APP_DB_ENGINE=$(eval echo \$APP_DB_ENGINE_${STAGE_UPPERCASE})
-    export APP_DB_NAME=$(eval echo \$APP_DB_NAME_${STAGE_UPPERCASE})
-    export APP_DB_URI=$(eval echo \$APP_DB_URI_${STAGE_UPPERCASE})
-    export APP_FRONTEND_AUDIENCE=$(eval echo \$APP_FRONTEND_AUDIENCE_${STAGE_UPPERCASE})
-    export APP_CORS_ORIGIN="$(eval echo \"\$APP_CORS_ORIGIN_${STAGE_UPPERCASE}\")"
-    export AWS_S3_CHATBOT_ATTACHMENTS_BUCKET=$(eval echo \$AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_${STAGE_UPPERCASE})
+    export APP_VERSION=$(cat ${REPO_BASEDIR}/version.txt)
 
-    echo "Run over: 1) http [chalice], 2) https [chalice_docker], 3) use current [${RUN_METHOD}] (1/2/3) ?"
+    echo "Run over: 1) http, 2) https ?"
     read RUN_PROTOCOL
-    while [[ ! $RUN_PROTOCOL =~ ^[123]$ ]]; do
+    while [[ ! ${RUN_PROTOCOL} =~ ^[12]$ ]]; do
         echo "Please enter 1 or 2"
         read RUN_PROTOCOL
     done
-    if [ $RUN_PROTOCOL = "1" ]; then
-        RUN_PROTOCOL="http"
+    if [ "${RUN_PROTOCOL}" = "1" ]; then
+        export RUN_PROTOCOL="http"
     else
-        RUN_PROTOCOL="https"
+        export RUN_PROTOCOL="https"
     fi
 
+    if [ "${STAGE}" = "dev" ];then
+        . ${SCRIPTS_DIR}/../get_domain_name_dev.sh "${STAGE}" "${APP_DOMAIN_NAME}" "${SCRIPTS_DIR}/.."
+    else
+        . ${SCRIPTS_DIR}/../get_domain_name.sh "${STAGE}"
+    fi
+    if [ "${DOMAIN_NAME}" = "" ];then
+        exit 1
+    fi
+    export APP_HOST_NAME="${DOMAIN_NAME}"
+
+    export APP_DB_ENGINE=$(eval echo \$APP_DB_ENGINE_${STAGE_UPPERCASE})
+    export APP_DB_NAME=$(eval echo \$APP_DB_NAME_${STAGE_UPPERCASE})
+    export APP_DB_URI=$(eval echo \$APP_DB_URI_${STAGE_UPPERCASE})
+    export APP_CORS_ORIGIN="$(eval echo \"\$APP_CORS_ORIGIN_${STAGE_UPPERCASE}\")"
+    export AWS_S3_CHATBOT_ATTACHMENTS_BUCKET=$(eval echo \$AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_${STAGE_UPPERCASE})
+
     if [ "${CURRENT_FRAMEWORK}" = "chalice" ]; then
-        if [ $RUN_PROTOCOL = "https" ]; then
-            RUN_METHOD="chalice_docker"
+        if [ ${RUN_PROTOCOL} = "https" ]; then
+            export RUN_METHOD="chalice_docker"
         else
-            RUN_METHOD="chalice"
+            export RUN_METHOD="chalice"
             make down_qa
+        fi
+    else
+        if [ ${RUN_PROTOCOL} = "http" ]; then
+            make down_qa
+            echo "NOTE: The warning '-i used with no filenames on the command line, reading from STDIN.' is normal..."
+            echo ">> Old APP_CORS_ORIGIN: ${APP_CORS_ORIGIN}"
+            if [ "${APP_CORS_ORIGIN}" != "*" ]; then
+                export APP_CORS_ORIGIN="$(echo ${APP_CORS_ORIGIN} | perl -i -pe 's|https:\/\/|http:\/\/|')"
+            fi
+            echo ">> New APP_CORS_ORIGIN: ${APP_CORS_ORIGIN}"
         fi
     fi
 
@@ -181,9 +186,9 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
         echo "sh ${SCRIPTS_DIR}/set_chalice_cnf.sh ${STAGE}" http
         sh ${SCRIPTS_DIR}/set_chalice_cnf.sh ${STAGE} http
         echo ""
-        echo "pipenv run chalice local --host 0.0.0.0 --port ${PORT} --stage ${STAGE}"
+        echo "pipenv run chalice local --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT} --stage ${STAGE}"
         echo ""
-        pipenv run chalice local --host 0.0.0.0 --port ${PORT} --stage ${STAGE} --autoreload
+        pipenv run chalice local --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT} --stage ${STAGE} --autoreload
     fi
 
     if [ "${RUN_METHOD}" = "chalice_docker" ]; then
@@ -192,28 +197,14 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
     fi
 
     if [ "${RUN_METHOD}" = "gunicorn" ]; then
-        if [ $RUN_PROTOCOL = "https" ]; then
-            echo "pipenv run run gunicorn --bind 0.0.0.0:${PORT} ${APP_DIR}.${APP_MAIN_FILE}:app --reload --certfile=${SSL_CERT_PATH} --keyfile=${SSL_KEY_PATH} --forwarded-allow-ips=${IP_ADDRESS}"
-            echo ""
-            pipenv run gunicorn ${APP_DIR}.${APP_MAIN_FILE}:app \
-                --bind 0.0.0.0:${PORT} \
-                --reload \
-                --workers=2 \
-                --certfile="${SSL_CERT_PATH}" \
-                --keyfile="${SSL_KEY_PATH}" \
-                --ciphers="TLSv1.2" \
-                --proxy-protocol \
-                --limit-request-field_size=200000 \
-                --forwarded-allow-ips="${IP_ADDRESS},127.0.0.1,0.0.0.0" \
-                --do-handshake-on-connect \
-                --strip-header-spaces \
-                --env PORT=${PORT} \
-                --env APP_STAGE="${STAGE}"
+        if [ ${RUN_PROTOCOL} = "https" ]; then
+            echo "${SCRIPTS_DIR}/../secure_local_server/run.sh"
+            ${SCRIPTS_DIR}/../secure_local_server/run.sh "run" ${STAGE}
         else
-            echo "pipenv run run gunicorn --bind 0.0.0.0:${PORT} ${APP_DIR}.${APP_MAIN_FILE}:app --reload  --forwarded-allow-ips=${IP_ADDRESS}"
+            echo "pipenv run run gunicorn --bind 0.0.0.0:${BACKEND_LOCAL_PORT} ${APP_DIR}.${APP_MAIN_FILE}:app --reload  --forwarded-allow-ips=${IP_ADDRESS}"
             echo ""
             pipenv run gunicorn ${APP_DIR}.${APP_MAIN_FILE}:app \
-                --bind 0.0.0.0:${PORT} \
+                --bind 0.0.0.0:${BACKEND_LOCAL_PORT} \
                 --reload \
                 --workers=2 \
                 --proxy-protocol \
@@ -221,30 +212,34 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
                 --forwarded-allow-ips="${IP_ADDRESS},127.0.0.1,0.0.0.0" \
                 --do-handshake-on-connect \
                 --strip-header-spaces \
-                --env PORT=${PORT} \
+                --env PORT=${BACKEND_LOCAL_PORT} \
                 --env APP_STAGE="${STAGE}"
         fi
     fi
 
     if [ "${RUN_METHOD}" = "uvicorn" ]; then
-        if [ $RUN_PROTOCOL = "https" ]; then
-            echo "pipenv run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app --ssl-keyfile=${SSL_KEY_PATH} --ssl-certfile=${SSL_CERT_PATH} --reload --host 0.0.0.0 --port ${PORT}"
-            echo ""
-            pipenv run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app --ssl-keyfile=${SSL_KEY_PATH} --ssl-certfile=${SSL_CERT_PATH} --reload --host 0.0.0.0 --port ${PORT}  # --ca-certs=${SSL_CA_CERT_PATH}
+        if [ ${RUN_PROTOCOL} = "https" ]; then
+            echo "${SCRIPTS_DIR}/../secure_local_server/run.sh"
+            ${SCRIPTS_DIR}/../secure_local_server/run.sh "run" ${STAGE}
         else
-            echo "pipenv run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app  --reload --host 0.0.0.0 --port ${PORT}"
+            echo "pipenv run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app  --reload --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT}"
             echo ""
-            pipenv run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app --reload --host 0.0.0.0 --port ${PORT}
+            pipenv run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app --reload --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT}
         fi
+    fi
+
+    # Stop local NGINX
+    if [ "${STAGE}" = "dev" ];then
+        sh ${SCRIPTS_DIR}/../get_domain_name_dev.sh "stop_local_ngnx" "${APP_DOMAIN_NAME}" "${SCRIPTS_DIR}/.."
     fi
 fi
 
 if [ "$1" = "run" ]; then
     cd ${REPO_BASEDIR}
     echo ""
-    echo "PRODUCCION RUNNING: pipenv run chalice local --port ${PORT} --stage PROD"
+    echo "PRODUCCION RUNNING: pipenv run chalice local --port ${BACKEND_LOCAL_PORT} --stage PROD"
     echo ""
-    pipenv run chalice local --host 0.0.0.0 --port ${PORT} --stage prod
+    pipenv run chalice local --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT} --stage prod
 fi
 
 if [ "$1" = "deploy" ]; then

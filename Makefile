@@ -1,5 +1,5 @@
 # .DEFAULT_GOAL := local
-# .PHONY: tests
+.PHONY:  help install install_dev locked_dev locked_install lock_pip_file requirements clean clean_rm clean_temp_dir clean_logs fresh install_tools lsof test test_only lint types coverage format format_check qa mongo_docker mongo_docker_down mongo_backup mongo_restore config config_dev config_local config_qa config_qa_for_deployment config_staging build build_local build_check unbuild unbuild_qa unbuild_staging delete_stack create_s3_bucket_dev create_s3_bucket_qa create_s3_bucket_staging create_s3_bucket_prod create_s3_bucket_demo create_aws_config generate_sam_dynamodb deploy_qa deploy_run_local_qa deploy_validate_qa deploy_package_qa deploy_staging deploy_prod deploy_demo deploy run run_qa down_qa restart_qa run_local_docker run_prod add_submodules init_submodules local_dns local_dns_restart local_dns_rebuild local_dns_down local_dns_test copy_ssl_certs create_ssl_certs_only create_ssl_certs init_sam init_chalice generate_seed lock pre-publish publish pypi-build pypi-publish-test pypi-publish
 SHELL := /bin/bash
 
 # General Commands
@@ -89,6 +89,14 @@ mongo_docker:
 mongo_docker_down:
 	sh node_modules/genericsuite-be-scripts/scripts/mongo/run_mongo_docker.sh down
 
+mongo_backup:
+	# E.g. STAGE=qa BACKUP_DIR=/tmp/exampleapp make mongo_backup
+	sh node_modules/genericsuite-be-scripts/scripts/mongo/db_mongo_backup.sh ${STAGE} ${BACKUP_DIR}
+
+mongo_restore:
+	# E.g. STAGE=qa RESTORE_DIR=/tmp/exampleapp make mongo_restore
+	sh node_modules/genericsuite-be-scripts/scripts/mongo/db_mongo_restore.sh ${STAGE} ${RESTORE_DIR}
+
 ## Chalice Specific Commands
 
 config:
@@ -149,10 +157,16 @@ create_s3_bucket_demo:
 create_aws_config:
 	sh node_modules/genericsuite-be-scripts/scripts/aws/create_aws_config.sh
 
+generate_sam_dynamodb:
+	sh node_modules/genericsuite-be-scripts/scripts/aws_big_lambda/generate_sam_dynamodb/run_generate_sam_dynamodb.sh
+
 ## Deployment
 
 deploy_qa: create_s3_bucket_qa
 	sh node_modules/genericsuite-be-scripts/scripts/aws_big_lambda/big_lambdas_manager.sh sam_deploy qa
+
+deploy_run_local_qa: create_s3_bucket_qa
+	sh node_modules/genericsuite-be-scripts/scripts/aws_big_lambda/big_lambdas_manager.sh sam_run_local qa
 
 deploy_validate_qa: create_s3_bucket_qa
 	sh node_modules/genericsuite-be-scripts/scripts/aws_big_lambda/big_lambdas_manager.sh sam_validate qa
@@ -234,6 +248,10 @@ init_sam:
 
 init_chalice:
 	sh node_modules/genericsuite-be-scripts/scripts/aws/init_chalice.sh
+
+generate_seed:
+	# To assign the STORAGE_URL_SEED environment variable
+	sh node_modules/genericsuite-be-scripts/scripts/cryptography/run_generate_seed.sh
 
 ## NPM scripts library
 

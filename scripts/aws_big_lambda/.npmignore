@@ -1,0 +1,6 @@
+venv
+.env
+
+lambda-config-*.json
+template.yml
+samconfig.toml

@@ -8,10 +8,21 @@
 
 DEBUG="0"
 
+yes_or_no() {
+  read choice
+  while [[ ! $choice =~ ^[YyNn]$ ]]; do
+    echo "Please enter Y or N"
+    read choice
+  done
+}
+
 exit_abort() {
     echo ""
     echo "Aborting..."
     echo ""
+    remove_temp_files
+    echo ""
+    sh ${SCRIPTS_DIR}/../show_date_time.sh
     exit 1
 }
 
@@ -22,23 +33,16 @@ fi
 
 ask_to_continue() {
     echo "Continue (Y/n)?"
-    read choice
-    while [[ ! $choice =~ ^[YyNn]$ ]]; do
-        echo "Please enter Y or N"
-        read choice
-    done
+    yes_or_no
     if [ $choice = "n" ]; then
         exit_abort
     fi
 }    
 
 ask_for_force_ecr_image_creation() {
+  echo "----"
   echo "Do you want to perform the AWS ECR image creation (Y/n)?"
-  read choice
-  while [[ ! $choice =~ ^[YyNn]$ ]]; do
-    echo "Please enter Y or N"
-    read choice
-  done
+  yes_or_no
   if [[ $choice =~ ^[Yy]$ ]]; then
     FORCE_ECR_IMAGE_CREATION="1"
   else
@@ -46,8 +50,51 @@ ask_for_force_ecr_image_creation() {
   fi
 }
 
+show_existing_ecr_images() {
+    echo ""
+    echo "----"
+    echo "Existing ECR images:"
+    echo ""
+    # Prefix to filter repositories
+    prefix="${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}"
+
+    # Get a list of repositories filtered by prefix
+    repositories=$(aws ecr describe-repositories --query "repositories[?starts_with(repositoryName, '$prefix')].repositoryName" --output text)
+
+    # Loop through each repository
+    for repository in $repositories; do
+        # Get a list of images sorted by creation date (newest last)
+        images=$(aws ecr describe-images --repository-name $repository --query 'sort_by(imageDetails,& imagePushedAt)[*].imageDigest' --output text)
+
+        # Count the number of images
+        num_images=$(echo "$images" | wc -w)
+        echo "Number of images: $num_images"
+
+        # Loop through each image
+        echo ""
+        for image in $images; do
+            echo "Image: $image | Repository: $repository"
+            # Image name, version and date
+            image_tags=$(aws ecr describe-images --repository-name $repository --image-ids imageDigest=$image --query 'imageDetails[0].imageTags' --output text)
+            image_date=$(aws ecr describe-images --repository-name $repository --image-ids imageDigest=$image --query 'imageDetails[0].imagePushedAt' --output text)
+            echo "       Tag: ${image_tags}, Date pushed: ${image_date}"
+            echo ""
+        done
+    done
+}
+
+ask_to_show_existing_ecr_images() {
+  echo "---"
+  echo "Do you want to see the existing ECT images (y/n)?"
+  yes_or_no
+  if [[ $choice =~ ^[Yy]$ ]]; then
+    show_existing_ecr_images
+  fi
+}
+
 ask_for_app_version() {
     APP_VERSION=$(cat ${REPO_BASEDIR}/version.txt)
+    echo "----"
     echo "What will be the new App version? (press Enter for default: ${APP_VERSION})"
     read new_version
     if [ "${new_version}" != "" ]; then
@@ -55,11 +102,7 @@ ask_for_app_version() {
     fi
     echo "New App version will be: ${APP_VERSION}"
     echo "Are you sure (Y/n)?"
-    read choice
-    while [[ ! $choice =~ ^[YyNn]$ ]]; do
-        echo "Please enter Y or N"
-        read choice
-    done
+    yes_or_no
     if [[ ! $choice =~ ^[Yy]$ ]]; then
         exit_abort
     fi
@@ -67,12 +110,10 @@ ask_for_app_version() {
 }
 
 ask_for_frontend_version_assignment() {
+  echo ""
+  echo "----"
   echo "Do you want to assign the version ${APP_VERSION} to the frontend '${FRONTEND_DIRECTORY}' (Y/n)?"
-  read choice
-  while [[ ! $choice =~ ^[YyNn]$ ]]; do
-    echo "Please enter Y or N"
-    read choice
-  done
+  yes_or_no
   if [[ $choice =~ ^[Yy]$ ]]; then
     if [ -d "${FRONTEND_DIRECTORY}" ]; then
       echo "The frontend path '${FRONTEND_DIRECTORY}' exists..."
@@ -109,24 +150,39 @@ perform_frontend_version_assignment() {
   fi
 }
 
+remember_endpoint_definitions() {
+  echo ""
+  echo "**********************************************************************************"
+  echo "* WARNING:                                                                       *"
+  echo "* Please remember each Endpoint in your App must be defined in the SAM Template: *"
+  echo "*     RestAPI > Properties > DefinitionBody > paths                              *"
+  echo "**********************************************************************************"
+  echo ""
+  echo "If you decide to continue, I assume it was done..."
+  echo ""
+  ask_to_continue
+}
+
+
 ask_for_sam_guided_deployment() {
-    echo "Do you want to do a SAM Automatic (not guided) Deployment (y/n)?"
-    read choice
-    while [[ ! $choice =~ ^[YyNn]$ ]]; do
-        echo "Please enter Y or N"
-        read choice
-    done
+    echo ""
+    echo "----"
+    echo "SAM Deployment Methods:"
+    echo ""
+    echo "SAM Automatic Deployment: all parameters will be supplied to SAM by this script."
+    echo "SAM Guided Deployment: SAM will ask questions needed to perform the process."
+    echo ""
+    echo "Do you want to do a SAM Automatic Deployment (y/n)?"
+    yes_or_no
     if [[ $choice =~ ^[Yy]$ ]]; then
       SAM_GUIDED="n"
     else
       SAM_GUIDED="y"
     fi
+    echo ""
+    echo "----"
     echo "Do you want to Force Upload in the SAM Deployment (y/n)?"
-    read choice
-    while [[ ! $choice =~ ^[YyNn]$ ]]; do
-        echo "Please enter Y or N"
-        read choice
-    done
+    yes_or_no
     if [[ $choice =~ ^[Yy]$ ]]; then
       SAM_FORCED="--force-upload"
     else
@@ -139,6 +195,7 @@ write_new_app_version() {
 }
 
 ask_for_docker_image_version() {
+    echo "----"
     echo "What will be the Docker Image version to use? (e.g. latest or a version number)."
     echo "(press Enter for default: ${APP_VERSION})"
     read new_version
@@ -151,11 +208,7 @@ ask_for_docker_image_version() {
     echo "Docker image version to be used: ${DOCKER_IMAGE_VERSION}"
     echo "Image URI: ${AWS_DOCKER_IMAGE_URI_BASE}/${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}:${DOCKER_IMAGE_VERSION}"
     echo "Do you agree with that (Y/n)?"
-    read choice
-    while [[ ! $choice =~ ^[YyNn]$ ]]; do
-        echo "Please enter Y or N"
-        read choice
-    done
+    yes_or_no
     if [[ ! $choice =~ ^[Yy]$ ]]; then
         exit_abort
     fi
@@ -163,12 +216,9 @@ ask_for_docker_image_version() {
 }
 
 ask_for_docker_system_prune() {
+    echo "----"
     echo "Do you want to perform a Docker System Prune to have more free disk space (y/n)?"
-    read choice
-    while [[ ! $choice =~ ^[YyNn]$ ]]; do
-        echo "Please enter Y or N"
-        read choice
-    done
+    yes_or_no
     if [[ $choice =~ ^[Yy]$ ]]; then
       DOCKER_PRUNE="y"
     else
@@ -205,22 +255,23 @@ verify_docker_image_exist() {
         echo "Verifying ECR repository URI: ${AWS_DOCKER_IMAGE_URI}..."
         if aws ecr describe-images --repository-name ${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE} --region ${AWS_REGION} --image-ids imageTag=${DOCKER_IMAGE_VERSION} >/dev/null 2>&1
         then
-            echo "ECR repository URI exists..."
+            echo ""
+            echo ">> ECR repository URI exists..."
             if [ "${FORCE_ECR_IMAGE_CREATION}" = "1" ];then
-                echo "and it'll be overwritten..."
+                echo "   and it'll be overwritten..."
             else
-                echo "and it'll remain the same"
+                echo "   and it'll remain the same"
             fi
         else
+            echo ""
             if [ "${FORCE_ECR_IMAGE_CREATION}" = "0" ];then
                 ERROR_MSG="ERROR: Docker image version '${DOCKER_IMAGE_VERSION}' does not exist in the ECR repository: ${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}, and the image creation wasn't ordered..."
-                echo ${ERROR_MSG}
+                echo ">> ${ERROR_MSG}"
             else
-                echo "ECR repository URI does not exists and it'll be created..."
+                echo ">> ECR repository URI does not exists and it'll be created..."
             fi
         fi
     fi
-    echo ""
 }
 
 recover_at_sign() {
@@ -260,8 +311,15 @@ set_env_vars_file() {
 export APP_DB_ENGINE=$(eval echo \$APP_DB_ENGINE_${STAGE_UPPERCASE})
 export APP_DB_NAME=$(eval echo \$APP_DB_NAME_${STAGE_UPPERCASE})
 export APP_DB_URI=$(eval echo \$APP_DB_URI_${STAGE_UPPERCASE})
-export APP_FRONTEND_AUDIENCE=$(eval echo \$APP_FRONTEND_AUDIENCE_${STAGE_UPPERCASE})
-export APP_CORS_ORIGIN="$(eval echo \"\$APP_CORS_ORIGIN_${STAGE_UPPERCASE}\")"
+if [ "${ACTION}" = "sam_run_local" ]; then
+  export APP_CORS_ORIGIN="http://app.${APP_NAME_LOWERCASE}.local:${FRONTEND_LOCAL_PORT}"
+else
+  if [ "${STAGE_UPPERCASE}" = "QA" ]; then
+    export APP_CORS_ORIGIN="${APP_CORS_ORIGIN_QA_CLOUD}"
+  else
+    export APP_CORS_ORIGIN="$(eval echo \"\$APP_CORS_ORIGIN_${STAGE_UPPERCASE}\")"
+  fi
+fi
 export AWS_S3_CHATBOT_ATTACHMENTS_BUCKET=$(eval echo \$AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_${STAGE_UPPERCASE})
 export CURRENT_FRAMEWORK="${CURRENT_FRAMEWORK}"
 export DEFAULT_LANG="${DEFAULT_LANG}"
@@ -309,7 +367,6 @@ END
   SMTP_DEFAULT_SENDER=${SMTP_DEFAULT_SENDER},
   APP_SUPERADMIN_EMAIL=${APP_SUPERADMIN_EMAIL},
   SMTP_PORT=${SMTP_PORT},
-  APP_FRONTEND_AUDIENCE=${APP_FRONTEND_AUDIENCE},
   APP_DB_URI=${APP_DB_URI},
   OPENAI_TEMPERATURE=${OPENAI_TEMPERATURE},
   GOOGLE_API_KEY="${GOOGLE_API_KEY}"
@@ -341,7 +398,6 @@ END
   --env SMTP_DEFAULT_SENDER=\"${SMTP_DEFAULT_SENDER}\"
   --env APP_SUPERADMIN_EMAIL=\"${APP_SUPERADMIN_EMAIL}\"
   --env SMTP_PORT=\"${SMTP_PORT}\"
-  --env APP_FRONTEND_AUDIENCE=\"${APP_FRONTEND_AUDIENCE}\"
   --env APP_DB_URI=\"${APP_DB_URI}\"
   --env OPENAI_TEMPERATURE=\"${OPENAI_TEMPERATURE}\"
   --env GOOGLE_API_KEY=\"${GOOGLE_API_KEY}\"
@@ -374,27 +430,32 @@ prepare_tmp_build_dir() {
     echo "Removing existing: ${TMP_BUILD_DIR}"
     rm -rf "${TMP_BUILD_DIR}"
 
-    echo "Create directory: ${TMP_BUILD_DIR}/lib"
-    mkdir -p "${TMP_BUILD_DIR}"/lib
-
+    if [[ "${APP_DIR}" != "." && -d ${APP_DIR} ]]; then
+      echo "Creating directory: ${TMP_BUILD_DIR}/${APP_DIR}"
+      mkdir -p ${TMP_BUILD_DIR}/${APP_DIR}
+    fi
+    if [ -d lib ]; then
+      echo "Creating directory: ${TMP_BUILD_DIR}/lib"
+      mkdir -p "${TMP_BUILD_DIR}"/lib
+    fi
     if [ -d genericsuite ]; then
-      echo "Create directory: ${TMP_BUILD_DIR}/genericsuite"
+      echo "Creating directory: ${TMP_BUILD_DIR}/genericsuite"
       mkdir -p "${TMP_BUILD_DIR}"/genericsuite
     fi
     if [ -d genericsuite_ai ]; then
-      echo "Create directory: ${TMP_BUILD_DIR}/genericsuite_ai"
+      echo "Creating directory: ${TMP_BUILD_DIR}/genericsuite_ai"
       mkdir -p "${TMP_BUILD_DIR}"/genericsuite_ai
     fi
     if [ -d chalicelib ]; then
-      echo "Create directory: ${TMP_BUILD_DIR}/chalicelib"
+      echo "Creating directory: ${TMP_BUILD_DIR}/chalicelib"
       mkdir -p "${TMP_BUILD_DIR}"/chalicelib
     fi
     if [ -d fastapilib ]; then
-      echo "Create directory: ${TMP_BUILD_DIR}/fastapilib"
+      echo "Creating directory: ${TMP_BUILD_DIR}/fastapilib"
       mkdir -p "${TMP_BUILD_DIR}"/fastapilib
     fi
     if [ -d flasklib ]; then
-      echo "Create directory: ${TMP_BUILD_DIR}/flasklib"
+      echo "Creating directory: ${TMP_BUILD_DIR}/flasklib"
       mkdir -p "${TMP_BUILD_DIR}"/flasklib
     fi
 
@@ -424,22 +485,25 @@ prepare_tmp_build_dir() {
     cp app.${APP_NAME_LOWERCASE}.local.chain.crt ${TMP_BUILD_DIR}/
     cp ca.crt ${TMP_BUILD_DIR}/
 
-    if [ -d .chalice/deployment/deployment.zip ]; then
-      echo "Copy deployment.zip file"
-      cp .chalice/deployment/deployment.zip ${TMP_BUILD_DIR}/
-    fi
+    # if [ -d .chalice/deployment/deployment.zip ]; then
+    #   echo "Copy deployment.zip file"
+    #   cp .chalice/deployment/deployment.zip ${TMP_BUILD_DIR}/
+    # fi
 
     echo "Copy SAM related files"
-    cp ${SCRIPTS_DIR}/template.yml ${TMP_BUILD_DIR}/
-    cp ${SCRIPTS_DIR}/samconfig.toml ${TMP_BUILD_DIR}/
+    cp ${TMP_WORKING_DIR}/template.yml ${TMP_BUILD_DIR}/
+    cp ${TMP_WORKING_DIR}/samconfig.toml ${TMP_BUILD_DIR}/
     cp ${SCRIPTS_DIR}/run_api_gateway.sh ${TMP_BUILD_DIR}/
 
     cp ${SCRIPTS_DIR}/docker-compose-big-lambda-${TARGET_OS}.yml ${TMP_BUILD_DIR}/
 
     cp ${SCRIPTS_DIR}/Dockerfile-big-lambda-${TARGET_OS} ${TMP_BUILD_DIR}/Dockerfile
-    # For non-Chalice frameworks, change the initial run command: CMD [ "app.app" ] >> CMD [ "lib/app.app" ]
+    # For non-Chalice frameworks, change the initial run command:
+    # CMD [ "app.app" ] >> CMD [ "main.handler" ] or [ "index.handler" ]
     if [ "${APP_DIR}" != "." ]; then
-      perl -i -pe "s|CMD [ \"app.app\" ]|CMD [ \"${APP_DIR}.${APP_MAIN_FILE}:app\" ]|g" ${TMP_BUILD_DIR}/Dockerfile
+      echo "Running: 'perl -i -pe \"s|CMD [ \"app.app\" ]|CMD \[ \"${APP_DIR}.${APP_MAIN_FILE}:app\" \]|g\" ${TMP_BUILD_DIR}/Dockerfile'..."
+      echo "" > ${TMP_BUILD_DIR}/__init__.py
+      perl -i -pe "s|CMD \[ \"app.app\" \]|CMD \[ \"${APP_MAIN_FILE}.${APP_HANDLER}\" \]|g" ${TMP_BUILD_DIR}/Dockerfile
     fi
 
     cp ${SCRIPTS_DIR}/entry-${TARGET_OS}.sh ${TMP_BUILD_DIR}/
@@ -452,6 +516,7 @@ prepare_tmp_build_dir() {
     if [[ "${APP_DIR}" != "." && -d ${APP_DIR} ]]; then
       echo "Copy APP_DIR '${APP_DIR}' code files"
       cp -r ${APP_DIR}/* ${TMP_BUILD_DIR}/${APP_DIR}/
+      mv ${TMP_BUILD_DIR}/${APP_DIR}/${APP_MAIN_FILE}.py ${TMP_BUILD_DIR}/
     fi
     if [ -d lib ]; then
       echo "Copy 'lib' code files"
@@ -541,6 +606,24 @@ get_ssl_cert_arn() {
     fi
 }
 
+verify_base_names() {
+    base_names=("APP_DB_URI" "APP_DB_NAME" "APP_DB_ENGINE" "APP_NAME" "APP_SECRET_KEY" "APP_SUPERADMIN_EMAIL" "APP_HOST_NAME" "STORAGE_URL_SEED" "GIT_SUBMODULE_LOCAL_PATH")
+    ERROR_FLAG=0
+    
+    for base_name in "${base_names[@]}"; do
+        param_name_placeholder="${base_name}_placeholder"
+        if ! grep -q "$param_name_placeholder" "${TMP_WORKING_DIR}/template.yml"; then
+            echo "ERROR: $param_name_placeholder not found in ${TMP_WORKING_DIR}/template.yml"
+            ERROR_FLAG=1
+        fi
+    done
+    
+    if [ $ERROR_FLAG -eq 1 ]; then
+        echo ""
+        echo "^^^ Errors found while verifying base names in ${TMP_WORKING_DIR}/template.yml"
+    fi
+}
+
 create_sam_yaml() {
   # https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-function.html
 
@@ -549,25 +632,9 @@ create_sam_yaml() {
   echo ""
 
   # Prepare domain name
-  if [ "${APP_DOMAIN_NAME}" = "" ];then
-    APP_DOMAIN_NAME="${APP_NAME_LOWERCASE}.com"
-  fi
-
-  DOMAIN_NAME=""
-  if [ "${STAGE}" = "prod" ];then
-    DOMAIN_NAME="api.${APP_DOMAIN_NAME}"
-  else
-    if [ "${STAGE}" = "qa" ];then
-      DOMAIN_NAME="api-qa.${APP_DOMAIN_NAME}"
-    else
-      if [ "${STAGE}" = "staging" ];then
-        DOMAIN_NAME="api-staging.${APP_DOMAIN_NAME}"
-      else
-        if [ "${STAGE}" = "demo" ];then
-          DOMAIN_NAME="api-demo.${APP_DOMAIN_NAME}"
-        fi
-      fi
-    fi
+  . ${SCRIPTS_DIR}/../get_domain_name.sh "${STAGE}"
+  if [ "${DOMAIN_NAME}" = "" ];then
+    exit_abort
   fi
 
   # Prepare samconfig.toml
@@ -578,28 +645,39 @@ create_sam_yaml() {
     cd ..
   else
     if [ -f "${REPO_BASEDIR}/scripts/aws_big_lambda/template-sam.yml" ]; then
-      cp "${REPO_BASEDIR}/scripts/aws_big_lambda/template-sam.yml" template.yml
+      cp "${REPO_BASEDIR}/scripts/aws_big_lambda/template-sam.yml" ${TMP_WORKING_DIR}/template.yml
     else
-      cp template-sam.yml template.yml
+      cp template-sam.yml ${TMP_WORKING_DIR}/template.yml
     fi
   fi
 
   if [ -f "${REPO_BASEDIR}/scripts/aws/update_additional_envvars.sh" ]; then
-      . "${REPO_BASEDIR}/scripts/aws/update_additional_envvars.sh" "./template.yml" "${REPO_BASEDIR}"
+      . "${REPO_BASEDIR}/scripts/aws/update_additional_envvars.sh" "${TMP_WORKING_DIR}/template.yml" "${REPO_BASEDIR}"
   fi
 
   # Replace @ with \@
   recover_at_sign
 
-  perl -i -pe "s|Runtime: python3.9|#|g" "./template.yml"
-  perl -i -pe "s|Runtime: python|#|g" "./template.yml"
-  perl -i -pe "s|CodeUri: ./deployment.zip|ImageUri: ${AWS_DOCKER_IMAGE_URI}|g" "./template.yml"
-  perl -i -pe "s|Handler: app.app|PackageType: Image|g" "./template.yml"
+  # perl -i -pe "s|Runtime: python3.9|#|g" "${TMP_WORKING_DIR}/template.yml"
+  # perl -i -pe "s|Runtime: python|# Runtime: python|g" "${TMP_WORKING_DIR}/template.yml"
+  # perl -i -pe "s|CodeUri: ./deployment.zip|ImageUri: ${AWS_DOCKER_IMAGE_URI}|g" "${TMP_WORKING_DIR}/template.yml"
+  # perl -i -pe "s|Handler: app.app|PackageType: Image|g" "${TMP_WORKING_DIR}/template.yml"
+  RESTORE_DOMAIN_NAME="${DOMAIN_NAME}"
+  # if [ "${CODE_URI_PATH}" != "" ]; then
+  if [ "${ACTION}" = "sam_run_local" ]; then
+    perl -i -pe "s|CodeUri:.*|CodeUri: ${CODE_URI_PATH}|g" "${TMP_WORKING_DIR}/template.yml"
+    perl -i -pe "s|Handler: app.app|Handler: ${APP_MAIN_FILE}.${APP_HANDLER}|g" "${TMP_WORKING_DIR}/template.yml"
+    DOMAIN_NAME=""
+  else
+    perl -i -pe "s|Runtime: python|# Runtime: python|g" "${TMP_WORKING_DIR}/template.yml"
+    perl -i -pe "s|CodeUri:.*|ImageUri: ${AWS_DOCKER_IMAGE_URI}|g" "${TMP_WORKING_DIR}/template.yml"
+    perl -i -pe "s|Handler: app.app|PackageType: Image|g" "${TMP_WORKING_DIR}/template.yml"
+  fi
 
   if [ "${DOMAIN_NAME}" = "" ];then
-    perl -i -pe "s|Domain:|# Domain:|g" "./template.yml"
-    perl -i -pe "s|DomainName: api.example.com|# DomainName: api.example.com|g" "./template.yml"
-    perl -i -pe "s|CertificateArn: CertificateArn_placeholder|# CertificateArn: CertificateArn_placeholder|g" "./template.yml"
+    perl -i -pe "s|Domain:|# Domain:|g" "${TMP_WORKING_DIR}/template.yml"
+    perl -i -pe "s|DomainName: api.example.com|# DomainName: api.example.com|g" "${TMP_WORKING_DIR}/template.yml"
+    perl -i -pe "s|CertificateArn: CertificateArn_placeholder|# CertificateArn: CertificateArn_placeholder|g" "${TMP_WORKING_DIR}/template.yml"
   else
     domain="${DOMAIN_NAME}"
     get_ssl_cert_arn
@@ -615,81 +693,141 @@ create_sam_yaml() {
       echo "ACM_CERTIFICATE_ARN: ${ACM_CERTIFICATE_ARN}" 
       echo ""
     fi
-    perl -i -pe "s|DomainName: api.example.com|DomainName: ${DOMAIN_NAME}|g" "./template.yml"
-    perl -i -pe "s|CertificateArn: CertificateArn_placeholder|CertificateArn: ${ACM_CERTIFICATE_ARN}|g" "./template.yml"
+    perl -i -pe "s|DomainName: api.example.com|DomainName: ${DOMAIN_NAME}|g" "${TMP_WORKING_DIR}/template.yml"
+    perl -i -pe "s|CertificateArn: CertificateArn_placeholder|CertificateArn: ${ACM_CERTIFICATE_ARN}|g" "${TMP_WORKING_DIR}/template.yml"
   fi        
-  perl -i -pe "s|StageName: api|StageName: ${STAGE}|g" "./template.yml"
+  DOMAIN_NAME="${RESTORE_DOMAIN_NAME}"
 
-  perl -i -pe "s|APP_NAME:.*|APP_NAME: ${APP_NAME}|g" "./template.yml"
-  perl -i -pe "s|APP_NAME_LOWERCASE_placeholder|${APP_NAME_LOWERCASE}|g" "./template.yml"
-  perl -i -pe "s|APP_NAME_placeholder|${APP_NAME}|g" "./template.yml"
+  verify_base_names
+  if [ $ERROR_FLAG -eq 1 ]; then
+    exit_abort
+  fi
 
-  perl -i -pe "s|CURRENT_FRAMEWORK_placeholder|${CURRENT_FRAMEWORK}|g" "./template.yml"
-  perl -i -pe "s|DEFAULT_LANG_placeholder|${DEFAULT_LANG}|g" "./template.yml"
+  perl -i -pe "s|StageName: api|StageName: ${STAGE}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|http:\/\/localhost:3000|${APP_CORS_ORIGIN}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|stage=dev|stage=${STAGE}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|AI_ASSISTANT_NAME:.*|AI_ASSISTANT_NAME: ${AI_ASSISTANT_NAME}|g" "./template.yml"
-  perl -i -pe "s|APP_VERSION:.*|APP_VERSION: ${APP_VERSION}|g" "./template.yml"
-  perl -i -pe "s|APP_DEBUG:.*|APP_DEBUG: ${APP_DEBUG}|g" "./template.yml"
+  # perl -i -pe "s|APP_NAME:.*|APP_NAME: ${APP_NAME}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|APP_NAME_placeholder|${APP_NAME}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|APP_NAME_LOWERCASE_placeholder|${APP_NAME_LOWERCASE}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|APP_STAGE:.*|APP_STAGE: ${STAGE}|g" "./template.yml"
-  perl -i -pe "s|APP_STAGE_placeholder|${STAGE}|g" "./template.yml"
+  perl -i -pe "s|CURRENT_FRAMEWORK_placeholder|${CURRENT_FRAMEWORK}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|DEFAULT_LANG_placeholder|${DEFAULT_LANG}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|FLASK_APP:.*|FLASK_APP: ${FLASK_APP}|g" "./template.yml"
-  perl -i -pe "s|APP_SECRET_KEY:.*|APP_SECRET_KEY: ${APP_SECRET_KEY}|g" "./template.yml"
-  perl -i -pe "s|APP_SUPERADMIN_EMAIL:.*|APP_SUPERADMIN_EMAIL: ${APP_SUPERADMIN_EMAIL}|g" "./template.yml"
+  perl -i -pe "s|AI_ASSISTANT_NAME_placeholder|${AI_ASSISTANT_NAME}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|APP_VERSION_placeholder|${APP_VERSION}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|APP_HOST_NAME_placeholder|${DOMAIN_NAME}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|APP_DEBUG_placeholder|${APP_DEBUG}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|APP_CORS_ORIGIN:.*|APP_CORS_ORIGIN: ${APP_CORS_ORIGIN}|g" "./template.yml"
-  perl -i -pe "s|APP_CORS_ORIGIN_placeholder|${APP_CORS_ORIGIN}|g" "./template.yml"
-  perl -i -pe "s|http:\/\/localhost:3000|${APP_CORS_ORIGIN}|g" "./template.yml"
-  perl -i -pe "s|APP_FRONTEND_AUDIENCE:.*|APP_FRONTEND_AUDIENCE: ${APP_FRONTEND_AUDIENCE}|g" "./template.yml"
+  # perl -i -pe "s|APP_STAGE:.*|APP_STAGE: ${STAGE}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|APP_STAGE_placeholder|${STAGE}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|APP_DB_ENGINE:.*|APP_DB_ENGINE: ${APP_DB_ENGINE}|g" "./template.yml"
-  perl -i -pe "s|APP_DB_NAME:.*|APP_DB_NAME: ${APP_DB_NAME}|g" "./template.yml"
-  perl -i -pe "s|APP_DB_URI:.*|APP_DB_URI: ${APP_DB_URI}|g" "./template.yml"
+  perl -i -pe "s|FLASK_APP_placeholder|${FLASK_APP}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|APP_SECRET_KEY_placeholder|${APP_SECRET_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|STORAGE_URL_SEED_placeholder|${STORAGE_URL_SEED}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|APP_SUPERADMIN_EMAIL_placeholder|${APP_SUPERADMIN_EMAIL}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|GIT_SUBMODULE_URL:.*|GIT_SUBMODULE_URL: ${GIT_SUBMODULE_URL}|g" "./template.yml"
-  perl -i -pe "s|GIT_SUBMODULE_LOCAL_PATH:.*|GIT_SUBMODULE_LOCAL_PATH: ${GIT_SUBMODULE_LOCAL_PATH}|g" "./template.yml"
+  # perl -i -pe "s|APP_CORS_ORIGIN:.*|APP_CORS_ORIGIN: ${APP_CORS_ORIGIN}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|APP_CORS_ORIGIN_placeholder|${APP_CORS_ORIGIN}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|AWS_S3_CHATBOT_ATTACHMENTS_BUCKET:.*|AWS_S3_CHATBOT_ATTACHMENTS_BUCKET: ${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET}|g" "./template.yml"
-  perl -i -pe "s|AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_placeholder|${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET}|g" "./template.yml"
+  perl -i -pe "s|APP_DB_ENGINE_placeholder|${APP_DB_ENGINE}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|APP_DB_NAME_placeholder|${APP_DB_NAME}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|APP_DB_URI_placeholder|${APP_DB_URI}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|SMTP_SERVER:.*|SMTP_SERVER: ${SMTP_SERVER}|g" "./template.yml"
-  perl -i -pe "s|SMTP_USER:.*|SMTP_USER: ${SMTP_USER}|g" "./template.yml"
-  perl -i -pe "s|SMTP_PORT:.*|SMTP_PORT: ${SMTP_PORT}|g" "./template.yml"
-  perl -i -pe "s|SMTP_PASSWORD:.*|SMTP_PASSWORD: ${SMTP_PASSWORD}|g" "./template.yml"
-  perl -i -pe "s|SMTP_DEFAULT_SENDER:.*|SMTP_DEFAULT_SENDER: ${SMTP_DEFAULT_SENDER}|g" "./template.yml"
+  perl -i -pe "s|GIT_SUBMODULE_URL_placeholder|${GIT_SUBMODULE_URL}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|GIT_SUBMODULE_LOCAL_PATH_placeholder|${GIT_SUBMODULE_LOCAL_PATH}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|OPENAI_TEMPERATURE:.*|OPENAI_TEMPERATURE: ${OPENAI_TEMPERATURE}|g" "./template.yml"
-  perl -i -pe "s|OPENAI_API_KEY:.*|OPENAI_API_KEY: ${OPENAI_API_KEY}|g" "./template.yml"
-  perl -i -pe "s|OPENAI_MODEL:.*|OPENAI_MODEL: ${OPENAI_MODEL}|g" "./template.yml"
+  # perl -i -pe "s|AWS_S3_CHATBOT_ATTACHMENTS_BUCKET:.*|AWS_S3_CHATBOT_ATTACHMENTS_BUCKET: ${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_placeholder|${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe"s|GOOGLE_API_KEY:.*|GOOGLE_API_KEY: ${GOOGLE_API_KEY}|g" "./template.yml"
-  perl -i -pe"s|GOOGLE_CSE_ID:.*|GOOGLE_CSE_ID: ${GOOGLE_CSE_ID}|g" "./template.yml"
+  perl -i -pe "s|SMTP_SERVER_placeholder|${SMTP_SERVER}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|SMTP_USER_placeholder|${SMTP_USER}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|SMTP_PORT_placeholder|${SMTP_PORT}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|SMTP_PASSWORD_placeholder|${SMTP_PASSWORD}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|SMTP_DEFAULT_SENDER_placeholder|${SMTP_DEFAULT_SENDER}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe"s|LANGCHAIN_API_KEY:.*|LANGCHAIN_API_KEY: ${LANGCHAIN_API_KEY}|g" "./template.yml"
-  perl -i -pe"s|LANGCHAIN_PROJECT:.*|LANGCHAIN_PROJECT: ${LANGCHAIN_PROJECT}|g" "./template.yml"
+  perl -i -pe "s|OPENAI_TEMPERATURE_placeholder|${OPENAI_TEMPERATURE}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|OPENAI_API_KEY_placeholder|${OPENAI_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|OPENAI_MODEL_placeholder|${OPENAI_MODEL}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe"s|HUGGINGFACE_API_KEY:.*|HUGGINGFACE_API_KEY: ${HUGGINGFACE_API_KEY}|g" "./template.yml"
-  perl -i -pe"s|HUGGINGFACE_ENDPOINT_URL:.*|HUGGINGFACE_ENDPOINT_URL: ${HUGGINGFACE_ENDPOINT_URL}|g" "./template.yml"
+  perl -i -pe"s|GOOGLE_API_KEY_placeholder|${GOOGLE_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe"s|GOOGLE_CSE_ID_placeholder|${GOOGLE_CSE_ID}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe "s|http:\/\/localhost:3000|${APP_CORS_ORIGIN}|g" "./template.yml"
-  perl -i -pe "s|stage=dev|stage=${STAGE}|g" "./template.yml"
+  perl -i -pe"s|LANGCHAIN_API_KEY_placeholder|${LANGCHAIN_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe"s|LANGCHAIN_PROJECT_placeholder|${LANGCHAIN_PROJECT}|g" "${TMP_WORKING_DIR}/template.yml"
+
+  perl -i -pe"s|HUGGINGFACE_API_KEY_placeholder|${HUGGINGFACE_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe"s|HUGGINGFACE_ENDPOINT_URL_placeholder|${HUGGINGFACE_ENDPOINT_URL}|g" "${TMP_WORKING_DIR}/template.yml"
 
   # Prepare samconfig.toml
   if [ -f "${REPO_BASEDIR}/scripts/aws_big_lambda/template-samconfig.toml" ]; then
-    cp "${REPO_BASEDIR}/scripts/aws_big_lambda/template-samconfig.toml" "./samconfig.toml"
+    cp "${REPO_BASEDIR}/scripts/aws_big_lambda/template-samconfig.toml" "${TMP_WORKING_DIR}/samconfig.toml"
   else
-    cp template-samconfig.toml samconfig.toml
+    cp template-samconfig.toml ${TMP_WORKING_DIR}/samconfig.toml
   fi
-  perl -i -pe "s|APP_NAME_LOWERCASE_placeholder|${APP_NAME_LOWERCASE}|g" "./samconfig.toml"
-  perl -i -pe "s|APP_NAME_placeholder|${APP_NAME}|g" "./samconfig.toml"
+  perl -i -pe "s|APP_NAME_LOWERCASE_placeholder|${APP_NAME_LOWERCASE}|g" "${TMP_WORKING_DIR}/samconfig.toml"
+  perl -i -pe "s|APP_NAME_placeholder|${APP_NAME}|g" "${TMP_WORKING_DIR}/samconfig.toml"
+}
+
+verify_requirements_with_local_dependencies() {
+    echo ""
+    LOCAL_DEPENDENCIES_ERROR=""
+    # Verify "Local" dependencies
+    if grep -q "-e ..\/genericsuite-be-ai" "${REPO_BASEDIR}/requirements.txt"; then
+        echo "Local Genericsuite-BE-AI found in requirements.txt..."
+        echo "It was installed with e.g. pipenv install ../genericsuite-be-ai"
+        LOCAL_DEPENDENCIES_ERROR="1"
+    fi
+    if grep -q "-e ..\/genericsuite-be" "${REPO_BASEDIR}/requirements.txt"; then
+        echo "Local Genericsuite-BE found in requirements.txt..."
+        echo "It was installed with e.g. pipenv install ../genericsuite-be"
+        LOCAL_DEPENDENCIES_ERROR="1"
+    fi
+    # Local dependecies are not allowed because it makes the docker image for deployment creation to fail
+    if [ "${LOCAL_DEPENDENCIES_ERROR}" = "1" ]; then
+        echo ""
+        echo "Please install these dependencies from Pypi or a Git repository."
+        echo "If you are using Pipenv, you can install these dependencies with:"
+        echo "   pipenv install genericsuite-ai"
+        echo "   pipenv install genericsuite"
+        echo "   or"
+        echo "   pipenv install git+https://github.com/tomkat-cr/genericsuite-be-ai"
+        echo "   pipenv install git+https://github.com/tomkat-cr/genericsuite-be@branch_name"
+        exit_abort
+    fi
+    # Verify "Git" dependencies
+    if grep -q "genericsuite-ai@ git" "${REPO_BASEDIR}/requirements.txt"; then
+        echo "Git Genericsuite-BE-AI found in requirements.txt..."
+        LOCAL_DEPENDENCIES_ERROR="1"
+    fi
+    if grep -q "genericsuite@ git" "${REPO_BASEDIR}/requirements.txt"; then
+        echo "Git Genericsuite-BE found in requirements.txt..."
+        LOCAL_DEPENDENCIES_ERROR="1"
+    fi
+    # Local dependecies are allowed but warn about it just in case a commit+push is needed...
+    if [ "${LOCAL_DEPENDENCIES_ERROR}" = "1" ]; then
+        echo ""
+        echo "**************************************************************************"
+        echo "* WARNING: Did you remember to do the commit+push on those repositories? *"
+        echo "**************************************************************************"
+        echo ""
+        echo "If you decide to continue, I assume it was done..."
+        ask_to_continue
+    fi
+}
+
+requirements_rebuild() {
+    cd "${REPO_BASEDIR}"
+    REQUIREMENTS_REBUILD="0"
+    if [[ Pipfile -nt requirements.txt ]]; then
+      REQUIREMENTS_REBUILD="1"
+      make requirements
+    fi
 }
 
 build_docker() {
-    if [[ Pipfile -nt requirements.txt ]]; then
-      make requirements
-    fi
-
+    requirements_rebuild
+    verify_requirements_with_local_dependencies
     docker_system_prune
 
     echo "Building Docker image..."
@@ -710,7 +848,7 @@ build_docker() {
     rm app.${APP_NAME_LOWERCASE}.local.crt
     rm app.${APP_NAME_LOWERCASE}.local.chain.crt
     rm ca.crt
-    rm deployment.zip
+    # rm deployment.zip
     rm template.yml
     rm samconfig.toml
     rm run_api_gateway.sh
@@ -828,25 +966,26 @@ deploy_with_sam() {
     echo "sam deploy --guided"
     sam deploy --guided
   else
+    DEPLOYMENT_ERROR="0"
     # Automatic SAM deployment (no prompts after the final confirmation)
-    echo sam deploy --template-file template.yml --stack-name ${AWS_STACK_NAME} --region ${AWS_REGION} --config-file samconfig.toml --capabilities CAPABILITY_IAM --no-confirm-changeset --no-disable-rollback ${SAM_FORCED} --save-params --resolve-image-repos
-    sam deploy --template-file template.yml --stack-name ${AWS_STACK_NAME} --region ${AWS_REGION} --config-file samconfig.toml --capabilities CAPABILITY_IAM --no-confirm-changeset --no-disable-rollback ${SAM_FORCED} --save-params --resolve-image-repos
+    echo "sam deploy --template-file ${TMP_WORKING_DIR}/template.yml --stack-name ${AWS_STACK_NAME} --region ${AWS_REGION} --config-file ${TMP_WORKING_DIR}/samconfig.toml --capabilities CAPABILITY_IAM --no-confirm-changeset --no-disable-rollback ${SAM_FORCED} --save-params --resolve-image-repos"
+    if ! sam deploy --template-file ${TMP_WORKING_DIR}/template.yml --stack-name ${AWS_STACK_NAME} --region ${AWS_REGION} --config-file ${TMP_WORKING_DIR}/samconfig.toml --capabilities CAPABILITY_IAM --no-confirm-changeset --no-disable-rollback ${SAM_FORCED} --save-params --resolve-image-repos
+    then
+      DEPLOYMENT_ERROR="1"
+    fi
     # Remove with perl the entire line beginning with "template_file = ..." from "samconfig.toml" file
     # Because it refers to a local path with some PII, like the username eventually.
-    perl -i -pe "s|template_file = .*\n$||g" samconfig.toml
+    perl -i -pe "s|template_file = .*\n$||g" ${TMP_WORKING_DIR}/samconfig.toml
   fi
   echo ""
   echo "DEPLOY_WITH_SAM - End"
   echo ""
-  echo "Current directory:"
-  pwd
-  echo ""
 }
 
 deploy_without_sam() {
+    DEPLOYMENT_ERROR="o"
 
     # Deploy Lambda Function
-
     if [  "${FORCE_LAMBDA_CREATION}" = "1" ]; then
       echo ""
       echo "aws lambda delete-function --function-name ${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}"
@@ -874,6 +1013,9 @@ deploy_without_sam() {
         --memory-size ${MEMORY_SIZE:-512} \
         | jq
         # --architectures ${ARCHITECTURES:-arm64}
+      if [ ! $? -eq 0 ]; then
+        DEPLOYMENT_ERROR="1"
+      fi
     else
       echo aws lambda update-function-code \
         --function-name ${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE} \
@@ -884,6 +1026,9 @@ deploy_without_sam() {
         --function-name ${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE} \
         --image-uri ${AWS_DOCKER_IMAGE_URI} \
         --region ${AWS_REGION} | jq
+      if [ ! $? -eq 0 ]; then
+        DEPLOYMENT_ERROR="1"
+      fi
     fi
     echo ""
 
@@ -976,9 +1121,12 @@ deploy_without_sam() {
       --principal apigateway.amazonaws.com \
       --source-arn "arn:aws:execute-api:${AWS_REGION}:${AWS_ACCOUNT_ID}:${API_ID}/*/*/${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}" \
       | jq
-
-    echo ""
-    echo "Trigger added successfully."
+    if [ ! $? -eq 0 ]; then
+      DEPLOYMENT_ERROR="1"
+    else
+      echo ""
+      echo "Trigger added successfully."
+    fi
 
     # List API Gateway resources
     echo ""
@@ -1012,6 +1160,9 @@ deploy_without_sam() {
             --type AWS_PROXY \
             --integration-http-method ${resource_method} \
             --uri arn:aws:apigateway:${AWS_REGION}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}/invocations | jq
+            if [ ! $? -eq 0 ]; then
+              DEPLOYMENT_ERROR="1"
+            fi
         done
       fi
     done
@@ -1417,9 +1568,9 @@ test_lambda_docker() {
 }
 
 test_nginx() {
-    echo "3)" curl -XPOST "https://app.${APP_NAME_LOWERCASE}.local:${NGINX_PORT}/users/login"
+    echo "3)" curl -XPOST "https://app.${APP_NAME_LOWERCASE}.local:${BACKEND_LOCAL_PORT}/users/login"
     echo ""
-    curl -XPOST "https://app.${APP_NAME_LOWERCASE}.local:${NGINX_PORT}/users/login"
+    curl -XPOST "https://app.${APP_NAME_LOWERCASE}.local:${BACKEND_LOCAL_PORT}/users/login"
     echo ""
     echo "3.5)" docker logs local-lambda-nginx
     echo ""
@@ -1460,17 +1611,33 @@ docker_dependencies() {
   fi
 }
 
-show_date_time() {
-  if [ "${APP_TZ}" = "" ]; then
-    APP_TZ='America/New_York'
+verify_and_remove_file() {
+  if [ -f "${remove_file}" ];then
+    echo "Removing ${remove_file}..."
+    if rm -rf ${remove_file}
+    then
+      echo "Ok"
+    else
+      echo "RM Error"
+    fi
   fi
-  TZ="${APP_TZ}" date
+}
+
+remove_temp_files() {
+  echo ""
+  remove_file="${TMP_WORKING_DIR}/template.yml"
+  verify_and_remove_file
+  remove_file="${TMP_WORKING_DIR}/samconfig.toml"
+  verify_and_remove_file
+  remove_file="${TMP_BUILD_DIR}/template.yml"
+  verify_and_remove_file
+  remove_file="${TMP_BUILD_DIR}/samconfig.toml"
+  verify_and_remove_file
 }
 
 # ----------------------------
 
 # Default values before load .env
-
 
 # Action
 ACTION="$1"
@@ -1493,7 +1660,8 @@ cd "${REPO_BASEDIR}"
 
 LAMBDA_PORT="9000"
 API_GATEWAY_PORT="8080"
-NGINX_PORT="5001"
+FRONTEND_LOCAL_PORT=3000
+BACKEND_LOCAL_PORT=5001
 LOCAL_LAMBDA_DOCKER_NAME="local-lambda-backend"
 
 FORCE_LAMBDA_CREATION="0"
@@ -1505,40 +1673,30 @@ DEPLOYMENT_METHOD="deploy_with_sam"
 # TARGET_OS="Alpine"
 TARGET_OS="AL2"
 
+# Iniitial date/time
+sh ${SCRIPTS_DIR}/../show_date_time.sh
+
 # Assumes it's run from the project root directory...
-set -o allexport; . .env ; set +o allexport ;
+# set -o allexport; . .env ; set +o allexport ;
+. ${SCRIPTS_DIR}/../set_app_dir_and_main_file.sh
 
 if [ "${CURRENT_FRAMEWORK}" = "" ]; then
-    echo "ERROR: CURRENT_FRAMEWORK environment variable not defined"
+    echo "ERROR: CURRENT_FRAMEWORK environment variable not set"
     exit 1
 fi
 if [ "${APP_NAME}" = "" ]; then
-    echo "ERROR: APP_NAME environment variable not defined"
+    echo "ERROR: APP_NAME environment variable not set"
     exit 1
 fi
 export APP_NAME_LOWERCASE=$(echo ${APP_NAME} | tr '[:upper:]' '[:lower:]')
 
 if [ "${FRONTEND_DIRECTORY}" = "" ]; then
     if [ "${FRONTEND_PATH}" = "" ]; then
-        echo "FRONTEND_PATH environment variable is not defined"
+        echo "ERROR: FRONTEND_PATH environment variable not set"
         exit 1
     else
         FRONTEND_DIRECTORY="${FRONTEND_PATH}"
     fi
-fi
-
-# Default App main code directory
-if [ "${APP_DIR}" = "" ]; then
-  # https://aws.github.io/chalice/topics/packaging.html
-  APP_DIR='.'
-  if [ "${CURRENT_FRAMEWORK}" = "fastapi" ]; then
-    # https://fastapi.tiangolo.com/tutorial/bigger-applications/?h=directory+structure#an-example-file-structure
-    APP_DIR='app'
-  fi
-  if [ "${CURRENT_FRAMEWORK}" = "flask" ]; then
-    # https://flask.palletsprojects.com/en/2.3.x/tutorial/layout/
-    APP_DIR='flaskr'
-  fi
 fi
 
 if [ ! -d "./${APP_DIR}" ]; then
@@ -1546,26 +1704,23 @@ if [ ! -d "./${APP_DIR}" ]; then
   exit 1
 fi
 
-# Default App entry point coode file
-if [ "${APP_MAIN_FILE}" = "" ]; then
-  # https://aws.github.io/chalice/topics/packaging.html
-  APP_MAIN_FILE='app'
-  if [ "${CURRENT_FRAMEWORK}" = "fastapi" ]; then
-    # https://fastapi.tiangolo.com/tutorial/bigger-applications/?h=directory+structure#an-example-file-structure
-    APP_MAIN_FILE='main'
-  fi
-  if [ "${CURRENT_FRAMEWORK}" = "flask" ]; then
-    # https://flask.palletsprojects.com/en/2.3.x/tutorial/factory/
-    APP_MAIN_FILE='__init__'
-  fi
-fi
-
 if [ ! -f "${APP_DIR}/${APP_MAIN_FILE}.py" ]; then
   echo "ERROR: APP_DIR/APP_MAIN_FILE '"${APP_DIR}/${APP_MAIN_FILE}".py' not found"
   exit 1
 fi
 
+if [ "${APP_DOMAIN_NAME}" = "" ]; then
+    echo "ERROR: APP_HOST_NAME not set"
+    exit 1
+fi
+
+if [ "${STORAGE_URL_SEED}" = "" ]; then
+    echo "ERROR: STORAGE_URL_SEED not set"
+    exit 1
+fi
+
 TMP_BUILD_DIR="/tmp/${APP_NAME_LOWERCASE}_backend_aws_tmp"
+TMP_WORKING_DIR="/tmp"
 
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --output json --no-paginate | jq -r '.Account')
 AWS_LAMBDA_FUNCTION_NAME_AND_STAGE=$(echo ${AWS_LAMBDA_FUNCTION_NAME}-${STAGE_UPPERCASE} | tr '[:upper:]' '[:lower:]')
@@ -1580,23 +1735,23 @@ MEMORY_SIZE="512"
 # ARCHITECTURES="arm64"
 
 if [ "${AWS_ACCOUNT_ID}" = "" ]; then
-  echo "ERROR: missing AWS_ACCOUNT_ID"
+  echo "ERROR: AWS_ACCOUNT_ID not set"
   exit_abort
 fi
 
 if [ "${AWS_LAMBDA_FUNCTION_NAME}" = "" ]; then
-  echo "ERROR: missing AWS_LAMBDA_FUNCTION_NAME"
+  echo "ERROR: AWS_LAMBDA_FUNCTION_NAME not set"
   exit_abort
 fi
 
 AWS_LAMBDA_FUNCTION_ROLE=$(eval echo \$AWS_LAMBDA_FUNCTION_ROLE_${STAGE_UPPERCASE})
 if [ "${AWS_LAMBDA_FUNCTION_ROLE}" = "" ]; then
-  echo "ERROR: missing AWS_LAMBDA_FUNCTION_ROLE. Check the value of AWS_LAMBDA_FUNCTION_ROLE_${STAGE_UPPERCASE}"
+  echo "ERROR: AWS_LAMBDA_FUNCTION_ROLE not set. Check the value of AWS_LAMBDA_FUNCTION_ROLE_${STAGE_UPPERCASE}"
   exit_abort
 fi
 
 if [ "${AWS_REGION}" = "" ]; then
-  echo "ERROR: missing AWS_REGION"
+  echo "ERROR: AWS_REGION not set"
   exit_abort
 fi
 
@@ -1611,9 +1766,7 @@ echo "3) Frontend Directory (FRONTEND_DIRECTORY): ${FRONTEND_DIRECTORY}"
 echo ""
 echo "==========================="
 
-echo ""
-
-if [[ "${ACTION}" = "sam_validate" || "${ACTION}" = "package" ]]; then
+if [[ "${ACTION}" = "sam_validate" || "${ACTION}" = "package" || "${ACTION}" = "sam_run_local" ]]; then
   COPY_VERSION_TO_FRONTEND="0"
   if [ "${ACTION}" = "package" ]; then
     APP_VERSION="package_test"
@@ -1628,7 +1781,13 @@ if [[ "${ACTION}" = "sam_validate" || "${ACTION}" = "package" ]]; then
   SAM_GUIDED="n"
   SAM_FORCED="--force-upload"
 else
+  remember_endpoint_definitions
+  echo ""
+
   ask_for_force_ecr_image_creation
+  echo ""
+
+  ask_to_show_existing_ecr_images
   echo ""
 
   ask_for_app_version
@@ -1644,18 +1803,15 @@ else
     exit_abort
   fi
 
-  echo ""
   ask_for_sam_guided_deployment
   echo ""
 
   if [[ "${ACTION}" = "build_docker" || "${ACTION}" = "sam_deploy" ]]; then
     ask_for_docker_system_prune
-    echo ""
   else
     DOCKER_PRUNE="is_not_the_case"
   fi
 
-  echo ""
   ask_for_frontend_version_assignment
 fi
 
@@ -1692,7 +1848,8 @@ if [ "${DEBUG}" = "1" ];then
   echo "AWS_LAMBDA_FUNCTION_NAME_AND_STAGE: ${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}"
   echo "LAMBDA_PORT: ${LAMBDA_PORT}"
   echo "API_GATEWAY_PORT: ${LAMBDA_PORT}"
-  echo "NGINX_PORT: ${NGINX_PORT}"
+  echo "BACKEND_LOCAL_PORT: ${BACKEND_LOCAL_PORT}"
+  echo "FRONTEND_LOCAL_PORT: ${FRONTEND_LOCAL_PORT}"
 fi
 echo ""
 echo "Docker parameters:"
@@ -1712,7 +1869,9 @@ echo ""
 ask_to_continue
 
 echo ""
-show_date_time
+
+# Start date/time
+sh ${SCRIPTS_DIR}/../show_date_time.sh
 
 echo ""
 perform_frontend_version_assignment
@@ -1753,6 +1912,11 @@ if [ "${ACTION}" = "sam_deploy" ]; then
     deploy_with_sam
   else
     deploy_without_sam
+  fi
+  # ECR image cleaning
+  cd "${REPO_BASEDIR}"
+  if [ "${DEPLOYMENT_ERROR}" = "0" ]; then
+    sh ${SCRIPTS_DIR}/../aws/clean_ecr_images.sh ${STAGE} 1
   fi
 fi
 
@@ -1799,8 +1963,64 @@ fi
 
 if [ "${ACTION}" = "sam_validate" ]; then
   prepare_tmp_build_dir
-  echo sam validate -t ${SCRIPTS_DIR}/template.yml
-  sam validate -t ${SCRIPTS_DIR}/template.yml
+  echo sam validate -t ${TMP_WORKING_DIR}/template.yml
+  sam validate -t ${TMP_WORKING_DIR}/template.yml
+fi
+
+if [ "${ACTION}" = "sam_run_local" ]; then
+  # Build the project using the temp dir root path
+  CODE_URI_PATH="."
+  # Avoid removing temporary files
+  REMOVE_TEMP_FILES="0"
+
+  # Re-build requirements if Pipfile changed
+  requirements_rebuild
+  # cd "${REPO_BASEDIR}"
+  # if [[ Pipfile -nt requirements.txt ]]; then
+  #   make requirements
+  # fi
+
+  # Verify local requirements and avoid "-e ../genericsuite..."
+  verify_requirements_with_local_dependencies
+  # Prepare SAM template.yml
+  prepare_tmp_build_dir
+  # Build local SAM project
+  cd "${TMP_BUILD_DIR}"
+  echo ""
+  echo "Local SAM build started: 'sam build'"
+  echo "From:"
+  echo "${TMP_WORKING_DIR}"
+  echo ""
+  SAM_BUILD_OPTIONS=""
+  if [ "${REQUIREMENTS_REBUILD}" = "1" ]; then
+    SAM_BUILD_OPTIONS="${SAM_BUILD_OPTIONS} --debug"
+    # SAM_BUILD_OPTIONS="${SAM_BUILD_OPTIONS} --use-container"
+  fi
+  # "sam build" is always needed...
+  # if ! sam build --use-container --debug
+  # if ! sam build --debug
+  if ! sam build ${SAM_BUILD_OPTIONS}
+  then
+    echo ""
+    echo "ERROR: sam build failed"
+    exit_abort
+  fi
+  # Run local SAM project
+  echo ""
+  echo "Local SAM started: 'sam local start-api'"
+  echo "From:"
+  echo "${TMP_WORKING_DIR}"
+  echo ""
+  # Python 3.10 Lambda image throws Segmentation Violation when running locally
+  # https://github.com/aws/aws-lambda-base-images/issues/100
+  # work around the issue by passing the "-d" option to "sam local" which puts sam in debug mode, which in turns disables multi-threading, preventing the crash
+  #
+  sam local start-api -d 8888 --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT}
+  # Restore requirements.txt
+  if [ -f "${REPO_BASEDIR}/requirements.txt.bak" ]; then
+    cp "${REPO_BASEDIR}/requirements.txt.bak" "${REPO_BASEDIR}/requirements.txt"
+    rm "${REPO_BASEDIR}/requirements.txt.bak"
+  fi
 fi
 
 if [ "${ACTION}" = "package" ]; then
@@ -1816,5 +2036,22 @@ if [ "${ACTION}" = "package" ]; then
   build_docker
 fi
 
+if [ "${REMOVE_TEMP_FILES}" = "0" ]; then
+  echo "WARNING: temp files not removed..."
+else
+  remove_temp_files
+fi
+
+if [ "${DEPLOYMENT_ERROR}" != "" ]; then
+  echo ""
+  echo ">>> FINAL DEPLOYMENT RESULT:"
+  if [ "${DEPLOYMENT_ERROR}" = "0" ]; then
+    echo ">>> Deployment done"
+  else
+    echo "^^^ Deployment WITH ERRORS ^^^"
+  fi
+fi
+
+# End date/time
 echo ""
-show_date_time
+sh ${SCRIPTS_DIR}/../show_date_time.sh

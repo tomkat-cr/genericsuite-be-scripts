@@ -1,6 +1,6 @@
 {
   "name": "genericsuite-be-scripts",
-  "version": "1.0.6",
+  "version": "1.0.10",
   "description": "GenericSuite Scripts (backend version)",
   "author": "Carlos J. Ramirez",
   "license": "ISC",
@@ -22,7 +22,7 @@
   "bugs": {
     "url": "https://github.com/tomkat-cr/genericsuite-be-scripts/issues"
   },
-  "homepage": "https://github.com/tomkat-cr/genericsuite-be-scripts#readme",
+  "homepage": "https://genericsuite.carlosjramirez.com/Backend-Development/GenericSuite-Scripts/",
   "keywords": [
     "bash",
     "genericsuite",
