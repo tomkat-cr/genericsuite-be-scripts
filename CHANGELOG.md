@@ -17,7 +17,6 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
-## Unreleased
 ## 1.0.10 (2024-05-18)
 ---
 
@@ -33,7 +32,8 @@ Standarize BACKEND_LOCAL_PORT and FRONTEND_LOCAL_PORT env. vars.
 Ignore the ".chalice/deployment/deployment.zip" file in big lambdas.
 
 ## Fixes
-Fix the "/var/scripts/get_domain_name.sh not found" error running the development backend envir. over https.
+Fix the "/var/scripts/get_domain_name.sh not found" error running the development backend environment over https.
+Fix error "cp: /tmp/sls/nginx.conf.tmp: No such file or directory" running the app over https.
 
 
 ## 1.0.9 (2024-05-17)

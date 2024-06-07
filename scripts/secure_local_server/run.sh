@@ -93,7 +93,7 @@ prepare_nginx_conf() {
     echo ""
     echo "Preparing Nginx configuration..."
     echo ""
-    # cd "${SCRIPTS_DIR}"
+    mkdir -p "${TMP_WORKING_DIR}"
     rm -rf "${TMP_WORKING_DIR}/nginx.conf.tmp"
     if ! cp "${SCRIPTS_DIR}/nginx.conf.template" "${TMP_WORKING_DIR}/nginx.conf.tmp" ; then
         echo "Could not copy nginx.conf.template to: ${TMP_WORKING_DIR}/nginx.conf.tmp"
