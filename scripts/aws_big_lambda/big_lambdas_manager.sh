@@ -607,7 +607,7 @@ get_ssl_cert_arn() {
 }
 
 verify_base_names() {
-    base_names=("APP_DB_URI" "APP_DB_NAME" "APP_DB_ENGINE" "APP_NAME" "APP_SECRET_KEY" "APP_SUPERADMIN_EMAIL" "APP_HOST_NAME" "STORAGE_URL_SEED" "GIT_SUBMODULE_LOCAL_PATH")
+    base_names=("CLOUD_PROVIDER AWS_REGION APP_DB_URI APP_DB_NAME APP_DB_ENGINE APP_NAME APP_SECRET_KEY APP_SUPERADMIN_EMAIL APP_HOST_NAME STORAGE_URL_SEED GIT_SUBMODULE_LOCAL_PATH")
     ERROR_FLAG=0
     
     for base_name in "${base_names[@]}"; do
@@ -723,16 +723,20 @@ create_sam_yaml() {
   perl -i -pe "s|APP_STAGE_placeholder|${STAGE}|g" "${TMP_WORKING_DIR}/template.yml"
 
   perl -i -pe "s|FLASK_APP_placeholder|${FLASK_APP}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|APP_SECRET_KEY_placeholder|${APP_SECRET_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|STORAGE_URL_SEED_placeholder|${STORAGE_URL_SEED}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|APP_SUPERADMIN_EMAIL_placeholder|${APP_SUPERADMIN_EMAIL}|g" "${TMP_WORKING_DIR}/template.yml"
+  # GsSecretParameter
+  # perl -i -pe "s|APP_SECRET_KEY_placeholder|${APP_SECRET_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
+  # GsSecretParameter
+  # perl -i -pe "s|STORAGE_URL_SEED_placeholder|${STORAGE_URL_SEED}|g" "${TMP_WORKING_DIR}/template.yml"
+  # GsSecretParameter
+  # perl -i -pe "s|APP_SUPERADMIN_EMAIL_placeholder|${APP_SUPERADMIN_EMAIL}|g" "${TMP_WORKING_DIR}/template.yml"
 
   # perl -i -pe "s|APP_CORS_ORIGIN:.*|APP_CORS_ORIGIN: ${APP_CORS_ORIGIN}|g" "${TMP_WORKING_DIR}/template.yml"
   perl -i -pe "s|APP_CORS_ORIGIN_placeholder|${APP_CORS_ORIGIN}|g" "${TMP_WORKING_DIR}/template.yml"
 
   perl -i -pe "s|APP_DB_ENGINE_placeholder|${APP_DB_ENGINE}|g" "${TMP_WORKING_DIR}/template.yml"
   perl -i -pe "s|APP_DB_NAME_placeholder|${APP_DB_NAME}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|APP_DB_URI_placeholder|${APP_DB_URI}|g" "${TMP_WORKING_DIR}/template.yml"
+  # GsSecretParameter
+  # perl -i -pe "s|APP_DB_URI_placeholder|${APP_DB_URI}|g" "${TMP_WORKING_DIR}/template.yml"
 
   perl -i -pe "s|GIT_SUBMODULE_URL_placeholder|${GIT_SUBMODULE_URL}|g" "${TMP_WORKING_DIR}/template.yml"
   perl -i -pe "s|GIT_SUBMODULE_LOCAL_PATH_placeholder|${GIT_SUBMODULE_LOCAL_PATH}|g" "${TMP_WORKING_DIR}/template.yml"
@@ -741,23 +745,33 @@ create_sam_yaml() {
   perl -i -pe "s|AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_placeholder|${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET}|g" "${TMP_WORKING_DIR}/template.yml"
 
   perl -i -pe "s|SMTP_SERVER_placeholder|${SMTP_SERVER}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|SMTP_USER_placeholder|${SMTP_USER}|g" "${TMP_WORKING_DIR}/template.yml"
   perl -i -pe "s|SMTP_PORT_placeholder|${SMTP_PORT}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|SMTP_PASSWORD_placeholder|${SMTP_PASSWORD}|g" "${TMP_WORKING_DIR}/template.yml"
+  # GsSecretParameter
+  # perl -i -pe "s|SMTP_USER_placeholder|${SMTP_USER}|g" "${TMP_WORKING_DIR}/template.yml"
+  # GsSecretParameter
+  # perl -i -pe "s|SMTP_PASSWORD_placeholder|${SMTP_PASSWORD}|g" "${TMP_WORKING_DIR}/template.yml"
   perl -i -pe "s|SMTP_DEFAULT_SENDER_placeholder|${SMTP_DEFAULT_SENDER}|g" "${TMP_WORKING_DIR}/template.yml"
 
   perl -i -pe "s|OPENAI_TEMPERATURE_placeholder|${OPENAI_TEMPERATURE}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|OPENAI_API_KEY_placeholder|${OPENAI_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
+  # GsSecretParameter
+  # perl -i -pe "s|OPENAI_API_KEY_placeholder|${OPENAI_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
   perl -i -pe "s|OPENAI_MODEL_placeholder|${OPENAI_MODEL}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe"s|GOOGLE_API_KEY_placeholder|${GOOGLE_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe"s|GOOGLE_CSE_ID_placeholder|${GOOGLE_CSE_ID}|g" "${TMP_WORKING_DIR}/template.yml"
+  # GsSecretParameter
+  # perl -i -pe"s|GOOGLE_API_KEY_placeholder|${GOOGLE_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
+  # GsSecretParameter
+  # perl -i -pe"s|GOOGLE_CSE_ID_placeholder|${GOOGLE_CSE_ID}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe"s|LANGCHAIN_API_KEY_placeholder|${LANGCHAIN_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
+  # GsSecretParameter
+  # perl -i -pe"s|LANGCHAIN_API_KEY_placeholder|${LANGCHAIN_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
   perl -i -pe"s|LANGCHAIN_PROJECT_placeholder|${LANGCHAIN_PROJECT}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe"s|HUGGINGFACE_API_KEY_placeholder|${HUGGINGFACE_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
+  # GsSecretParameter
+  # perl -i -pe"s|HUGGINGFACE_API_KEY_placeholder|${HUGGINGFACE_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
   perl -i -pe"s|HUGGINGFACE_ENDPOINT_URL_placeholder|${HUGGINGFACE_ENDPOINT_URL}|g" "${TMP_WORKING_DIR}/template.yml"
+
+  perl -i -pe "s|CLOUD_PROVIDER_placeholder|${CLOUD_PROVIDER}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|AWS_REGION_placeholder|${AWS_REGION}|g" "${TMP_WORKING_DIR}/template.yml"
 
   # Prepare samconfig.toml
   if [ -f "${REPO_BASEDIR}/scripts/aws_big_lambda/template-samconfig.toml" ]; then
@@ -1679,6 +1693,15 @@ sh ${SCRIPTS_DIR}/../show_date_time.sh
 # Assumes it's run from the project root directory...
 # set -o allexport; . .env ; set +o allexport ;
 . ${SCRIPTS_DIR}/../set_app_dir_and_main_file.sh
+
+if [ "${CLOUD_PROVIDER}" = "" ]; then
+  echo "ERROR: CLOUD_PROVIDER not set. Must be: aws, gcp, azure"
+  exit_abort
+fi
+if [ "${CLOUD_PROVIDER}" != "aws" ]; then
+  echo "ERROR: invalid CLOUD_PROVIDER. This script only works with 'aws'."
+  exit_abort
+fi
 
 if [ "${CURRENT_FRAMEWORK}" = "" ]; then
     echo "ERROR: CURRENT_FRAMEWORK environment variable not set"

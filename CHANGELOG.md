@@ -17,6 +17,14 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
+## Unreleased
+## 1.0.10 (2024-05-18)
+---
+
+### New
+Add password and API Keys env. vars. to AWS Secrets [GS-41].
+
+
 ## 1.0.10 (2024-05-18)
 ---
 

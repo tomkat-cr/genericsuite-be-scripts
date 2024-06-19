@@ -72,17 +72,15 @@ Resources:
           APP_NAME: APP_NAME_placeholder
           AI_ASSISTANT_NAME: AI_ASSISTANT_NAME_placeholder
           APP_VERSION: APP_VERSION_placeholder
-          APP_HOST_NAME: APP_HOST_NAME_placeholder
           FLASK_APP: FLASK_APP_placeholder
           APP_DEBUG: APP_DEBUG_placeholder
           APP_STAGE: APP_STAGE_placeholder
-          APP_SECRET_KEY: APP_SECRET_KEY_placeholder
-          STORAGE_URL_SEED: STORAGE_URL_SEED_placeholder
-          APP_SUPERADMIN_EMAIL: APP_SUPERADMIN_EMAIL_placeholder
+          # APP_SECRET_KEY: APP_SECRET_KEY_placeholder    # GsSecretParameter
+          # APP_SUPERADMIN_EMAIL: APP_SUPERADMIN_EMAIL_placeholder    # GsSecretParameter
           APP_CORS_ORIGIN: APP_CORS_ORIGIN_placeholder
           APP_DB_ENGINE: APP_DB_ENGINE_placeholder
           APP_DB_NAME: APP_DB_NAME_placeholder
-          APP_DB_URI: APP_DB_URI_placeholder
+          # APP_DB_URI: APP_DB_URI_placeholder    # GsSecretParameter
           CURRENT_FRAMEWORK: CURRENT_FRAMEWORK_placeholder
           DEFAULT_LANG: DEFAULT_LANG_placeholder
           GIT_SUBMODULE_URL: GIT_SUBMODULE_URL_placeholder
@@ -90,18 +88,28 @@ Resources:
           AWS_S3_CHATBOT_ATTACHMENTS_BUCKET: AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_placeholder
           SMTP_SERVER: SMTP_SERVER_placeholder
           SMTP_PORT: SMTP_PORT_placeholder
-          SMTP_USER: SMTP_USER_placeholder
-          SMTP_PASSWORD: SMTP_PASSWORD_placeholder
+          # SMTP_USER: SMTP_USER_placeholder    # GsSecretParameter
+          # SMTP_PASSWORD: SMTP_PASSWORD_placeholder    # GsSecretParameter
           SMTP_DEFAULT_SENDER: SMTP_DEFAULT_SENDER_placeholder
-          OPENAI_API_KEY: OPENAI_API_KEY_placeholder
+          # OPENAI_API_KEY: OPENAI_API_KEY_placeholder    # GsSecretParameter
           OPENAI_MODEL: OPENAI_MODEL_placeholder
           OPENAI_TEMPERATURE: OPENAI_TEMPERATURE_placeholder
-          GOOGLE_API_KEY: GOOGLE_API_KEY_placeholder
-          GOOGLE_CSE_ID: GOOGLE_CSE_ID_placeholder
-          LANGCHAIN_API_KEY: LANGCHAIN_API_KEY_placeholder
+          # GOOGLE_API_KEY: GOOGLE_API_KEY_placeholder    # GsSecretParameter
+          # GOOGLE_CSE_ID: GOOGLE_CSE_ID_placeholder    # GsSecretParameter
+          # LANGCHAIN_API_KEY: LANGCHAIN_API_KEY_placeholder    # GsSecretParameter
           LANGCHAIN_PROJECT: LANGCHAIN_PROJECT_placeholder
-          HUGGINGFACE_API_KEY: HUGGINGFACE_API_KEY_placeholder
+          # HUGGINGFACE_API_KEY: HUGGINGFACE_API_KEY_placeholder    # GsSecretParameter
           HUGGINGFACE_ENDPOINT_URL: HUGGINGFACE_ENDPOINT_URL_placeholder
+          # FDA_API_KEY: FDA_API_KEY_placeholder    # GsSecretParameter
+
+          # New 2024-05-30
+          APP_HOST_NAME: APP_HOST_NAME_placeholder
+          # STORAGE_URL_SEED: STORAGE_URL_SEED_placeholder    # GsSecretParameter
+
+          # New 2024-06-16
+          CLOUD_PROVIDER: CLOUD_PROVIDER_placeholder
+          AWS_REGION: AWS_REGION_placeholder
+
       Role:
         Fn::GetAtt:
         - LambdaExecutionRole

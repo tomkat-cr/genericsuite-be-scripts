@@ -7,6 +7,7 @@ https://stackoverflow.com/questions/53897333/read-fernet-key-causes-valueerror-f
 """
 from cryptography.fernet import Fernet
 
+
 def main():
     """
     Generate a new seed.
@@ -20,6 +21,7 @@ def main():
     print("")
     print("..........")
     print("")
+
 
 if __name__ == "__main__":
     main()
