@@ -100,8 +100,11 @@ if [ "${TARGET_STAGE}" = "qa" ] && [ "${TARGET_ACTION}" = "http" ]; then
 fi
 
 if [ "${TARGET_STAGE}" == "mongo_docker" ]; then
+    export APP_STAGE="dev"
     APP_DB_NAME_DEV="mongo"
     APP_DB_URI_DEV="mongodb://root:example@127.0.0.1:27017/"
+else
+    export APP_STAGE="${TARGET_STAGE}"
 fi
 
 echo ""

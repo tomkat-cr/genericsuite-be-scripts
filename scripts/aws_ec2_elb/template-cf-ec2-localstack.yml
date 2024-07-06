@@ -1,0 +1,104 @@
+# fastapi-ec2-localstack.yml
+# 2024-06-23 | CR
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template to deploy FastAPI app with EC2 and ECR, including all necessary resources (VPC, Subnets, Launch Configuration).
+
+Parameters:
+  KeyName:
+    Description: Name for the EC2 KeyPair to enable SSH access to the instance
+    Type: String
+  VpcId:
+    Description: VPC ID where the resources will be created
+    Type: String
+  SubnetId:
+    Description: Subnet ID where the EC2 instance will be launched
+    Type: String
+  EcrDockerImageUri:
+    Description: Name of the ECR repository
+    Type: String
+  EcrDockerImageTag:
+    Description: Tag of the Docker image in the ECR repository
+    Type: String
+    Default: latest
+
+Resources:
+  KeyPair:
+    Type: AWS::EC2::KeyPair
+    Properties:
+      KeyName: !Ref KeyName
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow HTTP and SSH
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      KeyName: !Ref KeyPair
+      SecurityGroups:
+        - !Ref SecurityGroup
+      SubnetId: !Ref SubnetId
+      ImageId: ami-0c55b159cbfafe1f0 # Amazon Linux 2 AMI
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          amazon-linux-extras install docker -y
+          service docker start
+          usermod -a -G docker ec2-user
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${AWS::AccountId}.dkr.ecr.us-east-1.amazonaws.com
+          docker pull ${EcrDockerImageUri}:${EcrDockerImageTag}
+          docker run -d -p 80:80 ${EcrDockerImageUri}:${EcrDockerImageTag} -v ~/.aws/credentials:/root/.aws/credentials
+
+  # LoadBalancer:
+  #   Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+  #   Properties:
+  #     Name: my-load-balancer
+  #     Subnets:
+  #       - !Ref SubnetId
+  #     SecurityGroups:
+  #       - !Ref SecurityGroup
+
+  # TargetGroup:
+  #   Type: AWS::ElasticLoadBalancingV2::TargetGroup
+  #   Properties:
+  #     VpcId: !Ref VpcId
+  #     Port: 80
+  #     Protocol: HTTP
+  #     TargetType: instance
+  #     Targets:
+  #       - Id: !Ref EC2Instance
+
+  # Listener:
+  #   Type: AWS::ElasticLoadBalancingV2::Listener
+  #   Properties:
+  #     LoadBalancerArn: !Ref LoadBalancer
+  #     Port: 80
+  #     Protocol: HTTP
+  #     DefaultActions:
+  #       - Type: forward
+  #         TargetGroupArn: !Ref TargetGroup
+
+Outputs:
+  InstancePublicIP:
+    Description: Public IP of our EC2 instance
+    Value: !GetAtt 
+      - EC2Instance
+      - PublicIp
+  # LoadBalancerDNS:
+  #   Description: DNS Name of the load balancer
+  #   Value: !GetAtt 
+  #     - LoadBalancer
+  #     - DNSName

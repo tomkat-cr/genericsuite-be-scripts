@@ -1,0 +1,28 @@
+# Dockerfile
+# Jira Story: GS-96 - Script to deploy the app to EC2
+# 2024-06-21 | CR
+
+# Use an official Python runtime as a parent image
+FROM python:3.11-slim
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Copy the current directory contents into the container at /app
+COPY . /app
+
+# Update operating system and install dependecies
+RUN apt-get update && apt-get install -y git
+
+# Install FastAPI and Uvicorn
+RUN pip install -r requirements.txt
+
+# Set invironment variables
+# RUN set -o allexport; source .env; set +o allexport;
+
+# Make port 80 available to the world outside this container
+EXPOSE 80
+
+# Run uvicorn server
+# CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80", "--env-file", ".env"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]

@@ -71,9 +71,14 @@ export APP_HOST_NAME="${DOMAIN_NAME}"
 export APP_VERSION=$(cat version.txt)
 export APP_DB_ENGINE=$(eval echo \$APP_DB_ENGINE_${STAGE_UPPERCASE})
 export APP_DB_NAME=$(eval echo \$APP_DB_NAME_${STAGE_UPPERCASE})
-export APP_DB_URI=$(eval echo \$APP_DB_URI_${STAGE_UPPERCASE})
+# export APP_DB_URI=$(eval echo \$APP_DB_URI_${STAGE_UPPERCASE})
 export APP_CORS_ORIGIN="$(eval echo \"\$APP_CORS_ORIGIN_${STAGE_UPPERCASE}\")"
 export AWS_S3_CHATBOT_ATTACHMENTS_BUCKET=$(eval echo \$AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_${STAGE_UPPERCASE})
+
+export APP_STAGE="${STAGE}"
+# To avoid message from langsmith:
+# USER_AGENT environment variable not set, consider setting it to identify your requests.
+export USER_AGENT="${APP_NAME_LOWERCASE}-${STAGE}"
 
 echo ""
 echo "Current App / Version: ${APP_NAME} / ${APP_VERSION}"

@@ -98,6 +98,7 @@ Resources:
           # GOOGLE_CSE_ID: GOOGLE_CSE_ID_placeholder    # GsSecretParameter
           # LANGCHAIN_API_KEY: LANGCHAIN_API_KEY_placeholder    # GsSecretParameter
           LANGCHAIN_PROJECT: LANGCHAIN_PROJECT_placeholder
+          USER_AGENT: USER_AGENT_placeholder
           # HUGGINGFACE_API_KEY: HUGGINGFACE_API_KEY_placeholder    # GsSecretParameter
           HUGGINGFACE_ENDPOINT_URL: HUGGINGFACE_ENDPOINT_URL_placeholder
           # FDA_API_KEY: FDA_API_KEY_placeholder    # GsSecretParameter

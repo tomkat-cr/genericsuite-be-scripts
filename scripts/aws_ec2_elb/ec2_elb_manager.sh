@@ -1,10 +1,6 @@
 #!/bin/bash
-# big_lambdas_manager.sh
-# 2023-12-10 | CR
-
-# Reference:
-# Deploy Python Lambda functions with container images
-# https://docs.aws.amazon.com/lambda/latest/dg/python-image.html#python-image-instructions
+# ec2_elb_manager.sh
+# 2024-06-20 | CR
 
 DEBUG="0"
 
@@ -271,21 +267,21 @@ verify_docker_image_exist() {
 
 recover_at_sign() {
     # Replace @ with \@
-    # APP_SUPERADMIN_EMAIL=${APP_SUPERADMIN_EMAIL//@/\\@}
-    # APP_SECRET_KEY=${APP_SECRET_KEY//@/\\@}
-    # APP_DB_URI_DEV=${APP_DB_URI_DEV//@/\\@}
-    # APP_DB_URI_QA=${APP_DB_URI_QA//@/\\@}
-    # APP_DB_URI_STAGING=${APP_DB_URI_STAGING//@/\\@}
-    # APP_DB_URI_PROD=${APP_DB_URI_PROD//@/\\@}
-    # APP_DB_URI_DEMO=${APP_DB_URI_DEMO//@/\\@}
-    # APP_DB_URI=${APP_DB_URI//@/\\@}
+    APP_SUPERADMIN_EMAIL=${APP_SUPERADMIN_EMAIL//@/\\@}
+    APP_SECRET_KEY=${APP_SECRET_KEY//@/\\@}
+    APP_DB_URI_DEV=${APP_DB_URI_DEV//@/\\@}
+    APP_DB_URI_QA=${APP_DB_URI_QA//@/\\@}
+    APP_DB_URI_STAGING=${APP_DB_URI_STAGING//@/\\@}
+    APP_DB_URI_PROD=${APP_DB_URI_PROD//@/\\@}
+    APP_DB_URI_DEMO=${APP_DB_URI_DEMO//@/\\@}
+    APP_DB_URI=${APP_DB_URI//@/\\@}
     SMTP_DEFAULT_SENDER=${SMTP_DEFAULT_SENDER//@/\\@}
-    # SMTP_USER=${SMTP_USER//@/\\@}
-    # SMTP_PASSWORD=${SMTP_PASSWORD//@/\\@}
-    # OPENAI_API_KEY=${OPENAI_API_KEY//@/\\@}
-    # LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY//@/\\@}
-    # GOOGLE_API_KEY=${GOOGLE_API_KEY//@/\\@}
-    # HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY//@/\\@}
+    SMTP_USER=${SMTP_USER//@/\\@}
+    SMTP_PASSWORD=${SMTP_PASSWORD//@/\\@}
+    OPENAI_API_KEY=${OPENAI_API_KEY//@/\\@}
+    LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY//@/\\@}
+    GOOGLE_API_KEY=${GOOGLE_API_KEY//@/\\@}
+    HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY//@/\\@}
 }
 
 set_env_vars_file() {
@@ -301,36 +297,43 @@ set_env_vars_file() {
     # Replace @ with \@
     recover_at_sign
 
-    if [ "${ACTION}" = "sam_run_local" ]; then
-      export APP_CORS_ORIGIN="http://app.${APP_NAME_LOWERCASE}.local:${FRONTEND_LOCAL_PORT}"
-    else
-      if [ "${STAGE_UPPERCASE}" = "QA" ]; then
-        export APP_CORS_ORIGIN="${APP_CORS_ORIGIN_QA_CLOUD}"
-      else
-        export APP_CORS_ORIGIN="$(eval echo \"\$APP_CORS_ORIGIN_${STAGE_UPPERCASE}\")"
-      fi
-    fi
-
     cat > "${TMP_BUILD_DIR}/set_env_vars.sh" <<END \
 
 export APP_DB_ENGINE=$(eval echo \$APP_DB_ENGINE_${STAGE_UPPERCASE})
 export APP_DB_NAME=$(eval echo \$APP_DB_NAME_${STAGE_UPPERCASE})
-export APP_STAGE="${STAGE}"
+export APP_DB_URI=$(eval echo \$APP_DB_URI_${STAGE_UPPERCASE})
+if [ "${ACTION}" = "sam_run_local" ]; then
+  export APP_CORS_ORIGIN="http://app.${APP_NAME_LOWERCASE}.local:${FRONTEND_LOCAL_PORT}"
+else
+  if [ "${STAGE_UPPERCASE}" = "QA" ]; then
+    export APP_CORS_ORIGIN="${APP_CORS_ORIGIN_QA_CLOUD}"
+  else
+    export APP_CORS_ORIGIN="$(eval echo \"\$APP_CORS_ORIGIN_${STAGE_UPPERCASE}\")"
+  fi
+fi
 export AWS_S3_CHATBOT_ATTACHMENTS_BUCKET=$(eval echo \$AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_${STAGE_UPPERCASE})
-export APP_CORS_ORIGIN="${APP_CORS_ORIGIN}"
 export CURRENT_FRAMEWORK="${CURRENT_FRAMEWORK}"
 export DEFAULT_LANG="${DEFAULT_LANG}"
+export APP_NAME="${APP_NAME}"
 export AI_ASSISTANT_NAME="${AI_ASSISTANT_NAME}"
 export FLASK_APP="${FLASK_APP}"
+export APP_SECRET_KEY="${APP_SECRET_KEY}"
+export APP_SUPERADMIN_EMAIL="${APP_SUPERADMIN_EMAIL}"
 export GIT_SUBMODULE_URL="${GIT_SUBMODULE_URL}"
 export GIT_SUBMODULE_LOCAL_PATH="${GIT_SUBMODULE_LOCAL_PATH}"
+export OPENAI_API_KEY="${OPENAI_API_KEY}"
 export OPENAI_MODEL="${OPENAI_MODEL}"
 export OPENAI_TEMPERATURE="${OPENAI_TEMPERATURE}"
-export USER_AGENT="${APP_NAME_LOWERCASE}-${STAGE}"
+export GOOGLE_API_KEY="${GOOGLE_API_KEY}"
+export GOOGLE_CSE_ID="${GOOGLE_CSE_ID}"
+export LANGCHAIN_API_KEY="${LANGCHAIN_API_KEY}"
 export LANGCHAIN_PROJECT="${LANGCHAIN_PROJECT}"
+export HUGGINGFACE_API_KEY="${HUGGINGFACE_API_KEY}"
 export HUGGINGFACE_ENDPOINT_URL="${HUGGINGFACE_ENDPOINT_URL}"
 export SMTP_SERVER="${SMTP_SERVER}"
 export SMTP_PORT="${SMTP_PORT}"
+export SMTP_USER="${SMTP_USER}"
+export SMTP_PASSWORD="${SMTP_PASSWORD}"
 export SMTP_DEFAULT_SENDER="${SMTP_DEFAULT_SENDER}"
 
 END
@@ -341,21 +344,31 @@ END
   CURRENT_FRAMEWORK=${CURRENT_FRAMEWORK},
   DEFAULT_LANG=${DEFAULT_LANG},
   APP_NAME=${APP_NAME},
-  APP_STAGE=${STAGE},
   AI_ASSISTANT_NAME=${AI_ASSISTANT_NAME},
   APP_DEBUG=${APP_DEBUG},
+  APP_STAGE=${APP_STAGE},
   FLASK_APP=${FLASK_APP},
   GIT_SUBMODULE_URL=${GIT_SUBMODULE_URL},
   GIT_SUBMODULE_LOCAL_PATH=${GIT_SUBMODULE_LOCAL_PATH},
   AWS_S3_CHATBOT_ATTACHMENTS_BUCKET=${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET},
   APP_CORS_ORIGIN=${APP_CORS_ORIGIN},
   APP_DB_NAME=${APP_DB_NAME},
+  APP_SECRET_KEY=${APP_SECRET_KEY},
+  SMTP_USER=${SMTP_USER},
   SMTP_DEFAULT_SENDER=${SMTP_DEFAULT_SENDER},
+  APP_SUPERADMIN_EMAIL=${APP_SUPERADMIN_EMAIL},
   SMTP_PORT=${SMTP_PORT},
+  APP_DB_URI=${APP_DB_URI},
   OPENAI_TEMPERATURE=${OPENAI_TEMPERATURE},
+  GOOGLE_API_KEY="${GOOGLE_API_KEY}"
+  GOOGLE_CSE_ID="${GOOGLE_CSE_ID}"
+  LANGCHAIN_API_KEY="${LANGCHAIN_API_KEY}"
   LANGCHAIN_PROJECT="${LANGCHAIN_PROJECT}"
+  HUGGINGFACE_API_KEY="${HUGGINGFACE_API_KEY}"
   HUGGINGFACE_ENDPOINT_URL="${HUGGINGFACE_ENDPOINT_URL}"
+  SMTP_PASSWORD=${SMTP_PASSWORD},
   SMTP_SERVER=${SMTP_SERVER},
+  OPENAI_API_KEY=${OPENAI_API_KEY},
   OPENAI_MODEL=${OPENAI_MODEL},
   APP_DB_ENGINE=${APP_DB_ENGINE}
 }"
@@ -363,21 +376,30 @@ END
   --env CURRENT_FRAMEWORK=\"${CURRENT_FRAMEWORK}\"
   --env DEFAULT_LANG=\"${DEFAULT_LANG}\"
   --env APP_NAME=\"${APP_NAME}\"
-  --env APP_STAGE=\"${STAGE}\"
-  --env AI_ASSISTANT_NAME=\"${AI_ASSISTANT_NAME}\"
   --env APP_DEBUG=\"${APP_DEBUG}\"
+  --env APP_STAGE=\"${APP_STAGE}\"
   --env FLASK_APP=\"${FLASK_APP}\"
   --env GIT_SUBMODULE_URL=\"${GIT_SUBMODULE_URL}\"
   --env GIT_SUBMODULE_LOCAL_PATH=\"${GIT_SUBMODULE_LOCAL_PATH}\"
   --env AWS_S3_CHATBOT_ATTACHMENTS_BUCKET=\"${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET}\"
   --env APP_CORS_ORIGIN=\"${APP_CORS_ORIGIN}\"
   --env APP_DB_NAME=\"${APP_DB_NAME}\"
+  --env APP_SECRET_KEY=\"${APP_SECRET_KEY}\"
+  --env SMTP_USER=\"${SMTP_USER}\"
   --env SMTP_DEFAULT_SENDER=\"${SMTP_DEFAULT_SENDER}\"
+  --env APP_SUPERADMIN_EMAIL=\"${APP_SUPERADMIN_EMAIL}\"
   --env SMTP_PORT=\"${SMTP_PORT}\"
+  --env APP_DB_URI=\"${APP_DB_URI}\"
   --env OPENAI_TEMPERATURE=\"${OPENAI_TEMPERATURE}\"
+  --env GOOGLE_API_KEY=\"${GOOGLE_API_KEY}\"
+  --env GOOGLE_CSE_ID=\"${GOOGLE_CSE_ID}\"
+  --env LANGCHAIN_API_KEY=\"${LANGCHAIN_API_KEY}\"
   --env LANGCHAIN_PROJECT=\"${LANGCHAIN_PROJECT}\"
+  --env HUGGINGFACE_API_KEY=\"${HUGGINGFACE_API_KEY}\"
   --env HUGGINGFACE_ENDPOINT_URL=\"${HUGGINGFACE_ENDPOINT_URL}\"
+  --env SMTP_PASSWORD=\"${SMTP_PASSWORD}\"
   --env SMTP_SERVER=\"${SMTP_SERVER}\"
+  --env OPENAI_API_KEY=\"${OPENAI_API_KEY}\"
   --env OPENAI_MODEL=\"${OPENAI_MODEL}\"
   --env APP_DB_ENGINE=\"${APP_DB_ENGINE}\"
 "
@@ -517,7 +539,28 @@ prepare_tmp_build_dir() {
     echo ""
     echo "__pycache__ cleanup started..."
     echo ""
-    find ${TMP_BUILD_DIR} -name "__pycache__" -type d -exec rm -rf {} \;
+    echo "'${TMP_BUILD_DIR}/lib' __pycache__ cleanup"
+    find ${TMP_BUILD_DIR}/lib/ -name "__pycache__" -type d -exec rm -rf {} \;
+    if [ -d genericsuite ]; then
+      echo "'${TMP_BUILD_DIR}/genericsuite' __pycache__ cleanup"
+      find ${TMP_BUILD_DIR}/genericsuite/ -name "__pycache__" -type d -exec rm -rf {} \;
+    fi
+    if [ -d genericsuite_ai ]; then
+      echo "'${TMP_BUILD_DIR}/genericsuite_ai' __pycache__ cleanup"
+      find ${TMP_BUILD_DIR}/genericsuite_ai/ -name "__pycache__" -type d -exec rm -rf {} \;
+    fi
+    if [ -d chalicelib ]; then
+      echo "'${TMP_BUILD_DIR}/chalicelib' __pycache__ cleanup"
+      find ${TMP_BUILD_DIR}/chalicelib/ -name "__pycache__" -type d -exec rm -rf {} \;
+    fi
+    if [ -d fastapilib ]; then
+      echo "'${TMP_BUILD_DIR}/fastapilib' __pycache__ cleanup"
+      find ${TMP_BUILD_DIR}/fastapilib/ -name "__pycache__" -type d -exec rm -rf {} \;
+    fi
+    if [ -d flasklib ]; then
+      echo "'${TMP_BUILD_DIR}/flasklib' __pycache__ cleanup"
+      find ${TMP_BUILD_DIR}/flasklib/ -name "__pycache__" -type d -exec rm -rf {} \;
+    fi
     echo ""
     echo "__pycache__ cleanup finished."
     
@@ -713,7 +756,6 @@ create_sam_yaml() {
   # GsSecretParameter
   # perl -i -pe"s|LANGCHAIN_API_KEY_placeholder|${LANGCHAIN_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
   perl -i -pe"s|LANGCHAIN_PROJECT_placeholder|${LANGCHAIN_PROJECT}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe"s|USER_AGENT_placeholder|${USER_AGENT}|g" "${TMP_WORKING_DIR}/template.yml"
 
   # GsSecretParameter
   # perl -i -pe"s|HUGGINGFACE_API_KEY_placeholder|${HUGGINGFACE_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
@@ -852,10 +894,6 @@ build_docker() {
     sleep 5
 
     echo ""
-    echo test_lambda_docker
-    test_lambda_docker
-
-    echo ""
     echo cd ${TMP_BUILD_DIR}
     cd ${TMP_BUILD_DIR}
     pwd
@@ -943,227 +981,6 @@ deploy_with_sam() {
   echo ""
   echo "DEPLOY_WITH_SAM - End"
   echo ""
-}
-
-deploy_without_sam() {
-    DEPLOYMENT_ERROR="o"
-
-    # Deploy Lambda Function
-    if [  "${FORCE_LAMBDA_CREATION}" = "1" ]; then
-      echo ""
-      echo "aws lambda delete-function --function-name ${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}"
-      aws lambda delete-function --function-name ${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}
-    fi
-    echo ""
-    if ! aws lambda get-function-configuration --function-name ${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE} --output json > ${SCRIPTS_DIR}/${JSON_CONFIG_FILE}
-    then
-      echo aws lambda create-function \
-        --function-name ${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE} \
-        --region ${AWS_REGION} \
-        --package-type Image \
-        --code ImageUri=${AWS_DOCKER_IMAGE_URI} \
-        --role arn:aws:iam::${AWS_ACCOUNT_ID}:role/${AWS_LAMBDA_FUNCTION_ROLE} \
-        --environment Variables="${ENV_VARIABLES}" \
-        --memory-size ${MEMORY_SIZE:-512}
-
-      aws lambda create-function \
-        --function-name ${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE} \
-        --region ${AWS_REGION} \
-        --package-type Image \
-        --code ImageUri=${AWS_DOCKER_IMAGE_URI} \
-        --role arn:aws:iam::${AWS_ACCOUNT_ID}:role/${AWS_LAMBDA_FUNCTION_ROLE} \
-        --environment Variables="${ENV_VARIABLES}" \
-        --memory-size ${MEMORY_SIZE:-512} \
-        | jq
-        # --architectures ${ARCHITECTURES:-arm64}
-      if [ ! $? -eq 0 ]; then
-        DEPLOYMENT_ERROR="1"
-      fi
-    else
-      echo aws lambda update-function-code \
-        --function-name ${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE} \
-        --image-uri ${AWS_DOCKER_IMAGE_URI} \
-        --region ${AWS_REGION}
-
-      aws lambda update-function-code \
-        --function-name ${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE} \
-        --image-uri ${AWS_DOCKER_IMAGE_URI} \
-        --region ${AWS_REGION} | jq
-      if [ ! $? -eq 0 ]; then
-        DEPLOYMENT_ERROR="1"
-      fi
-    fi
-    echo ""
-
-    API_ID=`aws apigateway get-rest-apis | jq -r ".items[] | select(.name == \"${AWS_API_GATEWAY_NAME}\").id"`
-
-    if [ "${API_ID}" = "" ];then
-      # Create the API Gateway
-      echo "API Gateway doesn''t exist: ${AWS_API_GATEWAY_NAME}"
-      exit_abort
-    fi
-
-    echo ""
-    echo "Adding trigger from the AWS API Gateway to the Lambda function..."
-
-    echo ""
-    echo "Trigger: Check if the root resource '/' has ANY method with the correct integration"
-    ROOT_RESOURCE_ID=$(aws apigateway get-resources --rest-api-id ${API_ID} | jq -r '.items[] | select(.path == "/") | .id')
-    ROOT_RESOURCE_ANY_METHOD=$(aws apigateway get-resource --rest-api-id ${API_ID} --resource-id ${ROOT_RESOURCE_ID} | jq -r '.resourceMethods.ANY')
-    if [ -z "${ROOT_RESOURCE_ANY_METHOD}" ]; then
-      echo "Creating ANY method integration for the root resource..."
-      echo ""
-
-      aws apigateway delete-method \
-        --rest-api-id ${API_ID} \
-        --resource-id ${ROOT_RESOURCE_ID} \
-        --http-method ANY | jq
-
-      echo aws apigateway put-method \
-        --rest-api-id ${API_ID} \
-        --resource-id ${ROOT_RESOURCE_ID} \
-        --http-method ANY \
-        --authorization-type NONE \
-        --no-api-key-required
-
-      if ! aws apigateway put-method \
-        --rest-api-id ${API_ID} \
-        --resource-id ${ROOT_RESOURCE_ID} \
-        --http-method ANY \
-        --authorization-type NONE \
-        --no-api-key-required \
-        | jq
-      then
-        echo ""
-        echo ">>--> WARNING: ANY method exist in the API Gateway..."
-      fi
-    else
-      echo "The root resource '/' already has an ANY method with the correct integration."
-      echo "Response:"
-      echo ${ROOT_RESOURCE_ANY_METHOD}
-      echo ""
-    fi
-
-    echo ""
-    echo "Trigger: Put the ANY integration"
-    echo ""
-    echo aws apigateway put-integration ...
-
-    if ! aws apigateway put-integration \
-      --region ${AWS_REGION} \
-      --type AWS \
-      --http-method ANY \
-      --integration-http-method POST \
-      --uri arn:aws:apigateway:${AWS_REGION}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}/invocations \
-      --rest-api-id ${API_ID} \
-      --resource-id ${ROOT_RESOURCE_ID} \
-      --request-templates "application/json"="'{\"statusCode\":200}'" \
-      --passthrough-behavior WHEN_NO_MATCH \
-      --content-handling CONVERT_TO_TEXT \
-      --cache-namespace "${AWS_API_GATEWAY_NAME}" \
-      | jq
-    then
-      echo ""
-      echo ">>--> ERROR: Integration between Lambda and API Gateway could not be created..."
-      exit_abort
-    fi
-
-    echo ""
-    echo "Trigger: Add Permission"
-    echo ""
-    echo aws lambda add-permission \
-      --function-name arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE} \
-      --statement-id apigateway-test-$(date +%s) \
-      --action lambda:InvokeFunction \
-      --principal apigateway.amazonaws.com \
-      --source-arn "arn:aws:execute-api:${AWS_REGION}:${AWS_ACCOUNT_ID}:${API_ID}/*/*/${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}"
-    aws lambda add-permission \
-      --function-name arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE} \
-      --statement-id lambda-apigateway-permission-$(date +%s) \
-      --action lambda:InvokeFunction \
-      --principal apigateway.amazonaws.com \
-      --source-arn "arn:aws:execute-api:${AWS_REGION}:${AWS_ACCOUNT_ID}:${API_ID}/*/*/${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}" \
-      | jq
-    if [ ! $? -eq 0 ]; then
-      DEPLOYMENT_ERROR="1"
-    else
-      echo ""
-      echo "Trigger added successfully."
-    fi
-
-    # List API Gateway resources
-    echo ""
-    echo "List API Gateway resources - BEGIN"
-    aws apigateway get-resources --rest-api-id ${API_ID} | jq
-    echo ""
-    echo "List API Gateway resources - END"
-    echo ""
-
-    # ROOT_RESOURCE_ID=$(aws apigateway get-resources --rest-api-id ${API_ID} | jq -r '.items[] | select(.parentId == null) | .id')
-    for resource_id in $(aws apigateway get-resources --rest-api-id ${API_ID} | jq -r '.items[]| select(.resourceMethods != null) | .id'); do
-      if [ "${resource_id}" = "${ROOT_RESOURCE_ID}" ];then
-        echo ""
-        echo "'${resource_id}' skipped because it's the root Parent Id..."
-        echo ""
-      else
-        for resource_method in $(aws apigateway get-resource --rest-api-id ${API_ID} --resource-id ${resource_id} | jq -r '.resourceMethods | keys[]'); do
-          echo ""
-          echo aws apigateway put-integration \
-            --rest-api-id ${API_ID} \
-            --resource-id ${resource_id} \
-            --http-method ${resource_method} \
-            --type AWS_PROXY \
-            --integration-http-method ${resource_method} \
-            --uri arn:aws:apigateway:${AWS_REGION}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}/invocations
-
-          aws apigateway put-integration \
-            --rest-api-id ${API_ID} \
-            --resource-id ${resource_id} \
-            --http-method ${resource_method} \
-            --type AWS_PROXY \
-            --integration-http-method ${resource_method} \
-            --uri arn:aws:apigateway:${AWS_REGION}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}/invocations | jq
-            if [ ! $? -eq 0 ]; then
-              DEPLOYMENT_ERROR="1"
-            fi
-        done
-      fi
-    done
-
-    # Test Lambda Function
-
-    create_test_payload_json_files
-    # perl -i -pe "s|\\n||g" ${TMP_BUILD_DIR}/test_payload.json
-
-    echo ""
-    echo aws lambda invoke --function-name ${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE} response.json
-    aws lambda invoke --function-name ${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE} response.json | jq
-
-    echo ""
-    echo "1) cat response.json"
-    cat response.json
-
-    echo ""
-    echo "aws lambda invoke \
-      --function-name ${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE} \
-      --payload file://${TMP_BUILD_DIR}/test_payload_10.json \
-      response.json"
-    aws lambda invoke \
-      --function-name ${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE} \
-      --payload file://${TMP_BUILD_DIR}/test_payload_10.json \
-      response.json
-
-    echo ""
-    echo "2) cat response.json"
-    cat response.json
-
-    echo ""
-    echo rm response.json
-    rm response.json
-
-    echo ""
-    echo "Deployment done!"
-    echo ""
 }
 
 run_local_api_gateway() {
@@ -1357,179 +1174,6 @@ END
   echo "CREATE_TEST_PAYLOAD_JSON_FILES ended."
 }
 
-test_api_gateway() {
-    echo ""
-    echo "Test API Gateway:" curl -XPOST "http://127.0.0.1:${API_GATEWAY_PORT}/users/login"
-    echo ""
-    curl -XPOST "http://127.0.0.1:${API_GATEWAY_PORT}/users/login"
-}
-
-test_lambda_docker() {
-    echo ""
-    echo "Test Lambda Docker:" curl -XPOST "http://127.0.0.1:${LAMBDA_PORT}/2015-03-31/functions/function/invocations" -d '{\"version\": \"1.0\"...}'
-    echo ""
-    curl -XPOST "http://127.0.0.1:${LAMBDA_PORT}/2015-03-31/functions/function/invocations" -d \
-    {'
-  "version": "1.0",
-  "resource": "/users/login",
-  "path": "/users/login",
-  "httpMethod": "GET",
-  "headers": {
-    "header1": "value1",
-    "header2": "value2"
-  },
-  "multiValueHeaders": {
-    "header1": [
-      "value1"
-    ],
-    "header2": [
-      "value1",
-      "value2"
-    ]
-  },
-  "queryStringParameters": {
-    "parameter1": "value1",
-    "parameter2": "value"
-  },
-  "multiValueQueryStringParameters": {
-    "parameter1": [
-      "value1",
-      "value2"
-    ],
-    "parameter2": [
-      "value"
-    ]
-  },
-  "requestContext": {
-    "accountId": "${AWS_ACCOUNT_ID}",
-    "apiId": "id",
-    "authorizer": {
-      "claims": null,
-      "scopes": null
-    },
-    "domainName": "id.execute-api.us-east-1.amazonaws.com",
-    "domainPrefix": "id",
-    "extendedRequestId": "request-id",
-    "httpMethod": "GET",
-    "identity": {
-      "accessKey": null,
-      "accountId": null,
-      "caller": null,
-      "cognitoAuthenticationProvider": null,
-      "cognitoAuthenticationType": null,
-      "cognitoIdentityId": null,
-      "cognitoIdentityPoolId": null,
-      "principalOrgId": null,
-      "sourceIp": "192.0.2.1",
-      "user": null,
-      "userAgent": "user-agent",
-      "userArn": null,
-      "clientCert": {
-        "clientCertPem": "CERT_CONTENT",
-        "subjectDN": "www.example.com",
-        "issuerDN": "Example issuer",
-        "serialNumber": "a1:a1:a1:a1:a1:a1:a1:a1:a1:a1:a1:a1:a1:a1:a1:a1",
-        "validity": {
-          "notBefore": "May 28 12:30:02 2019 GMT",
-          "notAfter": "Aug  5 09:36:04 2021 GMT"
-        }
-      }
-    },
-    "path": "/users/login",
-    "protocol": "HTTP/1.1",
-    "requestId": "id=",
-    "requestTime": "04/Mar/2020:19:15:17 +0000",
-    "requestTimeEpoch": 1583349317135,
-    "resourceId": null,
-    "resourcePath": "/users/login",
-    "stage": "$default"
-  },
-  "pathParameters": null,
-  "stageVariables": null,
-  "body": "Hello from Lambda!",
-  "isBase64Encoded": false
-'}
-    echo ""
-    echo "Test Lambda Docker:" curl -XPOST "http://127.0.0.1:${LAMBDA_PORT}/2015-03-31/functions/function/invocations" -d '{\"version\": \"2.0\"...}'
-    echo ""
-    curl -XPOST "http://127.0.0.1:${LAMBDA_PORT}/2015-03-31/functions/function/invocations" -d \
-    {'
-  "version": "2.0",
-  "routeKey": "$default",
-  "rawPath": "/users/login",
-  "rawQueryString": "parameter1=value1&parameter1=value2&parameter2=value",
-  "cookies": [
-    "cookie1",
-    "cookie2"
-  ],
-  "headers": {
-    "header1": "value1",
-    "header2": "value1,value2"
-  },
-  "queryStringParameters": {
-    "parameter1": "value1,value2",
-    "parameter2": "value"
-  },
-  "requestContext": {
-    "accountId": "123456789012",
-    "apiId": "api-id",
-    "authentication": {
-      "clientCert": {
-        "clientCertPem": "CERT_CONTENT",
-        "subjectDN": "www.example.com",
-        "issuerDN": "Example issuer",
-        "serialNumber": "a1:a1:a1:a1:a1:a1:a1:a1:a1:a1:a1:a1:a1:a1:a1:a1",
-        "validity": {
-          "notBefore": "May 28 12:30:02 2019 GMT",
-          "notAfter": "Aug  5 09:36:04 2021 GMT"
-        }
-      }
-    },
-    "authorizer": {
-      "jwt": {
-        "claims": {
-          "claim1": "value1",
-          "claim2": "value2"
-        },
-        "scopes": [
-          "scope1",
-          "scope2"
-        ]
-      }
-    },
-    "domainName": "id.execute-api.us-east-1.amazonaws.com",
-    "domainPrefix": "id",
-    "http": {
-      "method": "POST",
-      "path": "/users/login",
-      "protocol": "HTTP/1.1",
-      "sourceIp": "192.0.2.1",
-      "userAgent": "agent"
-    },
-    "requestId": "id",
-    "routeKey": "$default",
-    "stage": "$default",
-    "time": "12/Mar/2020:19:03:58 +0000",
-    "timeEpoch": 1583348638390
-  },
-  "body": "Hello from Lambda ${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}",
-  "pathParameters": {
-    "parameter1": "value1"
-  },
-  "isBase64Encoded": false,
-  "stageVariables": {
-    "stageVariable1": "value1",
-    "stageVariable2": "value2"
-  }
-'}
-    echo ""
-    echo ""
-    echo "2.5)" docker logs ${LOCAL_LAMBDA_DOCKER_NAME}
-    echo ""
-    docker logs ${LOCAL_LAMBDA_DOCKER_NAME}
-    echo ""
-}
-
 test_nginx() {
     echo "3)" curl -XPOST "https://app.${APP_NAME_LOWERCASE}.local:${BACKEND_LOCAL_PORT}/users/login"
     echo ""
@@ -1625,8 +1269,6 @@ cd "`dirname "$0"`"
 SCRIPTS_DIR="`pwd`"
 cd "${REPO_BASEDIR}"
 
-LAMBDA_PORT="9000"
-API_GATEWAY_PORT="8080"
 FRONTEND_LOCAL_PORT=3000
 BACKEND_LOCAL_PORT=5001
 LOCAL_LAMBDA_DOCKER_NAME="local-lambda-backend"
@@ -1634,7 +1276,6 @@ LOCAL_LAMBDA_DOCKER_NAME="local-lambda-backend"
 FORCE_LAMBDA_CREATION="0"
 # FORCE_LAMBDA_CREATION="1"
 
-# DEPLOYMENT_METHOD="deploy_without_sam"
 DEPLOYMENT_METHOD="deploy_with_sam"
 
 # TARGET_OS="Alpine"
@@ -1702,7 +1343,7 @@ AWS_ACCOUNT_ID=$(aws sts get-caller-identity --output json --no-paginate | jq -r
 AWS_LAMBDA_FUNCTION_NAME_AND_STAGE=$(echo ${AWS_LAMBDA_FUNCTION_NAME}-${STAGE_UPPERCASE} | tr '[:upper:]' '[:lower:]')
 # DOCKER_IMAGE_NAME=$(echo ${AWS_LAMBDA_FUNCTION_NAME} | perl -i -pe "s|-||g")
 DOCKER_IMAGE_NAME="${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}"
-AWS_DOCKER_IMAGE_URI_BASE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+AWS_DOCKER_IMAGE_URI_BASE="${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com"
 AWS_DOCKER_IMAGE_URI="${AWS_DOCKER_IMAGE_URI_BASE}/${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}:latest"
 JSON_CONFIG_FILE="lambda-config-${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}.json"
 AWS_API_GATEWAY_NAME="${AWS_LAMBDA_FUNCTION_NAME}-${STAGE}"
@@ -1732,9 +1373,9 @@ if [ "${AWS_REGION}" = "" ]; then
 fi
 
 echo ""
-echo "==========================="
-echo "=== BIG_LAMBDAS_MANAGER ==="
-echo "==========================="
+echo "======================="
+echo "=== EC2_ELB_MANAGER ==="
+echo "======================="
 echo ""
 echo "1) Action (ACTION): ${ACTION}"
 echo "2) Stage (STAGE): ${STAGE}"
@@ -1822,8 +1463,6 @@ echo "Image URI (AWS_DOCKER_IMAGE_URI): ${AWS_DOCKER_IMAGE_URI}"
 if [ "${DEBUG}" = "1" ];then
   echo "AWS_LAMBDA_FUNCTION_NAME: ${AWS_LAMBDA_FUNCTION_NAME}"
   echo "AWS_LAMBDA_FUNCTION_NAME_AND_STAGE: ${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}"
-  echo "LAMBDA_PORT: ${LAMBDA_PORT}"
-  echo "API_GATEWAY_PORT: ${API_GATEWAY_PORT}"
   echo "BACKEND_LOCAL_PORT: ${BACKEND_LOCAL_PORT}"
   echo "FRONTEND_LOCAL_PORT: ${FRONTEND_LOCAL_PORT}"
 fi
@@ -1869,9 +1508,7 @@ if [ "${ACTION}" = "enter" ]; then
 fi
 
 if [ "${ACTION}" = "test" ]; then
-  test_lambda_docker
   test_nginx
-  test_api_gateway
 fi
 
 if [ "${ACTION}" = "build_docker" ]; then
@@ -1887,7 +1524,7 @@ if [ "${ACTION}" = "sam_deploy" ]; then
   if [ "${DEPLOYMENT_METHOD}" = "deploy_with_sam" ];then
     deploy_with_sam
   else
-    deploy_without_sam
+    # deploy_without_sam
   fi
   # ECR image cleaning
   cd "${REPO_BASEDIR}"

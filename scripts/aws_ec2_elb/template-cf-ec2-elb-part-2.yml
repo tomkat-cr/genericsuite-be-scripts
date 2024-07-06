@@ -1,0 +1,194 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Deploy a Genericsuite application on EC2 instances (SSL Certificate and update Load Balancer with HTTPS Listener)
+
+Parameters:
+  DomainName:
+    Description: Domain name for the ALB
+    Type: String
+  LoadBalancerArn:
+    Description: ARN of the existing Load Balancer
+    Type: String
+  TargetGroupArn:
+    Description: ARN of the existing Target Group
+    Type: String
+  AppName:
+    Description: application name
+    Type: String
+  AppStage:
+    Description: application stage (qa, prod, staging, demo, dev)
+    Type: String
+  AppStackName:
+    Description: Application stack name
+    Type: String
+  HostedZoneId:
+    Description: The ID of the hosted zone where the domain is managed
+    Type: AWS::Route53::HostedZone::Id
+
+Resources:
+  AppSSLCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties: 
+      DomainName: !Ref DomainName
+      ValidationMethod: DNS
+      Tags:
+        - Key: App
+          Value: !Ref AppName
+        - Key: Stage
+          Value: !Ref AppStage
+        - Key: Name
+          Value: !Sub "${AppName}-${AppStage}-ssl-certificate"
+
+  GetCertificateValidationResource:
+    Type: Custom::GetCertificateValidation
+    Properties:
+      ServiceToken: !GetAtt GetCertificateValidationFunction.Arn
+      CertificateArn: !Ref AppSSLCertificate
+
+  GetCertificateValidationFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.8
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          
+          def handler(event, context):
+              if event['RequestType'] == 'Delete':
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+                  return
+              
+              certificate_arn = event['ResourceProperties']['CertificateArn']
+              acm_client = boto3.client('acm')
+              
+              try:
+                  response = acm_client.describe_certificate(CertificateArn=certificate_arn)
+                  validation_options = response['Certificate']['DomainValidationOptions']
+                  
+                  for option in validation_options:
+                      if 'ResourceRecord' in option:
+                          record = option['ResourceRecord']
+                          cfnresponse.send(event, context, cfnresponse.SUCCESS, {
+                              'Name': record['Name'],
+                              'Type': record['Type'],
+                              'Value': record['Value']
+                          })
+                          return
+                  
+                  cfnresponse.send(event, context, cfnresponse.FAILED, {
+                      'Reason': 'No validation records found'
+                  })
+              except Exception as e:
+                  cfnresponse.send(event, context, cfnresponse.FAILED, {
+                      'Reason': str(e)
+                  })
+
+  CreateCNAMERecordResource:
+    Type: Custom::CreateCNAMERecord
+    Properties:
+      ServiceToken: !GetAtt CreateCNAMERecordFunction.Arn
+      HostedZoneId: !Ref HostedZoneId
+      RecordName: !GetAtt GetCertificateValidationResource.Name
+      RecordType: !GetAtt GetCertificateValidationResource.Type
+      RecordValue: !GetAtt GetCertificateValidationResource.Value
+
+  CreateCNAMERecordFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.8
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          
+          def handler(event, context):
+              if event['RequestType'] == 'Delete':
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+                  return
+              
+              hosted_zone_id = event['ResourceProperties']['HostedZoneId']
+              record_name = event['ResourceProperties']['RecordName']
+              record_type = event['ResourceProperties']['RecordType']
+              record_value = event['ResourceProperties']['RecordValue']
+              
+              route53_client = boto3.client('route53')
+              
+              try:
+                  response = route53_client.change_resource_record_sets(
+                      HostedZoneId=hosted_zone_id,
+                      ChangeBatch={
+                          'Changes': [
+                              {
+                                  'Action': 'UPSERT',
+                                  'ResourceRecordSet': {
+                                      'Name': record_name,
+                                      'Type': record_type,
+                                      'TTL': 300,
+                                      'ResourceRecords': [{'Value': record_value}]
+                                  }
+                              }
+                          ]
+                      }
+                  )
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, {
+                      'Message': 'CNAME record created successfully'
+                  })
+              except Exception as e:
+                  cfnresponse.send(event, context, cfnresponse.FAILED, {
+                      'Reason': str(e)
+                  })
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: ACMandRoute53Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - acm:DescribeCertificate
+                  - route53:ChangeResourceRecordSets
+                Resource: '*'
+
+  AppHTTPSListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancerArn
+      Port: 443
+      Protocol: HTTPS
+      SslPolicy: ELBSecurityPolicy-2016-08
+      Certificates:
+        - CertificateArn: !Ref AppSSLCertificate
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroupArn
+      Tags:
+        - Key: App
+          Value: !Ref AppName
+        - Key: Stage
+          Value: !Ref AppStage
+        - Key: Name
+          Value: !Sub "${AppName}-${AppStage}-https-listener"
+
+Outputs:
+  CertificateArn:
+    Description: ARN of the created SSL Certificate
+    Value: !Ref AppSSLCertificate
+  HTTPSListenerArn:
+    Description: ARN of the created HTTPS Listener
+    Value: !Ref AppHTTPSListener

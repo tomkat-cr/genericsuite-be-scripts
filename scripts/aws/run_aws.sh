@@ -159,7 +159,7 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
 
     export APP_DB_ENGINE=$(eval echo \$APP_DB_ENGINE_${STAGE_UPPERCASE})
     export APP_DB_NAME=$(eval echo \$APP_DB_NAME_${STAGE_UPPERCASE})
-    export APP_DB_URI=$(eval echo \$APP_DB_URI_${STAGE_UPPERCASE})
+    # export APP_DB_URI=$(eval echo \$APP_DB_URI_${STAGE_UPPERCASE})
     export APP_CORS_ORIGIN="$(eval echo \"\$APP_CORS_ORIGIN_${STAGE_UPPERCASE}\")"
     export AWS_S3_CHATBOT_ATTACHMENTS_BUCKET=$(eval echo \$AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_${STAGE_UPPERCASE})
 
@@ -181,6 +181,14 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
             echo ">> New APP_CORS_ORIGIN: ${APP_CORS_ORIGIN}"
         fi
     fi
+
+    export APP_STAGE="${STAGE}"
+    # To avoid message from langsmith:
+    # USER_AGENT environment variable not set, consider setting it to identify your requests.
+    export USER_AGENT="${APP_NAME_LOWERCASE}-${STAGE}"
+    echo ""
+    echo "APP_STAGE: ${APP_STAGE}"
+    echo "USER_AGENT: ${USER_AGENT}"
 
     if [ "${RUN_METHOD}" = "chalice" ]; then
         echo "sh ${SCRIPTS_DIR}/set_chalice_cnf.sh ${STAGE}" http
@@ -213,7 +221,7 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
                 --do-handshake-on-connect \
                 --strip-header-spaces \
                 --env PORT=${BACKEND_LOCAL_PORT} \
-                --env APP_STAGE="${STAGE}"
+                --env APP_STAGE="${APP_STAGE}"
         fi
     fi
 
