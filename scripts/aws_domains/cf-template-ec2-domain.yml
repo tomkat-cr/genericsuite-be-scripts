@@ -1,15 +1,9 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Deploy a Genericsuite application on EC2 instances (SSL Certificate and update Load Balancer with HTTPS Listener)
+Description: Deploy GenericSuite application domain for the EC2 instances (SSL Certificate and Route53 domain)
 
 Parameters:
   DomainName:
     Description: Domain name for the ALB
-    Type: String
-  LoadBalancerArn:
-    Description: ARN of the existing Load Balancer
-    Type: String
-  TargetGroupArn:
-    Description: ARN of the existing Target Group
     Type: String
   AppName:
     Description: application name
@@ -17,14 +11,23 @@ Parameters:
   AppStage:
     Description: application stage (qa, prod, staging, demo, dev)
     Type: String
-  AppStackName:
-    Description: Application stack name
-    Type: String
   HostedZoneId:
     Description: The ID of the hosted zone where the domain is managed
     Type: AWS::Route53::HostedZone::Id
 
 Resources:
+  Route53RecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref DomainName
+      Type: A
+      # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/quickref-route53.html
+      TTL: '60'
+      ResourceRecords:
+      - 192.168.0.1
+      - 192.168.0.2
+
   AppSSLCertificate:
     Type: AWS::CertificateManager::Certificate
     Properties: 
@@ -47,7 +50,7 @@ Resources:
   GetCertificateValidationFunction:
     Type: AWS::Lambda::Function
     Properties:
-      Runtime: python3.8
+      Runtime: python3.11
       Handler: index.handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Code:
@@ -97,7 +100,7 @@ Resources:
   CreateCNAMERecordFunction:
     Type: AWS::Lambda::Function
     Properties:
-      Runtime: python3.8
+      Runtime: python3.11
       Handler: index.handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Code:
@@ -165,30 +168,19 @@ Resources:
                   - route53:ChangeResourceRecordSets
                 Resource: '*'
 
-  AppHTTPSListener:
-    Type: AWS::ElasticLoadBalancingV2::Listener
-    Properties:
-      LoadBalancerArn: !Ref LoadBalancerArn
-      Port: 443
-      Protocol: HTTPS
-      SslPolicy: ELBSecurityPolicy-2016-08
-      Certificates:
-        - CertificateArn: !Ref AppSSLCertificate
-      DefaultActions:
-        - Type: forward
-          TargetGroupArn: !Ref TargetGroupArn
-      Tags:
-        - Key: App
-          Value: !Ref AppName
-        - Key: Stage
-          Value: !Ref AppStage
-        - Key: Name
-          Value: !Sub "${AppName}-${AppStage}-https-listener"
-
 Outputs:
   CertificateArn:
     Description: ARN of the created SSL Certificate
     Value: !Ref AppSSLCertificate
-  HTTPSListenerArn:
-    Description: ARN of the created HTTPS Listener
-    Value: !Ref AppHTTPSListener
+    Export:
+      Name: !Sub "${AWS::StackName}-CertificateArn"
+  Route53RecordSetId:
+    Description: ID of the created Route53 Record Set
+    Value: !Ref Route53RecordSet
+    Export:
+      Name: !Sub "${AWS::StackName}-Route53RecordSetId"
+  DomainName:
+    Description: Domain name for the ALB
+    Value: !Ref DomainName
+    Export:
+      Name: !Sub "${AWS::StackName}-DomainName"

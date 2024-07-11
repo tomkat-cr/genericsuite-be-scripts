@@ -1,0 +1,252 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: KMS Key for a GenericSuite aplication.
+
+Parameters:
+  AppName:
+    Description: Application name
+    Type: String
+  AppStage:
+    Description: Application stage
+    Type: String
+  KmsKeyAlias:
+    Description: KMS Key alias
+    Type: String
+    Default: genericsuite-key
+
+Resources:
+  KeyAdminRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: "KeyAdminRole"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "ec2.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: "KeyAdminPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "kms:Create*"
+                  - "kms:Describe*"
+                  - "kms:Enable*"
+                  - "kms:List*"
+                  - "kms:Put*"
+                  - "kms:Update*"
+                  - "kms:Revoke*"
+                  - "kms:Disable*"
+                  - "kms:Get*"
+                  - "kms:Delete*"
+                  - "kms:ScheduleKeyDeletion"
+                  - "kms:CancelKeyDeletion"
+                  - "kms:GenerateDataKey"
+                Resource: "*"
+      Tags:
+        - Key: App
+          Value: !Ref AppName
+        - Key: Stage
+          Value: !Ref AppStage
+
+  UseKeyRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: "UseKeyRole"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "ec2.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: "UseKeyPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "kms:Encrypt"
+                  - "kms:Decrypt"
+                  - "kms:ReEncrypt*"
+                  - "kms:GenerateDataKey*"
+                  - "kms:DescribeKey"
+                Resource: "*"
+      Tags:
+        - Key: App
+          Value: !Ref AppName
+        - Key: Stage
+          Value: !Ref AppStage
+
+  AttachKeyRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: "AttachKeyRole"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "ec2.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: "AttachKeyPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "kms:CreateGrant"
+                  - "kms:ListGrants"
+                  - "kms:RevokeGrant"
+                Resource: "*"
+      Tags:
+        - Key: App
+          Value: !Ref AppName
+        - Key: Stage
+          Value: !Ref AppStage
+
+  # Role for autoscaling groups
+  ASGRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${KmsKeyAlias}-asg-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: autoscaling.amazonaws.com
+            Action: sts:AssumeRole
+
+  GsKmsKey:
+    Type: "AWS::KMS::Key"
+    Properties:
+      Description: "KMS key for encrypting Secrets Manager secrets and other resources"
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "Enable IAM User Permissions"
+            Effect: "Allow"
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: "kms:*"
+            Resource: "*"
+          - Sid: "Allow access for Key Administrators"
+            Effect: "Allow"
+            Principal:
+              AWS: !GetAtt KeyAdminRole.Arn
+            Action: 
+              - "kms:Create*"
+              - "kms:Describe*"
+              - "kms:Enable*"
+              - "kms:List*"
+              - "kms:Put*"
+              - "kms:Update*"
+              - "kms:Revoke*"
+              - "kms:Disable*"
+              - "kms:Get*"
+              - "kms:Delete*"
+              - "kms:ScheduleKeyDeletion"
+              - "kms:CancelKeyDeletion"
+              - "kms:GenerateDataKey"
+            Resource: "*"
+          - Sid: "Allow use of the key"
+            Effect: "Allow"
+            Principal:
+              AWS: !GetAtt UseKeyRole.Arn
+            Action: 
+              - "kms:Encrypt"
+              - "kms:Decrypt"
+              - "kms:ReEncrypt*"
+              - "kms:GenerateDataKey*"
+              - "kms:DescribeKey"
+            Resource: "*"
+          - Sid: "Allow attachment of persistent resources"
+            Effect: "Allow"
+            Principal:
+              AWS: !GetAtt AttachKeyRole.Arn
+            Action: 
+              - "kms:CreateGrant"
+              - "kms:ListGrants"
+              - "kms:RevokeGrant"
+            Resource: "*"
+
+          - Sid: "Allow use of the key for EBS volumes"
+            Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action:
+              - "kms:Encrypt"
+              - "kms:Decrypt"
+              - "kms:ReEncrypt*"
+              - "kms:GenerateDataKey*"
+              - "kms:DescribeKey"
+            Resource: "*"
+          - Sid: "Allow attachment of persistent resources"
+            Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action:
+              - "kms:CreateGrant"
+              - "kms:ListGrants"
+              - "kms:RevokeGrant"
+            Resource: "*"
+            Condition:
+              Bool:
+                kms:GrantIsForAWSResource: true
+
+          - Sid: "Allow use of the key for ASG"
+            Effect: Allow
+            Principal:
+              AWS: !GetAtt ASGRole.Arn
+              # AWS: !Sub "arn:aws:iam::${AWS::AccountId}:role/aws-service-role/autoscaling.amazonaws.com/${KmsKeyAlias}-asg-role"
+            Action:
+              - "kms:Encrypt"
+              - "kms:Decrypt"
+              - "kms:ReEncrypt*"
+              - "kms:GenerateDataKey*"
+              - "kms:DescribeKey"
+            Resource: "*"
+          - Sid: "Allow attachment of persistent resources for ASG"
+            Effect: Allow
+            Principal:
+              AWS: !GetAtt ASGRole.Arn
+              # AWS: !Sub "arn:aws:iam::${AWS::AccountId}:role/aws-service-role/autoscaling.amazonaws.com/${KmsKeyAlias}-asg-role"
+            Action:
+              - "kms:CreateGrant"
+              - "kms:ListGrants"
+              - "kms:RevokeGrant"
+            Resource: "*"
+            Condition:
+              Bool:
+                kms:GrantIsForAWSResource: true
+
+      Tags:
+        - Key: App
+          Value: !Ref AppName
+        - Key: Stage
+          Value: !Ref AppStage
+
+  GsKmsKeyAlias:
+    Type: "AWS::KMS::Alias"
+    Properties:
+      # AliasName: "alias/GsKmsKeyAlias_placeholder"
+      AliasName: !Sub "alias/${KmsKeyAlias}"
+      TargetKeyId: !Ref GsKmsKey
+
+Outputs:
+  KeyId:
+    Description: KMS Key for Secrets Manager encryption
+    Value: !GetAtt GsKmsKey.Arn
+    Export:
+      Name: !Sub "${KmsKeyAlias}:kms-key-id"
+  ASGRoleArn:
+    Description: ARN for ASG role
+    Value: !GetAtt ASGRole.Arn
+    Export:
+      Name: !Sub "${KmsKeyAlias}:asg-role-arn"

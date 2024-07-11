@@ -197,17 +197,20 @@ generate_seed:
 	# To assign the STORAGE_URL_SEED environment variable
 	sh node_modules/genericsuite-be-scripts/scripts/cryptography/run_generate_seed.sh
 
-aws_secrets_create:
-	sh node_modules/genericsuite-be-scripts/scripts/aws_secrets/aws_secrets_manager.sh create
+aws_secrets:
+	sh node_modules/genericsuite-be-scripts/scripts/aws_secrets/aws_secrets_manager.sh
 
-aws_secrets_describe:
-	sh node_modules/genericsuite-be-scripts/scripts/aws_secrets/aws_secrets_manager.sh describe
+# aws_secrets_create:
+# 	sh node_modules/genericsuite-be-scripts/scripts/aws_secrets/aws_secrets_manager.sh create
 
-aws_secrets_update:
-	sh node_modules/genericsuite-be-scripts/scripts/aws_secrets/aws_secrets_manager.sh update
+# aws_secrets_describe:
+# 	sh node_modules/genericsuite-be-scripts/scripts/aws_secrets/aws_secrets_manager.sh describe
 
-aws_secrets_delete:
-	sh node_modules/genericsuite-be-scripts/scripts/aws_secrets/aws_secrets_manager.sh delete
+# aws_secrets_update:
+# 	sh node_modules/genericsuite-be-scripts/scripts/aws_secrets/aws_secrets_manager.sh update
+
+# aws_secrets_delete:
+# 	sh node_modules/genericsuite-be-scripts/scripts/aws_secrets/aws_secrets_manager.sh delete
 
 ## Application Specific Commands
 

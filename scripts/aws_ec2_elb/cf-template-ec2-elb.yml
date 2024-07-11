@@ -1,0 +1,809 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Deploy a Genericsuite application on EC2 instances (VPC, Subnets,
+  Launch Template with a ECR Docker image, Instance Role, AutoScaling Group, and
+  Security Group).
+
+Parameters:
+  KeyName:
+    Description: Name for the EC2 KeyPair to enable SSH access to the instance
+    Type: AWS::EC2::KeyPair::KeyName
+  DomainName:
+    Description: Domain name for the ALB
+    Type: String
+  HostedZoneId:
+    Description: The ID of the hosted zone where the domain is managed
+    Type: AWS::Route53::HostedZone::Id
+  EcrRepositoryName:
+    Description: ECR docker images repository name
+    Type: String
+  EcrDockerImageUri:
+    Description: Complete URI of the ECR repository Docker image
+    Type: String
+  EcrDockerImageTag:
+    Description: ECR repository Docker image tag
+    Type: String
+    Default: latest
+  AppName:
+    Description: application name
+    Type: String
+  AppStage:
+    Description: application stage (qa, prod, staging, demo, dev)
+    Type: String
+  AwsRegion:
+    Description: application region
+    Type: String
+  KmsKeyAlias:
+    Type: String
+    Description: The alias of the KMS key to use for EBS encryption
+  DomainStackName:
+    Description: Name of the stack that created the domain resources
+    Type: String
+  S3BucketName1:
+    Description: App S3 Bucket name
+    Type: String
+  AsmSecretsName:
+    Description: Secrets Manager - Secrets set name
+    Type: String
+  AsmEnvsName:
+    Description: Secrets Manager - Environment variables set name
+    Type: String
+  AwsAccountId:
+    Description: AWS account Id
+    Type: String
+  
+Resources:
+
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: !Sub ${AppName}-${AppStage}-vpc
+        - Key: App
+          Value: !Ref AppName
+        - Key: Stage
+          Value: !Ref AppStage
+
+  Subnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs ''
+      CidrBlock: 10.0.1.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${AppName}-${AppStage}-subnet-1
+        - Key: App
+          Value: !Ref AppName
+        - Key: Stage
+          Value: !Ref AppStage
+
+  Subnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select
+        - 1
+        - !GetAZs ''
+      CidrBlock: 10.0.2.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${AppName}-${AppStage}-subnet-2
+        - Key: App
+          Value: !Ref AppName
+        - Key: Stage
+          Value: !Ref AppStage
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${AppName}-${AppStage}-igw
+        - Key: App
+          Value: !Ref AppName
+        - Key: Stage
+          Value: !Ref AppStage
+
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AppName}-${AppStage}-rt
+        - Key: App
+          Value: !Ref AppName
+        - Key: Stage
+          Value: !Ref AppStage
+
+  Ec2Route:
+    Type: AWS::EC2::Route
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      RouteTableId: !Ref RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  SubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref Subnet1
+      RouteTableId: !Ref RouteTable
+
+  Ec2InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AppName}-${AppStage}-ec2-instance-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+        # Bingo! this enabled SSM
+        - arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM
+      Policies:
+        - PolicyName: Ec2InstancePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:Describe*
+                Resource: '*'
+        - PolicyName: Ec2S3AccessPolicy1
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:PutObjectAcl
+                  - s3:GetObject
+                  - s3:GetObjectAcl
+                  - s3:DeleteObject
+                # Resource: arn:aws:s3:::AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_placeholder/*
+                Resource: !Sub arn:aws:s3:::${S3BucketName1}/*
+        - PolicyName: Ec2LogsPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:*:logs:*:*:*
+        - PolicyName: Ec2EcrLoginPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                Resource: '*'
+        - PolicyName: Ec2EcrAccessPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:BatchGetImage
+                  - ecr:GetDownloadUrlForLayer
+                Resource:
+                  # - !Sub arn:aws:ecr:${AwsRegion}:${AwsAccountId}:repository/AWS_ECR_REPOSITORY_NAME_placeholder
+                  - !Sub arn:aws:ecr:${AwsRegion}:${AwsAccountId}:repository/${EcrRepositoryName}
+        - PolicyName: Ec2SecretsAccessPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: '*'
+                # Resource: 
+                # #   - arn:aws:secretsmanager:*:*:secret:AWS_SECRETS_MANAGER_SECRETS_NAME_placeholder
+                #   - !Sub arn:aws:secretsmanager:*:*:secret:${AsmSecretsName}
+                # #   - arn:aws:secretsmanager:*:*:secret:AWS_SECRETS_MANAGER_ENVS_NAME_placeholder
+                #   - !Sub arn:aws:secretsmanager:*:*:secret:${AsmEnvsName}
+        - PolicyName: Ec2KmsAccessPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - kms:Decrypt
+                  - kms:GenerateDataKey*
+                  - kms:CreateGrant
+                Resource: !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/*'
+                # Resource: !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${KmsKeyAlias}'
+                # Resource: '*'
+                # Resource: 
+                # # - arn:aws:kms:AWS_REGION_placeholder:AWS_ACCOUNT_ID_placeholder:alias/AWS_KMS_KEY_ALIAS_placeholder
+                #   - !Sub arn:aws:kms:${AwsRegion}:${AwsAccountId}:alias/${KmsKeyAlias}
+        - PolicyName: Ec2CloudWatchLogsPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - logs:DescribeLogStreams
+                Resource: 
+                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:${AppName}-${AppStage}-ec2-logs:*
+
+  Ec2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub ${AppName}-${AppStage}-ec2-instance-profile
+      Path: /
+      Roles:
+        - !Ref Ec2InstanceRole
+        # - !ImportValue 
+        #     Fn::Sub: "${KmsKeyAlias}:asg-role-arn"
+
+  AppLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub ${AppName}-${AppStage}-ec2-logs
+      RetentionInDays: 30  # Adjust as needed
+
+  LoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub ${AppName}-${AppStage}-sg-lb
+      GroupDescription: Enable SSH and HTTPS access
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: App
+          Value: !Ref AppName
+        - Key: Stage
+          Value: !Ref AppStage
+
+  # The error "Unrecognized resource types: AWS::EC2::ManagedPrefixList" occurs because the AWS::EC2::ManagedPrefixList resource type is not available in all AWS CloudFormation versions or regions.
+  # AWSSystemsManagerPrefixList:
+  #   Type: AWS::EC2::ManagedPrefixList
+  #   Properties:
+  #     PrefixListName: AWSSystemsManagerPrefixList
+  #     Entries:
+  #       - Description: Systems Manager
+  #         PrefixListId: pl-63a5400b
+
+  # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-prefixlist.html
+  # AWSSystemsManagerPrefixList:
+  #   Type: AWS::EC2::PrefixList
+  #   Properties:
+  #     PrefixListName: !Sub ${AppName}-${AppStage}-ssm-servers
+  #     AddressFamily: "IPv4"
+  #     MaxEntries: 10
+  #     Entries:
+  #       - Description: Systems Manager
+  #         Cidr: 52.119.199.68/32  # ssm.us-east-1.amazonaws.com
+  #       - Description: Systems Manager Messages
+  #         Cidr: 52.46.132.109/32  # ssmmessages.us-east-1.amazonaws.com
+  #       - Description: EC2 Messages
+  #         Cidr: 52.46.150.209/32  # ec2messages.us-east-1.amazonaws.com
+  #     Tags:
+  #       - Key: Name
+  #         Value: !Sub ${AppName}-${AppStage}-ssm-servers
+  #       - Key: App
+  #         Value: !Ref AppName
+  #       - Key: Stage
+  #         Value: !Ref AppStage
+
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub ${AppName}-${AppStage}-sg-ec2
+      GroupDescription: Enable SSH and HTTP access
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
+        # # TODO: temporary, remove 22 port access after an emergency use
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0  # Consider restricting this to your IP range
+
+      # SecurityGroupEgress:
+      #   - IpProtocol: tcp
+      #     FromPort: 443
+      #     ToPort: 443
+      #     DestinationPrefixListId: !Ref AWSSystemsManagerPrefixList
+          # DestinationPrefixListId:
+          #   - 52.119.199.68/32  # ssm.us-east-1.amazonaws.com
+          #   - 52.46.132.109/32  # ssmmessages.us-east-1.amazonaws.com
+          #   - 52.46.150.209/32  # ec2messages.us-east-1.amazonaws.com
+          # https://docs.aws.amazon.com/systems-manager/latest/userguide/setup-create-vpc.html#create-vpc-endpoints
+          # DestinationPrefixListId:
+          #   - !Sub "ssm.${AWS::Region}.amazonaws.com"
+          #   - !Sub "ssmmessages.${AWS::Region}.amazonaws.com"
+          #   - !Sub "ec2messages.${AWS::Region}.amazonaws.com"
+      Tags:
+        - Key: App
+          Value: !Ref AppName
+        - Key: Stage
+          Value: !Ref AppStage
+
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub ${AppName}-${AppStage}-launch-template
+      LaunchTemplateData:
+        # Option: EC2 > Images > AMIs > Filter > Source: amazon/amzn2-ami-minimal-hvm-2.0.2024
+
+        # Amazon Linux 2 AMI | ami-001d6f67dd7ac8908 / Boot mode: – / amazon/amzn2-ami-minimal-hvm-2.0.20240124.0-x86_64-ebs / Deprecation time: Mon Jun 30, 2025 
+        # ImageId: ami-001d6f67dd7ac8908
+
+        # Amazon Linux 2 AMI (HVM) - Kernel 5.10, SSD Volume Type
+        # ami-0195204d5dce06d99 (64-bit (x86)) / ami-003d53c9bb0a387f4 (64-bit (Arm))
+        # Virtualization: hvm
+        # ENA enabled: true
+        # Root device type: ebs
+        ImageId: ami-0195204d5dce06d99
+        # ImageId: ami-003d53c9bb0a387f4
+
+        # Option: EC2 > Instances > Instance types
+        # Instance type | vCPUs | Architecture | Memory (GiB) | Storage (GB) | Storage type | Network performance | On-Demand Linux pricing | On-Demand Windows pricing
+        # t2.nano | 1 | i386, x86_64 | 1 | - | -| Low to Moderate | 0.0058 USD per Hour | 0.0081 USD per Hour
+        # t2.micro | 1 | i386, x86_64 | 1 | - | -| Low to Moderate | 0.0116 USD per Hour | 0.0162 USD per Hour
+        # t2.small | 1 | i386, x86_64 | 2 | - | - | Low to Moderate | 0.023 USD per Hour | 0.032 USD per Hour
+        
+        InstanceType: t2.micro
+
+        # t4g.nano | 2 | arm64 | 0.5 | - | - | Up to 5 Gigabit | 0.0042 USD per Hour
+        # t4g.micro | 2 | arm64 | 1 | - | - | Up to 5 Gigabit | 0.0084 USD per Hour
+        # t4g.small | 2 | arm64 | 2 | - | - | Up to 5 Gigabit | 0.0084 USD per Hour
+        # InstanceType: t4g.micro
+
+        KeyName: !Ref KeyName
+        SecurityGroupIds:
+          - !Ref InstanceSecurityGroup
+
+        # https://aws.amazon.com/blogs/security/get-the-full-benefits-of-imdsv2-and-disable-imdsv1-across-your-aws-infrastructure/
+
+        # Enable imdsv2 : --metadata-options “HttpEndpoint=enabled,HttpTokens=required”
+        # MetadataOptions:
+        #   HttpTokens: required
+        #   HttpEndpoint: enabled
+
+        BlockDeviceMappings:
+          - DeviceName: /dev/xvda
+            Ebs:
+              VolumeSize: 50
+              DeleteOnTermination: true
+              VolumeType: gp2
+              # Encrypted: true
+              # KmsKeyId: !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${KmsKeyAlias}'
+
+        IamInstanceProfile:
+          Name: !Ref Ec2InstanceProfile
+
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: Name
+                Value: !Sub ${AppName}-${AppStage}-instance
+              - Key: App
+                Value: !Ref AppName
+              - Key: Stage
+                Value: !Ref AppStage
+          - ResourceType: volume
+            Tags:
+              - Key: Name
+                Value: !Sub ${AppName}-${AppStage}-root-volume
+              - Key: App
+                Value: !Ref AppName
+              - Key: Stage
+                Value: !Ref AppStage
+
+        UserData: 
+          Fn::Base64:
+            !Sub |
+            #!/bin/bash
+            exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+            echo "Starting GS instance boot sequence..."
+
+            echo ">>--> `date` | Run | yum update -y"
+            yum update -y
+
+            echo ">>--> `date` | Run | yum install aws-cli jq amazon-ssm-agent amazon-cloudwatch-agent -y"
+            yum install aws-cli jq amazon-ssm-agent amazon-cloudwatch-agent -y
+
+            echo ">>--> `date` | Run | Create CloudWatch agent configuration file"
+            cat <<EOF > /opt/aws/amazon-cloudwatch-agent/bin/config.json
+            {
+              "agent": {
+                "metrics_collection_interval": 60,
+                "run_as_user": "root"
+              },
+              "logs": {
+                "logs_collected": {
+                  "files": {
+                    "collect_list": [
+                      {
+                        "file_path": "/var/log/user-data.log",
+                        "log_group_name": "${AppName}-${AppStage}-ec2-logs",
+                        "log_stream_name": "{instance_id}-user-data-logs"
+                      },
+                      {
+                        "file_path": "/var/log/docker",
+                        "log_group_name": "${AppName}-${AppStage}-ec2-logs",
+                        "log_stream_name": "{instance_id}-docker-logs"
+                      }
+                    ]
+                  }
+                }
+              },
+              "metrics": {
+                "metrics_collected": {
+                  "disk": {
+                    "measurement": [
+                      "used_percent"
+                    ],
+                    "metrics_collection_interval": 60,
+                    "resources": [
+                      "/"
+                    ]
+                  },
+                  "mem": {
+                    "measurement": [
+                      "mem_used_percent"
+                    ],
+                    "metrics_collection_interval": 60
+                  }
+                }
+              }
+            }
+            EOF
+
+            /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json
+
+            echo ">>--> `date` | Run | amazon-linux-extras install docker -y"
+            amazon-linux-extras install docker -y
+
+            echo ">>--> `date` | Run | service amazon-ssm-agent start"
+            systemctl start amazon-ssm-agent
+
+            echo ">>--> `date` | Run | service docker start"
+            systemctl start docker
+            systemctl enable docker
+
+            echo ">>--> `date` | Run | aws ecr get-login-password --region ${AWS::Region} | docker login --username AWS --password-stdin ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com"
+            aws ecr get-login-password --region ${AWS::Region} | docker login --username AWS --password-stdin ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com
+
+            echo ">>--> `date` | Run | docker pull ${EcrDockerImageUri}:${EcrDockerImageTag}"
+            docker pull ${EcrDockerImageUri}:${EcrDockerImageTag} > /dev/null 2>&1
+
+            echo ">>--> `date` | Run | docker run -d -p 80:80 --name gs_app_be -e CLOUD_PROVIDER=aws -e APP_NAME=${AppName} -e APP_STAGE=${AppStage} -e AWS_REGION=${AWS::Region} ${EcrDockerImageUri}:${EcrDockerImageTag}"
+            docker run -d -p 80:80 --name gs_app_be -e CLOUD_PROVIDER=aws -e APP_NAME=${AppName} -e APP_STAGE=${AppStage} -e AWS_REGION=${AWS::Region} ${EcrDockerImageUri}:${EcrDockerImageTag}
+
+            echo ">>--> `date` | Run | docker ps"
+            if [ "$(docker ps -q -f name=gs_app_be)" ]; then
+              echo "Container is running successfully."
+            else
+              echo "Container failed to start. Check docker logs."
+              docker logs gs_app_be
+            fi
+
+            echo ">>--> `date` | GS instance boot sequence finished"
+
+  SSMVPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ssm
+      VpcId: !Ref VPC
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !Ref Subnet1
+        - !Ref Subnet2
+      SecurityGroupIds:
+        - !Ref InstanceSecurityGroup
+
+  SSMAccessRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AppName}-${AppStage}-ssm-access-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMFullAccess
+
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: !Sub ${AppName}-${AppStage}-asg
+      LaunchTemplate:
+        LaunchTemplateId: !Ref LaunchTemplate
+        Version: !GetAtt LaunchTemplate.LatestVersionNumber
+      VPCZoneIdentifier:
+        - !Ref Subnet1
+        - !Ref Subnet2
+      MinSize: '1'
+      MaxSize: '2'
+      DesiredCapacity: '1'
+      TargetGroupARNs:
+        - !Ref TargetGroup
+      HealthCheckType: ELB
+      HealthCheckGracePeriod: 1200 # 300 -> 5 min, 600 -> 10 min, 900 -> 15 min, 1200 -> 20 min
+      Tags:
+        - Key: App
+          Value: !Ref AppName
+          PropagateAtLaunch: true
+        - Key: Stage
+          Value: !Ref AppStage
+          PropagateAtLaunch: true
+
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub ${AppName}-${AppStage}-alb
+      Subnets:
+        - !Ref Subnet1
+        - !Ref Subnet2
+      SecurityGroups:
+        - !Ref LoadBalancerSecurityGroup
+      Scheme: internet-facing
+      Tags:
+        - Key: App
+          Value: !Ref AppName
+        - Key: Stage
+          Value: !Ref AppStage
+
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub ${AppName}-${AppStage}-tg
+      VpcId: !Ref VPC
+      Port: 80
+      Protocol: HTTP
+      HealthCheckProtocol: HTTP
+      HealthCheckPort: 80
+      HealthCheckPath: /
+      Matcher:
+        HttpCode: 200
+      TargetType: instance
+      Tags:
+        - Key: App
+          Value: !Ref AppName
+        - Key: Stage
+          Value: !Ref AppStage
+
+  # HTTPListener:
+  #   Type: AWS::ElasticLoadBalancingV2::Listener
+  #   Properties:
+  #     LoadBalancerArn: !Ref LoadBalancer
+  #     Port: 80
+  #     Protocol: HTTP
+  #     DefaultActions:
+  #       - Type: forward
+  #         TargetGroupArn: !Ref TargetGroup
+
+  HTTPSListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 443
+      Protocol: HTTPS
+      SslPolicy: ELBSecurityPolicy-2016-08
+      Certificates:
+        - CertificateArn:
+            Fn::ImportValue: !Sub "${DomainStackName}-CertificateArn"
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+      # Tags:
+      #   - Key: App
+      #     Value: !Ref AppName
+      #   - Key: Stage
+      #     Value: !Ref AppStage
+      #   - Key: Name
+      #     Value: !Sub "${AppName}-${AppStage}-https-listener"
+
+  UpdateRoute53RecordSet:
+    Type: Custom::UpdateRoute53RecordSet
+    Properties:
+      ServiceToken: !GetAtt UpdateRoute53RecordSetFunction.Arn
+      HostedZoneId: !Ref HostedZoneId
+      RecordSetId: 
+        Fn::ImportValue: !Sub "${DomainStackName}-Route53RecordSetId"
+      AliasTarget:
+        DNSName: !GetAtt LoadBalancer.DNSName
+        HostedZoneId: !GetAtt LoadBalancer.CanonicalHostedZoneID
+        EvaluateTargetHealth: false
+
+  UpdateRoute53RecordSetFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: !Sub "${AppName}-${AppStage}-ec2-updt-route53"
+      Runtime: python3.11
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          
+          def handler(event, context):
+              if event['RequestType'] == 'Delete':
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+                  return
+              
+              hosted_zone_id = event['ResourceProperties']['HostedZoneId']
+              record_set_id = event['ResourceProperties']['RecordSetId']
+              alias_target = event['ResourceProperties']['AliasTarget']
+              alias_target['EvaluateTargetHealth'] = str(alias_target['EvaluateTargetHealth']) == 'true'
+              
+              route53_client = boto3.client('route53')
+              
+              try:
+                  response = route53_client.change_resource_record_sets(
+                      HostedZoneId=hosted_zone_id,
+                      ChangeBatch={
+                          'Changes': [
+                              {
+                                  'Action': 'UPSERT',
+                                  'ResourceRecordSet': {
+                                      'Name': record_set_id,
+                                      'Type': 'A',
+                                      'AliasTarget': alias_target
+                                  }
+                              }
+                          ]
+                      }
+                  )
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, {
+                      'Message': 'Route53 record set updated successfully'
+                  })
+              except Exception as e:
+                  cfnresponse.send(event, context, cfnresponse.FAILED, {
+                      'Reason': str(e)
+                  })
+
+  # Give a fixed name for the UpdateRoute53RecordSetFunction log group so it don't generate a new log group each time it runs
+  UpdateRoute53RecordSetFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      # LogGroupName: !Sub /aws/lambda/${UpdateRoute53RecordSetFunction}
+      LogGroupName: !Sub /aws/lambda/${AppName}-${AppStage}-ec2-updt-route53
+      RetentionInDays: 1
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: Route53Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - route53:ChangeResourceRecordSets
+                Resource: '*'
+
+  # ScalingPolicyUp:
+  #   Type: AWS::AutoScaling::ScalingPolicy
+  #   Properties:
+  #     AutoScalingGroupName: !Ref AutoScalingGroup
+  #     PolicyType: TargetTrackingScaling
+  #     TargetTrackingConfiguration:
+  #       PredefinedMetricSpecification:
+  #         PredefinedMetricType: ASGAverageCPUUtilization
+  #       TargetValue: 90.0
+
+  # ScalingPolicyDown:
+  #   Type: AWS::AutoScaling::ScalingPolicy
+  #   Properties:
+  #     AutoScalingGroupName: !Ref AutoScalingGroup
+  #     PolicyType: SimpleScaling
+  #     ScalingAdjustment: -1
+  #     AdjustmentType: ChangeInCapacity
+
+  # HighCPUAlarm:
+  #   Type: AWS::CloudWatch::Alarm
+  #   Properties:
+  #     AlarmDescription: "Alarm if CPU exceeds 90% for 5 minutes"
+  #     Namespace: AWS/EC2
+  #     MetricName: CPUUtilization
+  #     Dimensions:
+  #       - Name: AutoScalingGroupName
+  #         Value: !Ref AutoScalingGroup
+  #     Statistic: Average
+  #     Period: 300
+  #     EvaluationPeriods: 1
+  #     Threshold: 90
+  #     ComparisonOperator: GreaterThanThreshold
+  #     AlarmActions:
+  #       - !Ref ScalingPolicyUp
+
+  # LowCPUAlarm:
+  #   Type: AWS::CloudWatch::Alarm
+  #   Properties:
+  #     AlarmDescription: "Alarm if CPU is below 90% for 5 minutes"
+  #     Namespace: AWS/EC2
+  #     MetricName: CPUUtilization
+  #     Dimensions:
+  #       - Name: AutoScalingGroupName
+  #         Value: !Ref AutoScalingGroup
+  #     Statistic: Average
+  #     Period: 300
+  #     EvaluationPeriods: 1
+  #     Threshold: 90
+  #     ComparisonOperator: LessThanOrEqualToThreshold
+  #     AlarmActions:
+  #       - !Ref ScalingPolicyDown
+
+Outputs:
+  LoadBalancerDNSName:
+    Description: DNS Name of the load balancer
+    Value: !GetAtt LoadBalancer.DNSName
+    Export:
+      Name: !Sub "${AWS::StackName}-LoadBalancerDNSName"
+  LoadBalancerFullName:
+    Description: ALB Full Name
+    Value: !GetAtt LoadBalancer.LoadBalancerFullName
+    Export:
+      Name: !Sub "${AWS::StackName}-LoadBalancerFullName"
+  LoadBalancerArn:
+    Description: ARN of the Load Balancer
+    Value: !Ref LoadBalancer
+    Export:
+      Name: !Sub "${AWS::StackName}-LoadBalancerArn"
+  TargetGroupArn:
+    Description: ARN of the Target Group
+    Value: !Ref TargetGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-TargetGroupArn"
+  AutoScalingGroupArn:
+    Description: ARN of the Auto Scaling Group
+    Value: !Ref AutoScalingGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-AutoScalingGroupArn"
