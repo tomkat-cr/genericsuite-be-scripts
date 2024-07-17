@@ -54,6 +54,34 @@ Resources:
               - logs:CreateLogStream
               - logs:PutLogEvents
               Resource: arn:*:logs:*:*:*
+        - PolicyName: Ec2SecretsAccessPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: '*'
+                # Resource: 
+                # #   - arn:aws:secretsmanager:*:*:secret:AWS_SECRETS_MANAGER_SECRETS_NAME_placeholder
+                #   - !Sub arn:aws:secretsmanager:*:*:secret:${AsmSecretsName}
+                # #   - arn:aws:secretsmanager:*:*:secret:AWS_SECRETS_MANAGER_ENVS_NAME_placeholder
+                #   - !Sub arn:aws:secretsmanager:*:*:secret:${AsmEnvsName}
+        - PolicyName: Ec2KmsAccessPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - kms:Decrypt
+                  - kms:GenerateDataKey*
+                  - kms:CreateGrant
+                Resource: !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/*'
+                # Resource: !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${KmsKeyAlias}'
+                # Resource: '*'
+                # Resource: 
+                # # - arn:aws:kms:AWS_REGION_placeholder:AWS_ACCOUNT_ID_placeholder:alias/AWS_KMS_KEY_ALIAS_placeholder
+                #   - !Sub arn:aws:kms:${AwsRegion}:${AwsAccountId}:alias/${KmsKeyAlias}
 
   APIHandler:
     Type: AWS::Serverless::Function
@@ -72,7 +100,12 @@ Resources:
           APP_NAME: APP_NAME_placeholder
           APP_STAGE: APP_STAGE_placeholder
           CLOUD_PROVIDER: CLOUD_PROVIDER_placeholder
-          AWS_REGION: AWS_REGION_placeholder
+          # AWS_REGION: AWS_REGION_placeholder
+          # Lambda was unable to configure your environment variables because the environment variables you have provided contains reserved keys that are currently not supported for modification. Reserved keys used in this request: AWS_REGION
+
+          # GET_SECRETS_ENABLED: 0
+          # GET_SECRETS_ENVVARS: 0
+          # GET_SECRETS_CRITICAL: 0
 
           # AI_ASSISTANT_NAME: AI_ASSISTANT_NAME_placeholder
           # APP_VERSION: APP_VERSION_placeholder

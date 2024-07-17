@@ -5,6 +5,10 @@
 # Usage:
 # ACTION=run STAGE=qa TARGET=ec2 ECR_DOCKER_IMAGE_TAG="0.0.16" sh node_modules/genericsuite-be-scripts/scripts/aws_ec2_elb/run-ec2-cloud-deploy.sh
 # ACTION=run STAGE=qa TARGET=domain ECR_DOCKER_IMAGE_TAG=0.1.16 make deploy_ec2
+# ACTION=run STAGE=qa TARGET=domain ECR_DOCKER_IMAGE_TAG=0.1.16 ENGINE=localstack make deploy_ec2
+# CICD_MODE=0 ACTION=run STAGE=qa TARGET=ec2 ECR_DOCKER_IMAGE_TAG=0.0.16 make deploy_ec2
+# CICD_MODE=0 ACTION=run STAGE=qa TARGET=ec2 ECR_DOCKER_IMAGE_TAG=0.0.16 ENGINE=localstack make deploy_ec2
+# CICD_MODE=0 ACTION=destroy STAGE=qa TARGET=ec2 ECR_DOCKER_IMAGE_TAG=0.0.16 make deploy_ec2
 
 remove_temp_files() {
     echo "No temporary files to remove..."
@@ -74,29 +78,28 @@ fi
 
 create_key_pair() {
     echo ""
-    echo "Creating '${EC2_KEY_NAME}' key pair..."
+    echo "Creating '${EC2_SSH_KEY_FILENAME}.pem' key pair..."
     echo ""
-    SSH_KEYS_DIRECTORY="${HOME}/.ssh"
     # Delete existing key pair file
-    if [ -f ${SSH_KEYS_DIRECTORY}/${EC2_KEY_NAME}.pem ]; then
-        echo "Key pair ${EC2_KEY_NAME} already exists. Removing it..."
-        if ! rm -rf ${SSH_KEYS_DIRECTORY}/${EC2_KEY_NAME}.pem; then
+    if [ -f "${SSH_KEYS_DIRECTORY}/${EC2_SSH_KEY_FILENAME}.pem" ]; then
+        echo "Key pair ${EC2_SSH_KEY_FILENAME}.pem already exists. Removing it..."
+        if ! rm -rf "${SSH_KEYS_DIRECTORY}/${EC2_SSH_KEY_FILENAME}.pem"; then
             echo "ERROR: Could not delete existing key pair."
             exit_abort
         fi
     fi
     # Create new key pair in AWS and .pem file
-    aws ec2 create-key-pair --key-name "${EC2_KEY_NAME}" --query 'KeyMaterial' --output text > "${SSH_KEYS_DIRECTORY}/${EC2_KEY_NAME}.pem"
+    ${AWS_COMMAND} ec2 create-key-pair --key-name "${EC2_KEY_NAME}" --query 'KeyMaterial' --output text > "${SSH_KEYS_DIRECTORY}/${EC2_SSH_KEY_FILENAME}.pem"
     if [ ! $? -eq 0 ]
     then
         exit_abort
     fi
     echo ""
-    echo "Securing '${SSH_KEYS_DIRECTORY}/${EC2_KEY_NAME}.pem'..."
+    echo "Securing '${SSH_KEYS_DIRECTORY}/${EC2_SSH_KEY_FILENAME}.pem'..."
     echo ""
-    if ! chmod 400 "${SSH_KEYS_DIRECTORY}/${EC2_KEY_NAME}.pem"
+    if ! chmod 400 "${SSH_KEYS_DIRECTORY}/${EC2_SSH_KEY_FILENAME}.pem"
     then
-        echo "ERROR: Could not secure '${SSH_KEYS_DIRECTORY}/${EC2_KEY_NAME}.pem'"
+        echo "ERROR: Could not secure '${SSH_KEYS_DIRECTORY}/${EC2_SSH_KEY_FILENAME}.pem'"
         exit_abort
     fi
     echo ""
@@ -106,7 +109,7 @@ create_key_pair() {
 verify_key_pairs() {
     echo ""
     echo "Verify '${EC2_KEY_NAME}' key pair existence"
-    if ! AWS_CMD_RESULT=$(aws ec2 describe-key-pairs --key-names "$EC2_KEY_NAME" --region "$AWS_REGION" --output text)
+    if ! AWS_CMD_RESULT=$(${AWS_COMMAND} ec2 describe-key-pairs --key-names "${EC2_KEY_NAME}" --region "$AWS_REGION" --output text)
     then
         echo "${AWS_CMD_RESULT}"
         echo "Key pair does not exist... Creating it..."
@@ -116,23 +119,27 @@ verify_key_pairs() {
     fi
 }
 
-# Function to get a specific output value from the stack
-# get_stack_output() {
-#     local output_key=$1
-#     aws cloudformation describe-stacks \
-#         --region $AWS_REGION \
-#         --stack-name $CF_STACK_NAME_P1 \
-#         --query "Stacks[0].Outputs[?OutputKey=='$output_key'].OutputValue" \
-#         --output text
-# }
-
 # Function to get the HostedZoneId for a given domain
 get_hosted_zone_id() {
     local domain=$1
-    aws route53 list-hosted-zones-by-name \
+    ${AWS_COMMAND} route53 list-hosted-zones-by-name \
         --dns-name "$domain." \
         --query "HostedZones[?Name=='$domain.'].Id" \
         --output text | sed 's/\/hostedzone\///'
+}
+
+# Function to get a specific output value from the stack
+get_stack_output() {
+    local output_key=$1
+    local cf_stack_name_p1=$2
+    if [ -z "${cf_stack_name_p1}" ]; then
+        cf_stack_name_p1="${CF_STACK_NAME_P1}"
+    fi
+    ${AWS_COMMAND} cloudformation describe-stacks \
+        --region ${AWS_REGION} \
+        --stack-name ${cf_stack_name_p1} \
+        --query "Stacks[0].Outputs[?OutputKey=='$output_key'].OutputValue" \
+        --output text
 }
 
 # get_pars_for_second_run() {
@@ -160,155 +167,55 @@ get_hosted_zone_id() {
 #     export HOSTED_ZONE_ID
 # }
 
-# create_tmp_cf_template_file() {
-#     local cf_template_file_original=$1
-#     echo ""
-#     echo "Creating temporary CloudFormation template file..."
-#     echo "From: ${cf_template_file_original}"
-#     echo ""
+authorize_localstack_one_sq() {
+    if [ "${ENGINE}" = "localstack" ]; then
+        # Reference: https://docs.localstack.cloud/user-guide/aws/ec2/
+        local security_group_name=$1
+        ${AWS_COMMAND} ec2 authorize-security-group-ingress \
+            --group-id ${security_group_name} \
+            --protocol tcp \
+            --port 22 \
+            --cidr 0.0.0.0/0
+        ${AWS_COMMAND} ec2 authorize-security-group-ingress \
+            --group-id ${security_group_name} \
+            --protocol tcp \
+            --port 80 \
+            --cidr 0.0.0.0/0
+    fi
+}
 
-#     # Copy the original CloudFormation template file to the temporary directory
-#     local cf_template_file="${TMP_WORKING_DIR}/$(basename ${cf_template_file_original})"
-#     if ! cp "${cf_template_file_original}" "${cf_template_file}"
-#     then
-#         echo "ERROR: Could not copy '${cf_template_file_original}' to '${cf_template_file}'"
-#         exit_abort
-#     fi
+authorize_localstack_sq() {
+    # authorize_localstack_one_sq "${APP_NAME_LOWERCASE}-${STAGE}-sg-ec2"
+    authorize_localstack_one_sq "default"
+}
 
-#     local aws_s3_chatbot_attachments_bucket=$(eval echo \$AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_${STAGE_UPPERCASE})
-#     local app_name_and_stage="${APP_NAME_LOWERCASE}-${STAGE}"
-#     perl -i -pe "s|APP_NAME_LOWERCASE_placeholder|${APP_NAME_LOWERCASE}|g" "${cf_template_file}"
-#     perl -i -pe "s|APP_STAGE_placeholder|${STAGE}|g" "${cf_template_file}"
-#     perl -i -pe "s|AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_placeholder|${aws_s3_chatbot_attachments_bucket}|g" "${cf_template_file}"
-#     perl -i -pe "s|AWS_KMS_KEY_ALIAS_placeholder|${app_name_and_stage}-kms|g" "${cf_template_file}"
-#     perl -i -pe "s|AWS_SECRETS_MANAGER_SECRETS_NAME_placeholder|${app_name_and_stage}-secrets|g" "${cf_template_file}"
-#     perl -i -pe "s|AWS_SECRETS_MANAGER_ENVS_NAME_placeholder|${app_name_and_stage}-envs|g" "${cf_template_file}"
-#     perl -i -pe "s|AWS_REGION_placeholder|${AWS_REGION}|g" "${cf_template_file}"
-#     perl -i -pe "s|AWS_ACCOUNT_ID_placeholder|${AWS_ACCOUNT_ID}|g" "${cf_template_file}"
-#     perl -i -pe "s|AWS_ECR_REPOSITORY_NAME_placeholder|${DOCKER_IMAGE_NAME}|g" "${cf_template_file}"
-
-#     export TEMP_CF_TEMPLATE_FILE="${cf_template_file}"
-#     echo "File created: ${TEMP_CF_TEMPLATE_FILE}"
-#     echo "Done."
-# }
-
-# validate_cloud_cf_stack() {
-#     local cf_template_file_original=$1
-#     echo ""
-#     echo "Validating CloudFormation template..."
-#     echo "From: ${cf_template_file_original}"
-#     echo ""
-#     create_tmp_cf_template_file "${cf_template_file_original}"
-#     local cf_template_file="${TEMP_CF_TEMPLATE_FILE}"
-#     if ! AWS_CMD_RESULT=$(aws cloudformation validate-template --template-body file://${cf_template_file} --output text)
-#         then
-#         echo "ERROR: CloudFormation template validation failed"
-#         echo "ERROR: ${AWS_CMD_RESULT}"
-#         exit_abort
-#     fi
-#     echo "Done."
-# }
+get_localstack_default_sg_id() {
+    local security_group_name=$1
+    local security_group_id=$(awslocal ec2 describe-security-groups \
+        --filters Name=group-name,Values=${security_group_name} \
+        --query 'SecurityGroups[0].GroupId' \
+        --output text)
+    echo "${security_group_id}"
+}
 
 
-# create_and_test_cloud_cf_stack() {
-#     local cf_template_file_original=$1
-#     local cf_stack_name=$2
-#     local cf_stack_parameters=$3
-#     local round=$4
+get_ec2_ip() {
+    EC2_IP=$(awslocal ec2 describe-instances --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
+    echo "${EC2_IP}"
+}
 
-#     create_tmp_cf_template_file "${cf_template_file_original}"
-#     local cf_template_file="${TEMP_CF_TEMPLATE_FILE}"
-
-#     verify_key_pairs
-#     if ! AWS_CMD_RESULT=$(aws cloudformation describe-stacks --stack-name ${cf_stack_name} --output text)
-#     then
-#         STACK_ACTION="create-stack"
-#         STACK_FOLLOWUP_ACTION="stack-create-complete"
-#     else
-#         STACK_ACTION="update-stack"
-#         STACK_FOLLOWUP_ACTION="stack-update-complete"
-#     fi
-#     echo ""
-#     echo "Process the CloudFormation stack:"
-#     echo "cf_template_file: '${cf_template_file}'"
-#     echo "cf_stack_name: '${cf_stack_name}'"
-#     echo "cf_stack_parameters: '${cf_stack_parameters}'"
-#     echo ""
-#     echo "aws cloudformation ${STACK_ACTION} --stack-name ${cf_stack_name} --template-body file://${cf_template_file} --parameters ${cf_stack_parameters} --capabilities CAPABILITY_NAMED_IAM --output text"
-#     echo ""
-#     if aws cloudformation ${STACK_ACTION} --stack-name ${cf_stack_name} --template-body file://${cf_template_file} --parameters ${cf_stack_parameters} --capabilities CAPABILITY_NAMED_IAM --output text > "${LOG_FILE}" 2>&1
-#     then
-#         AWS_CMD_RESULT=$(cat "${LOG_FILE}")
-#         echo "${AWS_CMD_RESULT}"
-#     else
-#         AWS_CMD_RESULT=$(cat "${LOG_FILE}")
-#         if echo ${AWS_CMD_RESULT} | grep -q "can not be updated"
-#         then
-#             if [ "$round" != "" ]
-#             then
-#                 echo ""
-#                 echo "The process tried to delete the stack and re-run but it doesn't works..."
-#                 echo "Please delete the stack manually and run the script again."
-#                 echo "Exiting..."
-#                 exit_abort
-#             else
-#                 echo ""
-#                 echo "Deleting the stacks and retrying..."
-#                 echo ""
-#                 destroy_cloud_cf_stack "${CF_STACK_NAME_P1}"
-#                 destroy_cloud_cf_stack "${CF_STACK_NAME_P2}"
-#                 sleep 5
-#                 echo ""
-#                 echo "Retrying the stack run..."
-#                 echo ""
-#                 create_and_test_cloud_cf_stack "${cf_template_file_original}" "${cf_stack_name}" "${cf_stack_parameters}" "2"
-#             fi
-#         else
-#             echo ""
-#             echo "ERROR-010: ${AWS_CMD_RESULT}"
-#             exit_abort
-#         fi
-#     fi
-
-#     echo ""
-#     echo "Wait for Stack Creation"
-#     echo ""
-#     echo "aws cloudformation wait ${STACK_FOLLOWUP_ACTION} --stack-name ${cf_stack_name} --output text"
-#     echo ""
-#     if AWS_CMD_RESULT=$(aws cloudformation wait ${STACK_FOLLOWUP_ACTION} --stack-name ${cf_stack_name} --output text)
-#     then
-#         echo "${AWS_CMD_RESULT}"
-#     else
-#         echo "ERROR: ${AWS_CMD_RESULT}"
-#         exit_abort
-#     fi
-
-#     echo ""
-#     echo "Check the stack creation"
-#     echo ""
-#     echo "aws cloudformation describe-stacks --stack-name ${cf_stack_name} --output text"
-#     echo ""
-#     if AWS_CMD_RESULT=$(aws cloudformation describe-stacks --stack-name ${cf_stack_name} --output text)
-#     then
-#         echo "${AWS_CMD_RESULT}"
-#     else
-#         echo "ERROR: ${AWS_CMD_RESULT}"
-#         exit_abort
-#     fi
-
-#     echo ""
-#     echo "Check the outputs"
-#     echo ""
-#     echo "aws cloudformation describe-stacks --stack-name ${cf_stack_name} --query "Stacks[0].Outputs" --output text"
-#     echo ""
-#     if AWS_CMD_RESULT=$(aws cloudformation describe-stacks --stack-name ${cf_stack_name} --query "Stacks[0].Outputs" --output text)
-#     then
-#         echo "${AWS_CMD_RESULT}"
-#     else
-#         echo "ERROR: ${AWS_CMD_RESULT}"
-#         exit_abort
-#     fi
-# }
+show_ssh_conection_help() {
+    if [ "${ENGINE}" = "localstack" ]; then
+        EC2_IP=$(get_stack_output "InstancePublicIP" "${CF_STACK_NAME_P1}")
+        echo ""
+        echo "Access the EC2 instance using this command:"
+        echo "ssh -i "\${HOME}/.ssh/${EC2_SSH_KEY_FILENAME}.pem" root@${EC2_IP} -p 22"
+        echo "ssh -p 12862 -i \${HOME}/.ssh/${EC2_SSH_KEY_FILENAME}.pem root@127.0.0.1"
+        echo "And test with:"
+        echo "curl ${EC2_IP}:80"
+        echo "curl \"http://${EC2_IP}\""
+    fi
+}
 
 run_cf_templates_creation() {
     if [ "${TARGET}" = "ec2" ]; then
@@ -323,8 +230,16 @@ run_cf_templates_creation() {
         # Infraestructure template parameters
         CF_STACK_PARAMETERS="ParameterKey=KeyName,ParameterValue=${EC2_KEY_NAME} ParameterKey=EcrRepositoryName,ParameterValue=${DOCKER_IMAGE_NAME} ParameterKey=EcrDockerImageUri,ParameterValue=${ECR_DOCKER_IMAGE_URI} ParameterKey=EcrDockerImageTag,ParameterValue=${ECR_DOCKER_IMAGE_TAG} ParameterKey=DomainName,ParameterValue=${ALB_DOMAIN_NAME} ParameterKey=HostedZoneId,ParameterValue=${HOSTED_ZONE_ID} ParameterKey=AppName,ParameterValue=${APP_NAME_LOWERCASE} ParameterKey=AppStage,ParameterValue=${STAGE} ParameterKey=S3BucketName1,ParameterValue=${aws_s3_chatbot_attachments_bucket} ParameterKey=KmsKeyAlias,ParameterValue=${KMS_KEY_ALIAS} ParameterKey=AsmSecretsName,ParameterValue=${app_name_and_stage}-secrets ParameterKey=AsmEnvsName,ParameterValue=${app_name_and_stage}-envs ParameterKey=AwsRegion,ParameterValue=${AWS_REGION} ParameterKey=AwsAccountId,ParameterValue=${AWS_ACCOUNT_ID}  ParameterKey=DomainStackName,ParameterValue=${CF_STACK_NAME_P2}"
 
+        if [ "${ENGINE}" = "localstack" ]; then
+            local default_sg_id=$(get_localstack_default_sg_id "default")
+            if [ -z "${default_sg_id}" ]; then
+                echo "Failed to retrieve default security group ID"
+                exit_abort
+            fi
+            CF_STACK_PARAMETERS="${CF_STACK_PARAMETERS} ParameterKey=DefaultSecurityGroupId,ParameterValue=${default_sg_id}"
+        fi
+
         # Validate the create infraestructure template
-        # validate_cloud_cf_stack "${cf_template_file_p1_path}"
         if ! sh ${AWS_CF_PROCESSOR_SCRIPT} "validate" "${STAGE}" "${CF_STACK_NAME_P1}" "${CF_STACK_PARAMETERS}" "${cf_template_file_p1_path}" ""
         then
             exit_abort
@@ -332,28 +247,28 @@ run_cf_templates_creation() {
 
         # Run the create infraestructure template
         # get_pars_for_second_run
-        # create_and_test_cloud_cf_stack "${cf_template_file_p1_path}" "${CF_STACK_NAME_P1}" "${CF_STACK_PARAMETERS}"
         if ! sh ${AWS_CF_PROCESSOR_SCRIPT} "run" "${STAGE}" "${CF_STACK_NAME_P1}" "${CF_STACK_PARAMETERS}" "${cf_template_file_p1_path}" ""
         then
             exit_abort
         fi
+
+        authorize_localstack_sq
+        show_ssh_conection_help
     fi
 
     if [ "${TARGET}" = "domain" ]; then
-        local cf_template_file_p2_path="${SCRIPTS_DIR}/${CF_TEMPLATE_FILE_P2}"
+        local cf_template_file_p2_path="${SCRIPTS_DIR}/../aws_domains/${CF_TEMPLATE_FILE_P2}"
 
         # Subdomain and https-certificate template parameters
         CF_STACK_PARAMETERS="ParameterKey=DomainName,ParameterValue=${ALB_DOMAIN_NAME} ParameterKey=HostedZoneId,ParameterValue=${HOSTED_ZONE_ID} ParameterKey=AppName,ParameterValue=${APP_NAME_LOWERCASE} ParameterKey=AppStage,ParameterValue=${STAGE}"
 
         # Subdomain and https-certificate template parameters validation
-        # validate_cloud_cf_stack "${cf_template_file_p2_path}"
         if ! sh ${AWS_CF_PROCESSOR_SCRIPT} "validate" "${STAGE}" "${CF_STACK_NAME_P2}" "${CF_STACK_PARAMETERS}" "${cf_template_file_p2_path}" ""
         then
             exit_abort
         fi
 
         # Run the create subdomain and https-certificate template
-        # create_and_test_cloud_cf_stack "${cf_template_file_p2_path}" "${CF_STACK_NAME_P2}" "${CF_STACK_PARAMETERS}"
         if ! sh ${AWS_CF_PROCESSOR_SCRIPT} "run" "${STAGE}" "${CF_STACK_NAME_P2}" "${CF_STACK_PARAMETERS}" "${cf_template_file_p2_path}" ""
         then
             exit_abort
@@ -370,14 +285,12 @@ run_cf_templates_creation() {
 
 run_cf_templates_destroy() {
     if [ "${TARGET}" = "ec2" ]; then
-        # destroy_cloud_cf_stack "${CF_STACK_NAME_P1}"
         if ! sh ${AWS_CF_PROCESSOR_SCRIPT} "destroy" "${STAGE}" "${CF_STACK_NAME_P1}" "" "" ""
         then
             exit_abort
         fi
     fi
     if [ "${TARGET}" = "domain" ]; then
-        # destroy_cloud_cf_stack "${CF_STACK_NAME_P2}"
         if ! sh ${AWS_CF_PROCESSOR_SCRIPT} "destroy" "${STAGE}" "${CF_STACK_NAME_P2}" "" "" ""
         then
             exit_abort
@@ -399,34 +312,6 @@ run_cf_templates_describe() {
         fi
     fi
 }
-
-# destroy_cloud_cf_stack() {
-#     local cf_stack_name=$1
-#     echo ""
-#     echo "Deleting the CLOUD stack: ${cf_stack_name}"
-#     echo ""
-#     echo "aws cloudformation delete-stack --stack-name ${cf_stack_name} --output text"
-#     echo ""
-#     if AWS_CMD_RESULT=$(aws cloudformation delete-stack --stack-name ${cf_stack_name} --output text)
-#     then
-#         echo "${AWS_CMD_RESULT}"
-#     else
-#         echo "ERROR: ${AWS_CMD_RESULT}"
-#         exit_abort
-#     fi
-#     echo ""
-#     echo "Wait for Stack Deletion"
-#     echo ""
-#     echo "aws cloudformation wait stack-delete-complete --stack-name ${cf_stack_name} --output text"
-#     echo ""
-#     if AWS_CMD_RESULT=$(aws cloudformation wait stack-delete-complete --stack-name ${cf_stack_name} --output text)
-#     then
-#         echo "${AWS_CMD_RESULT}"
-#     else
-#         echo "ERROR: ${AWS_CMD_RESULT}"
-#         exit_abort
-#     fi
-# }
 
 prepare_working_environment() {
     # Get and validate environment variables
@@ -461,12 +346,15 @@ prepare_working_environment() {
         exit_abort
     fi
 
-    AWS_ACCOUNT_ID=$(aws sts get-caller-identity --output json --no-paginate | jq -r '.Account')
-    if [ "${AWS_ACCOUNT_ID}" = "" ]; then
-        echo ""
-        echo "ERROR: AWS_ACCOUNT_ID could not be retrieved. Please configure your AWS credentials."
-        exit_abort
-    fi
+    # if [ "${ENGINE}" != "localstack" ]; then
+        # AWS_ACCOUNT_ID=$(${AWS_COMMAND} sts get-caller-identity --output json --no-paginate | jq -r '.Account')
+        AWS_ACCOUNT_ID=$(aws sts get-caller-identity --output json --no-paginate | jq -r '.Account')
+        if [ "${AWS_ACCOUNT_ID}" = "" ]; then
+            echo ""
+            echo "ERROR: AWS_ACCOUNT_ID could not be retrieved. Please configure your AWS credentials."
+            exit_abort
+        fi
+    # fi
 
     # Working variables
     STAGE=$(echo ${STAGE} | tr '[:upper:]' '[:lower:]')
@@ -480,9 +368,6 @@ prepare_working_environment() {
 
     # ....
 
-    # EC2_VPC_ID="${DOCKER_IMAGE_NAME}-vpc"
-    # EC2_SUBNET_ID="${DOCKER_IMAGE_NAME}-subnet"
-
     EC2_KEY_NAME="${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}-ec2-keys"
     ALB_DOMAIN_NAME="api-${STAGE}-2.${APP_DOMAIN_NAME}"
 
@@ -492,28 +377,84 @@ prepare_working_environment() {
     CF_STACK_NAME_P2="${DOCKER_IMAGE_NAME}-domain"
 
     if [ "${CF_TEMPLATE_FILE_P1}" = "" ]; then
-        # CF_TEMPLATE_FILE_P1="fastapi-ec2-localstack.yml"
-        # CF_TEMPLATE_FILE_P1="fastapi-ec2-ecr.yml"
-        # CF_TEMPLATE_FILE_P1="cf-template-ec2-elb-part-1.yml"
-        CF_TEMPLATE_FILE_P1="cf-template-ec2-elb.yml"
+        if [ "${ENGINE}" != "localstack" ]; then
+            CF_TEMPLATE_FILE_P1="cf-template-ec2-elb.yml"
+        else
+            CF_TEMPLATE_FILE_P1="cf-template-ec2-localstack.yml"
+        fi
     fi
 
     if [ "${CF_TEMPLATE_FILE_P2}" = "" ]; then
-        # CF_TEMPLATE_FILE_P2="cf-template-ec2-elb-part-2.yml"
         CF_TEMPLATE_FILE_P2="cf-template-ec2-domain.yml"
     fi
 
     # Get the HostedZoneId
-    HOSTED_ZONE_ID=$(get_hosted_zone_id $APP_DOMAIN_NAME)
-    if [ -z "$HOSTED_ZONE_ID" ]; then
-        echo "Failed to retrieve HostedZoneId"
-        exit_abort
+    if [ "${ENGINE}" != "localstack" ]; then
+        HOSTED_ZONE_ID=$(get_hosted_zone_id $APP_DOMAIN_NAME)
+        if [ -z "$HOSTED_ZONE_ID" ]; then
+            echo "Failed to retrieve HostedZoneId"
+            exit_abort
+        fi
     fi
 
     # KMS key allias
     if [ "${KMS_KEY_ALIAS}" = "" ]; then
         KMS_KEY_ALIAS="genericsuite-key"
     fi
+
+    # Set the EC2 SSH key filename
+    EC2_SSH_KEY_FILENAME="${EC2_KEY_NAME}"
+    if [ "${ENGINE}" = "localstack" ]; then
+        EC2_SSH_KEY_FILENAME="${EC2_KEY_NAME}-localstack"
+    fi
+    SSH_KEYS_DIRECTORY="${HOME}/.ssh"
+}
+
+localstack_venv() {
+    if [ ! -d "venv" ]; then
+        echo "[INFO|EC2] - Creating virtual environment..."
+        python3 -m venv venv
+        if [ -f localstack_requirements.txt ]; then
+            pip install -r localstack_requirements.txt
+        fi
+    fi
+    . venv/bin/activate
+}
+
+set_engine() {
+    # Set ENGINE. Options: aws (meaning use the AWS Cloud services), localstack (local AWS services). Defaults to "aws"
+    if [ "${ENGINE}" = "" ]; then
+        ENGINE="aws"
+    fi
+    # Set AWS_COMMAND and eventually localstack envvars
+    if [ "${ENGINE}" = "localstack" ]; then
+        if [ "${LOCALSTACK_KEEP_ALIVE}" = "" ]; then
+            LOCALSTACK_KEEP_ALIVE="0"
+            # LOCALSTACK_KEEP_ALIVE="1"
+        fi
+        export AWS_COMMAND="awslocal --endpoint-url http://localhost:4566"
+        if ! sh ${AWS_CF_PROCESSOR_SCRIPT} "localstack_launch" "${STAGE}" "${CF_STACK_NAME_P1}" "" "" ""
+        then
+            exit_abort
+        fi
+        localstack_venv
+    else
+        export AWS_COMMAND="aws"
+    fi
+}
+
+describe_instances() {
+    localstack_venv
+    echo ""
+    echo "EC2 VPCs:"
+    ${AWS_COMMAND} ec2 describe-vpcs | jq
+    echo ""
+    echo "EC2 Security Groups:"
+    ${AWS_COMMAND} ec2 describe-security-groups | jq
+    echo ""
+    echo "EC2 Instance(s):"
+    ${AWS_COMMAND} ec2 describe-instances | jq
+    echo ""
 }
 
 show_summary() {
@@ -560,17 +501,17 @@ show_summary() {
 prepare_working_environment
 show_summary
 
+set_engine
+
 sh ${SCRIPTS_DIR}/../show_date_time.sh
 
 ERROR="1"
 
-# if [[ "${ACTION}" = "" || "${ACTION}" = "run" ]]; then
 if [ "${ACTION}" = "run" ]; then
     run_cf_templates_creation
     ERROR="0"
 fi
 
-# if [[ "${ACTION}" = "down" || "${ACTION}" = "destroy" ]]; then
 if [ "${ACTION}" = "destroy" ]; then
     run_cf_templates_destroy
     ERROR="0"
@@ -578,6 +519,33 @@ fi
 
 if [ "${ACTION}" = "describe" ]; then
     run_cf_templates_describe
+    ERROR="0"
+fi
+
+if [ "${ACTION}" = "localstack_status" ]; then
+    sh ${AWS_CF_PROCESSOR_SCRIPT} "localstack_status" "${STAGE}" "localstack" "" "" ""
+    ERROR="0"
+fi
+
+if [ "${ACTION}" = "localstack_logs" ]; then
+    sh ${AWS_CF_PROCESSOR_SCRIPT} "localstack_logs" "${STAGE}" "localstack" "" "" ""
+    ERROR="0"
+fi
+
+if [ "${ACTION}" = "localstack_stop" ]; then
+    sh ${AWS_CF_PROCESSOR_SCRIPT} "localstack_stop" "${STAGE}" "localstack" "" "" ""
+    ERROR="0"
+fi
+
+if [ "${ACTION}" = "localstack_shell" ]; then
+    # sh ${AWS_CF_PROCESSOR_SCRIPT} "localstack_shell" "${STAGE}" "localstack" "" "" ""
+    localstack_venv
+    bash
+    ERROR="0"
+fi
+
+if [ "${ACTION}" = "describe_instances" ]; then
+    describe_instances
     ERROR="0"
 fi
 

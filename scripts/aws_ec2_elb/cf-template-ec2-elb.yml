@@ -7,12 +7,6 @@ Parameters:
   KeyName:
     Description: Name for the EC2 KeyPair to enable SSH access to the instance
     Type: AWS::EC2::KeyPair::KeyName
-  DomainName:
-    Description: Domain name for the ALB
-    Type: String
-  HostedZoneId:
-    Description: The ID of the hosted zone where the domain is managed
-    Type: AWS::Route53::HostedZone::Id
   EcrRepositoryName:
     Description: ECR docker images repository name
     Type: String
@@ -35,9 +29,6 @@ Parameters:
   KmsKeyAlias:
     Type: String
     Description: The alias of the KMS key to use for EBS encryption
-  DomainStackName:
-    Description: Name of the stack that created the domain resources
-    Type: String
   S3BucketName1:
     Description: App S3 Bucket name
     Type: String
@@ -50,6 +41,15 @@ Parameters:
   AwsAccountId:
     Description: AWS account Id
     Type: String
+  DomainStackName:
+    Description: Name of the stack that created the domain resources
+    Type: String
+  DomainName:
+    Description: Domain name for the ALB
+    Type: String
+  HostedZoneId:
+    Description: The ID of the hosted zone where the domain is managed
+    Type: AWS::Route53::HostedZone::Id
   
 Resources:
 

@@ -160,6 +160,9 @@ create_aws_config:
 generate_sam_dynamodb:
 	sh node_modules/genericsuite-be-scripts/scripts/aws_big_lambda/generate_sam_dynamodb/run_generate_sam_dynamodb.sh
 
+generate_cf_dynamodb:
+	sh node_modules/genericsuite-be-scripts/scripts/aws_dynamodb/generate_dynamodb_cf/generate_dynamodb_cf.sh
+
 ## Deployment
 
 deploy_qa: create_s3_bucket_qa
@@ -187,7 +190,15 @@ deploy_ecr_creation:
 	sh node_modules/genericsuite-be-scripts/scripts/aws_ec2_elb/run-fastapi-ecr-creation.sh
 
 deploy_ec2:
+	# E.g.
+	# CICD_MODE=0 ACTION=run STAGE=qa TARGET=ec2 ECR_DOCKER_IMAGE_TAG=0.0.16 make deploy_ec2
+	# CICD_MODE=0 ACTION=destroy STAGE=qa TARGET=ec2 ECR_DOCKER_IMAGE_TAG=0.0.16 make deploy_ec2
 	sh node_modules/genericsuite-be-scripts/scripts/aws_ec2_elb/run-ec2-cloud-deploy.sh
+
+deploy_dynamodb:
+	# CICD_MODE=0 ACTION=run STAGE=qa TARGET=dynamodb ENGINE=localstack make deploy_dynamodb
+	# CICD_MODE=0 ACTION=run STAGE=qa TARGET=dynamodb make deploy_dynamodb
+	sh node_modules/genericsuite-be-scripts/scripts/aws_dynamodb/run-dynamodb-deploy.sh
 
 deploy: deploy_qa
 
@@ -198,6 +209,10 @@ generate_seed:
 	sh node_modules/genericsuite-be-scripts/scripts/cryptography/run_generate_seed.sh
 
 aws_secrets:
+	# E.g.
+	# CICD_MODE=0 ACTION=run STAGE=qa TARGET=kms make aws_secrets
+	# CICD_MODE=0 ACTION=run STAGE=qa TARGET=kms ENGINE=localstack make aws_secrets
+	# CICD_MODE=0 ACTION=run STAGE=qa TARGET=secrets make aws_secrets
 	sh node_modules/genericsuite-be-scripts/scripts/aws_secrets/aws_secrets_manager.sh
 
 # aws_secrets_create:

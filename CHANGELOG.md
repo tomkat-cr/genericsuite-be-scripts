@@ -22,15 +22,18 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ---
 
 ### New
-Add password and API Keys to AWS Secrets [GS-41].
-Add: AWS Secrets manager to Makefile [GS-41].
-Add: EC2+ALB App deployment [GS-96].
-Add: delpoy_ec2 and deploy_ecr_creation to Makefile [GS-96].
+Add password and API Keys to AWS Secrets using AWS CloudFormation [GS-41].
+Add AWS Secrets manager to Makefile [GS-41].
+Add EC2+ALB App deployment using AWS CloudFormation [GS-96].
+Add depLoy_ec2 and deploy_ecr_creation to Makefile [GS-96].
+Add DynamoDB tables creation from the JSON configs using AWS CloudFormation [GS-84].
+Add "run-cf-deployment.sh" to standarize all Cloudformation calls [GS-96].
 
 ### Changes
 Change APP_STAGE dynamic assignment in run_aws.sh, set_chalice_cnf.sh, and big_lambdas_manager.sh, and secure_local_server/docker_entrypoint.sh [GS-41].
-Change __pycache__ removal simplified in big_lambdas_manager.sh [GS-96].
-Change APP_DB_URI and ther secrets assignment removed in big_lambdas_manager.sh, docker-compose-big-lambda-AL2.yml, docker-compose-big-lambda-Alpine.yml [GS-41].
+__pycache__ removal simplified in big_lambdas_manager.sh [GS-96].
+APP_DB_URI and the secrets assignment removed in big_lambdas_manager.sh, docker-compose-big-lambda-AL2.yml, docker-compose-big-lambda-Alpine.yml [GS-41].
+Remove all envvars from "template-sam.yml" [GS-96].
 
 ### Fixes
 Fix 'USER_AGENT environment variable not set...' LangSmith warning message removed in run_aws.sh, big_lambdas_manager.sh, aws_big_lambda/template-sam.yml, and secure_local_server/docker_entrypoint.sh.
