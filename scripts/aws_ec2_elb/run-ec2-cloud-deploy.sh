@@ -498,10 +498,9 @@ show_summary() {
 
 # Main
 
+set_engine
 prepare_working_environment
 show_summary
-
-set_engine
 
 sh ${SCRIPTS_DIR}/../show_date_time.sh
 

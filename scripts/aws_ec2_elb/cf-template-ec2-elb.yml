@@ -301,11 +301,11 @@ Resources:
           FromPort: 80
           ToPort: 80
           SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
-        # # TODO: temporary, remove 22 port access after an emergency use
-        # - IpProtocol: tcp
-        #   FromPort: 22
-        #   ToPort: 22
-        #   CidrIp: 0.0.0.0/0  # Consider restricting this to your IP range
+        # # TODO: temporary until SSM is activated with the imdsv2 enabling. Remove 22 port access after it or an emergency use
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0  # Consider restricting this to your IP range
       Tags:
         - Key: App
           Value: !Ref AppName
