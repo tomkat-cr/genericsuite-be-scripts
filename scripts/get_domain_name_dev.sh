@@ -332,23 +332,27 @@ if [ "${STAGE}" = "dev" ];then
     fi
     DOMAIN_NAME_ONLY="app.${APP_NAME_LOWERCASE}.local"
     export DOMAIN_NAME="${DOMAIN_NAME_ONLY}:${BACKEND_LOCAL_PORT}"
-    if [ "${NGROK_ENABLED}" == "1" ]; then
-      enable_ngrok
+    if [ "${BRIDGE_PROXY_DISABLED}" = "1" ]; then
+        echo "Bridge_proxy skipped..."
     else
-      if [ "${URL_MASK_EXTERNAL_HOSTNAME}" = "" ]; then
-        echo "NGROK_ENABLED is not set. Skipping ngrok setup."
-        echo "URL_MASK_EXTERNAL_HOSTNAME is not set..."
-        echo "Set URL_MASK_EXTERNAL_HOSTNAME if you want features like AI Vision to work with the local domain '${DOMAIN_NAME}'"
+      if [ "${NGROK_ENABLED}" == "1" ]; then
+        enable_ngrok
       else
-        if [[ "${URL_MASK_EXTERNAL_HOSTNAME}" != *"${APP_DOMAIN_NAME}"* ]]; then
-            # If the hostname in URL_MASK_EXTERNAL_HOSTNAME does not contain the domain name, add it
-            enable_bridge_proxy
+        if [ "${URL_MASK_EXTERNAL_HOSTNAME}" = "" ]; then
+          echo "NGROK_ENABLED is not set. Skipping ngrok setup."
+          echo "URL_MASK_EXTERNAL_HOSTNAME is not set..."
+          echo "Set URL_MASK_EXTERNAL_HOSTNAME if you want features like AI Vision to work with the local domain '${DOMAIN_NAME}'"
         else
-          # If the hostname in URL_MASK_EXTERNAL_HOSTNAME contains the domain name, assign it
-          if ! echo "${URL_MASK_EXTERNAL_HOSTNAME}" | grep -q "^http?://"; then
-            URL_MASK_EXTERNAL_HOSTNAME="https://${URL_MASK_EXTERNAL_HOSTNAME}"
+          if [[ "${URL_MASK_EXTERNAL_HOSTNAME}" != *"${APP_DOMAIN_NAME}"* ]]; then
+              # If the hostname in URL_MASK_EXTERNAL_HOSTNAME does not contain the domain name, add it
+              enable_bridge_proxy
+          else
+            # If the hostname in URL_MASK_EXTERNAL_HOSTNAME contains the domain name, assign it
+            if ! echo "${URL_MASK_EXTERNAL_HOSTNAME}" | grep -q "^http?://"; then
+              URL_MASK_EXTERNAL_HOSTNAME="https://${URL_MASK_EXTERNAL_HOSTNAME}"
+            fi
+            export DEV_MASK_EXT_HOSTNAME="${URL_MASK_EXTERNAL_HOSTNAME}"
           fi
-          export DEV_MASK_EXT_HOSTNAME="${URL_MASK_EXTERNAL_HOSTNAME}"
         fi
       fi
     fi

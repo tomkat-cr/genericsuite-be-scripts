@@ -2,7 +2,7 @@
 .PHONY:  help install install_dev locked_dev locked_install lock_pip_file requirements clean clean_rm clean_temp_dir clean_logs fresh install_tools lsof test test_only lint types coverage format format_check qa mongo_docker mongo_docker_down mongo_backup mongo_restore config config_dev config_local config_qa config_qa_for_deployment config_staging build build_local build_check unbuild unbuild_qa unbuild_staging delete_stack create_s3_bucket_dev create_s3_bucket_qa create_s3_bucket_staging create_s3_bucket_prod create_s3_bucket_demo create_aws_config generate_sam_dynamodb deploy_qa deploy_run_local_qa deploy_validate_qa deploy_package_qa deploy_staging deploy_prod deploy_demo deploy run run_qa down_qa restart_qa run_local_docker run_prod add_submodules init_submodules local_dns local_dns_restart local_dns_rebuild local_dns_down local_dns_test copy_ssl_certs create_ssl_certs_only create_ssl_certs init_sam init_chalice generate_seed lock pre-publish publish pypi-build pypi-publish-test pypi-publish
 SHELL := /bin/bash
 
-# General Commands
+## General Commands
 
 help:
 	cat Makefile
@@ -160,6 +160,9 @@ create_aws_config:
 generate_sam_dynamodb:
 	sh node_modules/genericsuite-be-scripts/scripts/aws_big_lambda/generate_sam_dynamodb/run_generate_sam_dynamodb.sh
 
+generate_cf_dynamodb:
+	sh node_modules/genericsuite-be-scripts/scripts/aws_dynamodb/generate_dynamodb_cf/generate_dynamodb_cf.sh
+
 ## Deployment
 
 deploy_qa: create_s3_bucket_qa
@@ -183,7 +186,46 @@ deploy_prod: create_s3_bucket_prod
 deploy_demo: create_s3_bucket_demo
 	sh node_modules/genericsuite-be-scripts/scripts/aws_big_lambda/big_lambdas_manager.sh sam_deploy demo
 
+deploy_ecr_creation:
+	sh node_modules/genericsuite-be-scripts/scripts/aws_ec2_elb/run-fastapi-ecr-creation.sh
+
+deploy_ec2:
+	# E.g.
+	# CICD_MODE=0 ACTION=run STAGE=qa TARGET=ec2 ECR_DOCKER_IMAGE_TAG=0.0.16 make deploy_ec2
+	# CICD_MODE=0 ACTION=destroy STAGE=qa TARGET=ec2 ECR_DOCKER_IMAGE_TAG=0.0.16 make deploy_ec2
+	sh node_modules/genericsuite-be-scripts/scripts/aws_ec2_elb/run-ec2-cloud-deploy.sh
+
+deploy_dynamodb:
+	# CICD_MODE=0 ACTION=run STAGE=qa TARGET=dynamodb ENGINE=localstack make deploy_dynamodb
+	# CICD_MODE=0 ACTION=run STAGE=qa TARGET=dynamodb make deploy_dynamodb
+	sh node_modules/genericsuite-be-scripts/scripts/aws_dynamodb/run-dynamodb-deploy.sh
+
 deploy: deploy_qa
+
+## Secrets
+
+generate_seed:
+	# To assign the STORAGE_URL_SEED environment variable
+	sh node_modules/genericsuite-be-scripts/scripts/cryptography/run_generate_seed.sh
+
+aws_secrets:
+	# E.g.
+	# CICD_MODE=0 ACTION=run STAGE=qa TARGET=kms make aws_secrets
+	# CICD_MODE=0 ACTION=run STAGE=qa TARGET=kms ENGINE=localstack make aws_secrets
+	# CICD_MODE=0 ACTION=run STAGE=qa TARGET=secrets make aws_secrets
+	sh node_modules/genericsuite-be-scripts/scripts/aws_secrets/aws_secrets_manager.sh
+
+# aws_secrets_create:
+# 	sh node_modules/genericsuite-be-scripts/scripts/aws_secrets/aws_secrets_manager.sh create
+
+# aws_secrets_describe:
+# 	sh node_modules/genericsuite-be-scripts/scripts/aws_secrets/aws_secrets_manager.sh describe
+
+# aws_secrets_update:
+# 	sh node_modules/genericsuite-be-scripts/scripts/aws_secrets/aws_secrets_manager.sh update
+
+# aws_secrets_delete:
+# 	sh node_modules/genericsuite-be-scripts/scripts/aws_secrets/aws_secrets_manager.sh delete
 
 ## Application Specific Commands
 
@@ -214,7 +256,7 @@ add_submodules:
 init_submodules:
 	sh node_modules/genericsuite-be-scripts/scripts/init_json_configs.sh
 
-# Local DNS server
+## Local DNS server
 
 local_dns:
 	sh node_modules/genericsuite-be-scripts/scripts/dns/run_local_dns.sh
@@ -248,10 +290,6 @@ init_sam:
 
 init_chalice:
 	sh node_modules/genericsuite-be-scripts/scripts/aws/init_chalice.sh
-
-generate_seed:
-	# To assign the STORAGE_URL_SEED environment variable
-	sh node_modules/genericsuite-be-scripts/scripts/cryptography/run_generate_seed.sh
 
 ## NPM scripts library
 

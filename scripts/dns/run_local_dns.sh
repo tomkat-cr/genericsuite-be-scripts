@@ -17,6 +17,11 @@ if [ "${APP_NAME}" = "" ]; then
     exit 1
 fi
 
+if [ "${LOCAL_DNS_DISABLED}" = "1" ]; then
+    echo "DNS local server skipped..."
+    exit 0
+fi
+
 export TMP_WORKING_DIR="/tmp"
 
 export APP_NAME_LOWERCASE=$(echo ${APP_NAME} | tr '[:upper:]' '[:lower:]')

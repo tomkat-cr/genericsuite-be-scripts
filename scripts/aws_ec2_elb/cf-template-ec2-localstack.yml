@@ -1,0 +1,403 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template to deploy FastAPI app with EC2 and ECR, including all necessary resources (VPC, Subnets, Launch Configuration).
+
+Parameters:
+  KeyName:
+    Description: Name for the EC2 KeyPair to enable SSH access to the instance
+    Type: AWS::EC2::KeyPair::KeyName
+  EcrRepositoryName:
+    Description: ECR docker images repository name
+    Type: String
+  EcrDockerImageUri:
+    Description: Complete URI of the ECR repository Docker image
+    Type: String
+  EcrDockerImageTag:
+    Description: ECR repository Docker image tag
+    Type: String
+    Default: latest
+  AppName:
+    Description: application name
+    Type: String
+  AppStage:
+    Description: application stage (qa, prod, staging, demo, dev)
+    Type: String
+  AwsRegion:
+    Description: application region
+    Type: String
+  KmsKeyAlias:
+    Type: String
+    Description: The alias of the KMS key to use for EBS encryption
+  S3BucketName1:
+    Description: App S3 Bucket name
+    Type: String
+  AsmSecretsName:
+    Description: Secrets Manager - Secrets set name
+    Type: String
+  AsmEnvsName:
+    Description: Secrets Manager - Environment variables set name
+    Type: String
+  AwsAccountId:
+    Description: AWS account Id
+    Type: String
+  DomainName:
+    Description: Domain name for the ALB
+    Type: String
+  HostedZoneId:
+    Description: The ID of the hosted zone where the domain is managed
+    Type: AWS::Route53::HostedZone::Id
+  DomainStackName:
+    Description: Name of the stack that created the domain resources
+    Type: String
+  DefaultSecurityGroupId:
+    Description: localstack default security group id
+    Type: String
+
+Resources:
+  # VPC:
+  #   Type: AWS::EC2::VPC
+  #   Properties:
+  #     CidrBlock: 10.0.0.0/16
+  #     EnableDnsHostnames: true
+  #     EnableDnsSupport: true
+  #     InstanceTenancy: default
+  #     Tags:
+  #       - Key: Name
+  #         Value: !Sub ${AppName}-${AppStage}-vpc
+  #       - Key: App
+  #         Value: !Ref AppName
+  #       - Key: Stage
+  #         Value: !Ref AppStage
+
+  # Subnet1:
+  #   Type: AWS::EC2::Subnet
+  #   Properties:
+  #     VpcId: !Ref VPC
+  #     AvailabilityZone: !Select
+  #       - 0
+  #       - !GetAZs ''
+  #     CidrBlock: 10.0.1.0/24
+  #     MapPublicIpOnLaunch: true
+  #     Tags:
+  #       - Key: Name
+  #         Value: !Sub ${AppName}-${AppStage}-subnet-1
+  #       - Key: App
+  #         Value: !Ref AppName
+  #       - Key: Stage
+  #         Value: !Ref AppStage
+
+  # InstanceSecurityGroup:
+  #   Type: AWS::EC2::SecurityGroup
+  #   Properties:
+  #     GroupName: !Sub ${AppName}-${AppStage}-sg-ec2
+  #     GroupDescription: Enable SSH and HTTP access
+  #     VpcId: !Ref VPC
+
+  #     # IpPermissions:
+  #     #   - FromPort: 80,
+  #     #     IpProtocol: tcp
+  #     #     IpRanges:
+  #     #        - CidrIp: 0.0.0.0/0
+  #     #     ToPort: 80,
+  #     #   - FromPort: 22,
+  #     #     IpProtocol: tcp
+  #     #     IpRanges:
+  #     #        - CidrIp: 0.0.0.0/0
+  #     #     ToPort: 22,
+
+  #     SecurityGroupIngress:
+  #       - IpProtocol: tcp
+  #         FromPort: 80
+  #         ToPort: 80
+  #         # SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
+  #       - IpProtocol: tcp
+  #         FromPort: 22
+  #         ToPort: 22
+  #         CidrIp: 0.0.0.0/0  # Consider restricting this to your IP range
+  #     Tags:
+  #       - Key: App
+  #         Value: !Ref AppName
+  #       - Key: Stage
+  #         Value: !Ref AppStage
+
+  # Ec2InstanceRole:
+  #   Type: AWS::IAM::Role
+  #   Properties:
+  #     RoleName: !Sub ${AppName}-${AppStage}-ec2-instance-role
+  #     AssumeRolePolicyDocument:
+  #       Version: '2012-10-17'
+  #       Statement:
+  #         - Effect: Allow
+  #           Principal:
+  #             Service:
+  #               - ec2.amazonaws.com
+  #           Action:
+  #             - sts:AssumeRole
+  #     Path: /
+  #     ManagedPolicyArns:
+  #       # - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+  #       - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+  #       # Bingo! this enabled SSM
+  #       # - arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM
+  #     Policies:
+  #       - PolicyName: Ec2InstancePolicy
+  #         PolicyDocument:
+  #           Version: '2012-10-17'
+  #           Statement:
+  #             - Effect: Allow
+  #               Action:
+  #                 - ec2:Describe*
+  #               Resource: '*'
+  #       - PolicyName: Ec2S3AccessPolicy1
+  #         PolicyDocument:
+  #           Version: '2012-10-17'
+  #           Statement:
+  #             - Effect: Allow
+  #               Action:
+  #                 - s3:PutObject
+  #                 - s3:PutObjectAcl
+  #                 - s3:GetObject
+  #                 - s3:GetObjectAcl
+  #                 - s3:DeleteObject
+  #               # Resource: arn:aws:s3:::AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_placeholder/*
+  #               # Resource: !Sub arn:aws:s3:::${S3BucketName1}/*
+  #               Resource: '*'
+  #       - PolicyName: Ec2LogsPolicy
+  #         PolicyDocument:
+  #           Version: '2012-10-17'
+  #           Statement:
+  #             - Effect: Allow
+  #               Action:
+  #                 - logs:CreateLogGroup
+  #                 - logs:CreateLogStream
+  #                 - logs:PutLogEvents
+  #               Resource: arn:*:logs:*:*:*
+  #       - PolicyName: Ec2EcrLoginPolicy
+  #         PolicyDocument:
+  #           Version: '2012-10-17'
+  #           Statement:
+  #             - Effect: Allow
+  #               Action:
+  #                 - ecr:GetAuthorizationToken
+  #               Resource: '*'
+  #       - PolicyName: Ec2EcrAccessPolicy
+  #         PolicyDocument:
+  #           Version: '2012-10-17'
+  #           Statement:
+  #             - Effect: Allow
+  #               Action:
+  #                 - ecr:BatchCheckLayerAvailability
+  #                 - ecr:BatchGetImage
+  #                 - ecr:GetDownloadUrlForLayer
+  #               Resource:
+  #                 # - !Sub arn:aws:ecr:${AwsRegion}:${AwsAccountId}:repository/AWS_ECR_REPOSITORY_NAME_placeholder
+  #                 - !Sub arn:aws:ecr:${AwsRegion}:${AwsAccountId}:repository/${EcrRepositoryName}
+  #       - PolicyName: Ec2SecretsAccessPolicy
+  #         PolicyDocument:
+  #           Version: '2012-10-17'
+  #           Statement:
+  #             - Effect: Allow
+  #               Action:
+  #                 - secretsmanager:GetSecretValue
+  #               Resource: '*'
+  #               # Resource: 
+  #               # #   - arn:aws:secretsmanager:*:*:secret:AWS_SECRETS_MANAGER_SECRETS_NAME_placeholder
+  #               #   - !Sub arn:aws:secretsmanager:*:*:secret:${AsmSecretsName}
+  #               # #   - arn:aws:secretsmanager:*:*:secret:AWS_SECRETS_MANAGER_ENVS_NAME_placeholder
+  #               #   - !Sub arn:aws:secretsmanager:*:*:secret:${AsmEnvsName}
+  #       - PolicyName: Ec2KmsAccessPolicy
+  #         PolicyDocument:
+  #           Version: '2012-10-17'
+  #           Statement:
+  #             - Effect: Allow
+  #               Action:
+  #                 - kms:Decrypt
+  #                 - kms:GenerateDataKey*
+  #                 - kms:CreateGrant
+  #               # Resource: !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/*'
+  #               Resource: '*'
+  #               # Resource: !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${KmsKeyAlias}'
+  #               # Resource: '*'
+  #               # Resource: 
+  #               # # - arn:aws:kms:AWS_REGION_placeholder:AWS_ACCOUNT_ID_placeholder:alias/AWS_KMS_KEY_ALIAS_placeholder
+  #               #   - !Sub arn:aws:kms:${AwsRegion}:${AwsAccountId}:alias/${KmsKeyAlias}
+  #       - PolicyName: Ec2CloudWatchLogsPolicy
+  #         PolicyDocument:
+  #           Version: '2012-10-17'
+  #           Statement:
+  #             - Effect: Allow
+  #               Action:
+  #                 - logs:CreateLogGroup
+  #                 - logs:CreateLogStream
+  #                 - logs:PutLogEvents
+  #                 - logs:DescribeLogStreams
+  #               Resource: 
+  #                 - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:${AppName}-${AppStage}-ec2-logs:*
+
+  # Ec2InstanceProfile:
+  #   Type: AWS::IAM::InstanceProfile
+  #   Properties:
+  #     InstanceProfileName: !Sub ${AppName}-${AppStage}-ec2-instance-profile
+  #     Path: /
+  #     Roles:
+  #       - !Ref Ec2InstanceRole
+
+  AppLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub ${AppName}-${AppStage}-ec2-logs
+      RetentionInDays: 3  # Adjust as needed
+
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      # ImageId: ami-0c55b159cbfafe1f0
+      ImageId: ami-0195204d5dce06d99 # Amazon Linux 2 AMI / 64-bit (x86)
+      # ImageId: ami-003d53c9bb0a387f4 # Amazon Linux 2 AMI / 64-bit (Arm)
+
+      InstanceType: t2.micro
+
+      KeyName: !Ref KeyName
+
+      Count: 1
+    
+      SecurityGroups:
+        - !Sub ${DefaultSecurityGroupId}
+        # - !Ref InstanceSecurityGroup
+
+      # # SubnetId: !Ref SubnetId
+      # SubnetId: !Ref Subnet1
+
+      # https://aws.amazon.com/blogs/security/get-the-full-benefits-of-imdsv2-and-disable-imdsv1-across-your-aws-infrastructure/
+
+      # Enable imdsv2 : --metadata-options “HttpEndpoint=enabled,HttpTokens=required”
+      # MetadataOptions:
+      #   HttpTokens: required
+      #   HttpEndpoint: enabled
+
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 50
+            DeleteOnTermination: true
+            VolumeType: gp2
+            # Encrypted: true
+            # KmsKeyId: !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${KmsKeyAlias}'
+
+      # IamInstanceProfile:
+      #   Name: !Ref Ec2InstanceProfile
+
+      TagSpecifications:
+        - ResourceType: instance
+          Tags:
+            - Key: Name
+              Value: !Sub ${AppName}-${AppStage}-instance
+            - Key: App
+              Value: !Ref AppName
+            - Key: Stage
+              Value: !Ref AppStage
+        - ResourceType: volume
+          Tags:
+            - Key: Name
+              Value: !Sub ${AppName}-${AppStage}-root-volume
+            - Key: App
+              Value: !Ref AppName
+            - Key: Stage
+              Value: !Ref AppStage
+
+      UserData: 
+        Fn::Base64:
+          !Sub |
+          #!/bin/bash
+          exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+          echo "Starting GS instance boot sequence..."
+
+          echo ">>--> `date` | Run | yum update -y"
+          yum update -y
+
+          echo ">>--> `date` | Run | yum install aws-cli jq amazon-ssm-agent amazon-cloudwatch-agent -y"
+          yum install aws-cli jq amazon-ssm-agent amazon-cloudwatch-agent -y
+
+          echo ">>--> `date` | Run | Create CloudWatch agent configuration file"
+          cat <<EOF > /opt/aws/amazon-cloudwatch-agent/bin/config.json
+          {
+            "agent": {
+              "metrics_collection_interval": 60,
+              "run_as_user": "root"
+            },
+            "logs": {
+              "logs_collected": {
+                "files": {
+                  "collect_list": [
+                    {
+                      "file_path": "/var/log/user-data.log",
+                      "log_group_name": "${AppName}-${AppStage}-ec2-logs",
+                      "log_stream_name": "{instance_id}-user-data-logs"
+                    },
+                    {
+                      "file_path": "/var/log/docker",
+                      "log_group_name": "${AppName}-${AppStage}-ec2-logs",
+                      "log_stream_name": "{instance_id}-docker-logs"
+                    }
+                  ]
+                }
+              }
+            },
+            "metrics": {
+              "metrics_collected": {
+                "disk": {
+                  "measurement": [
+                    "used_percent"
+                  ],
+                  "metrics_collection_interval": 60,
+                  "resources": [
+                    "/"
+                  ]
+                },
+                "mem": {
+                  "measurement": [
+                    "mem_used_percent"
+                  ],
+                  "metrics_collection_interval": 60
+                }
+              }
+            }
+          }
+          EOF
+
+          /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json
+
+          echo ">>--> `date` | Run | amazon-linux-extras install docker -y"
+          amazon-linux-extras install docker -y
+
+          echo ">>--> `date` | Run | service amazon-ssm-agent start"
+          # systemctl start amazon-ssm-agent
+
+          echo ">>--> `date` | Run | service docker start"
+          systemctl start docker
+          systemctl enable docker
+
+          echo ">>--> `date` | Run | aws ecr get-login-password --region ${AWS::Region} | docker login --username AWS --password-stdin ${AwsAccountId}.dkr.ecr.${AWS::Region}.amazonaws.com"
+          aws ecr get-login-password --region ${AWS::Region} | docker login --username AWS --password-stdin ${AwsAccountId}.dkr.ecr.${AWS::Region}.amazonaws.com
+
+          echo ">>--> `date` | Run | docker pull ${EcrDockerImageUri}:${EcrDockerImageTag}"
+          docker pull ${EcrDockerImageUri}:${EcrDockerImageTag} > /dev/null 2>&1
+
+          echo ">>--> `date` | Run | docker run -d -p 80:80 --name gs_app_be -e CLOUD_PROVIDER=aws -e APP_NAME=${AppName} -e APP_STAGE=${AppStage} -e AWS_REGION=${AWS::Region} ${EcrDockerImageUri}:${EcrDockerImageTag}"
+          docker run -d -p 80:80 --name gs_app_be -e CLOUD_PROVIDER=aws -e APP_NAME=${AppName} -e APP_STAGE=${AppStage} -e AWS_REGION=${AWS::Region} ${EcrDockerImageUri}:${EcrDockerImageTag}
+
+          echo ">>--> `date` | Run | docker ps"
+          if [ "$(docker ps -q -f name=gs_app_be)" ]; then
+            echo "Container is running successfully."
+          else
+            echo "Container failed to start. Check docker logs."
+            docker logs gs_app_be
+          fi
+
+          echo ">>--> `date` | GS instance boot sequence finished"
+
+Outputs:
+  InstancePublicIP:
+    Description: Public IP of our EC2 instance
+    Value: !GetAtt 
+      - EC2Instance
+      - PublicIp

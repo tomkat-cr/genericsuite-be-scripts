@@ -17,7 +17,44 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
-## 1.0.10 (2024-05-18)
+## 1.0.11 (2024-07-19)
+---
+
+### New
+Add EC2+ALB App deployment using AWS CloudFormation (EBS volume encryption postponed) [GS-96].
+Add password and API Keys to AWS Secrets using AWS CloudFormation [GS-41].
+Add DynamoDB tables creation from the JSON configs using AWS CloudFormation [GS-84].
+Add: "scripts/aws_dynamodb/generate_dynamodb_cf/generate_dynamodb_cf.py" and its ".sh" to generate the "cf-template-dynamodb.yml" file in the project's scripts directory [GS-84]. 
+Add: "scripts/aws_dynamodb/run-dynamodb-deploy.sh" to deploy generated "cf-template-dynamodb.yml" [GS-84].
+Add: GET_SECRETS_CRITICAL and GET_SECRETS_CRITICAL envvars to fine-grained disabling of cloud secrets manager for critical secrets and plain envvars [GS-41].
+Add aws_secrets to Makefile to deploy envvars to the AWS Secrets manager [GS-41].
+Add depLoy_ec2 to Makefile [GS-96].
+Add deploy_ecr_creation to Makefile to build the FastAPI docker image [GS-96].
+Add: generate_cf_dynamodb and deploy_dynamodb to Makefile [GS-84].
+Add "scripts/aws_cf_processor/run-cf-deployment.sh" to standarize all Cloudformation calls [GS-96].
+Add: "run-cf-deployment.sh" enhanced to simulate the EC2 + ALB in AWS LocalStack [GS-97].
+Add: Secret and KMS access policies to the "template-sam.yml" file [GS-41].
+Add: "scripts/aws_cf_processor/test_localstack.sh" to test localstack EC2 functionality with the LOCALSTACK_AUTH_TOKEN envvar [GS-97].
+Add LOCAL_DNS_DISABLED and BRIDGE_PROXY_DISABLED envvars to disable local services working on the road.
+Add NGROK_ENABLED envvar to enable/disable Ngrok service in the URL_MASK_EXTERNAL_HOSTNAME and DEV_MASK_EXT_HOSTNAME assignments on "scripts/get_domain_name_dev.sh".
+
+### Changes
+Change APP_STAGE dynamic assignment in run_aws.sh, set_chalice_cnf.sh, and big_lambdas_manager.sh, and secure_local_server/docker_entrypoint.sh [GS-41].
+__pycache__ removal simplified in big_lambdas_manager.sh [GS-96].
+APP_DB_URI and the secrets assignment removed in big_lambdas_manager.sh, docker-compose-big-lambda-AL2.yml, docker-compose-big-lambda-Alpine.yml [GS-41].
+Remove all envvars from "template-sam.yml" [GS-96].
+Change: set APP_DB_URI when GET_SECRETS_ENABLED=0 or GET_SECRETS_CRITICAL=0 in "run_aws.sh" [GS-41].
+Change "scripts/aws/update_additional_envvars.sh" to be called from both "scripts/aws_secrets/aws_secrets_manager.sh" and "scripts/aws/set_chalice_cnf.sh", conditioning the config file variables replacement when 1st parameter (CONFIG_FILE) is passed, and setting the App specific secrets list (separated by blanks) in a export APP_SECRETS="..." used by the aws_secrets_manager [GS-41].
+Check the CLOUD_PROVIDER variable in big_lambdas_manager.sh and avoid execution if not set.
+
+### Fixes
+Fix 'USER_AGENT environment variable not set...' LangSmith warning message removed in run_aws.sh, big_lambdas_manager.sh, aws_big_lambda/template-sam.yml, and secure_local_server/docker_entrypoint.sh.
+Fix: issue reporting the "_placeholder" missing parameter in the SAM template in verify_base_names() of big_lambdas_manager.sh.
+Fix: API_GATEWAY_PORT report in pre-process summary in big_lambdas_manager.sh.
+Fix: relplace the fixed "us-east-1" region by $AWS_REGION on the AWS_DOCKER_IMAGE_URI_BASE assignment in big_lambdas_manager.sh.
+
+
+## 1.0.10 (2024-06-07)
 ---
 
 ### New

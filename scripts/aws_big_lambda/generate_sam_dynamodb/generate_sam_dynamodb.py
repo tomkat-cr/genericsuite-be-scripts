@@ -108,7 +108,8 @@ def get_dynamodb_definition(config: dict, table_prefix: str) -> dict:
 
 def generate_dynamodb_definitions(basedir: str, table_prefix: str):
     """
-    Generates DynamoDB table definitions from frontend and backend config files.
+    Generates DynamoDB table definitions from frontend and backend
+    config files.
     """
     dynamodb_definitions = {}
 
@@ -120,16 +121,19 @@ def generate_dynamodb_definitions(basedir: str, table_prefix: str):
         for file in files:
             _ = DEBUG and print(f'File: {file}')
             if file.endswith('.json'):
-                with open(os.path.join(root, file), 'r', encoding="utf-8") as f:
+                with open(os.path.join(root, file), 'r',
+                          encoding="utf-8") as f:
                     config = json.load(f)
                     # if file exists in backend config, merge them
                     file_path = os.path.join(basedir, 'backend', file)
                     if os.path.exists(file_path):
                         with open(file_path, 'r', encoding="utf-8") as f:
                             config.update(json.load(f))
-                    table_definition = get_dynamodb_definition(config, table_prefix)
+                    table_definition = get_dynamodb_definition(config,
+                                                               table_prefix)
                     if table_definition:
-                        # table_name = table_definition['Properties']['TableName']
+                        # table_name = \
+                        #   table_definition['Properties']['TableName']
                         # dynamodb_definitions[table_name] = table_definition
                         dynamodb_definitions.update(table_definition)
 
@@ -145,7 +149,8 @@ def generate_sam_dynamodb():
     print('')
 
     if len(sys.argv) < 4:
-        print('Usage: python generate_sam_dynamodb.py <base_config_path> <target_template_path> <table_prefix>')
+        print('Usage: python generate_sam_dynamodb.py <base_config_path>' +
+              '<target_template_path> <table_prefix>')
         sys.exit(1)
 
     base_config_path = sys.argv[1]
@@ -156,7 +161,8 @@ def generate_sam_dynamodb():
     print(f'target_template_path: {target_template_path}')
     print('')
 
-    dynamodb_def = generate_dynamodb_definitions(basedir=base_config_path,
+    dynamodb_def = generate_dynamodb_definitions(
+        basedir=base_config_path,
         table_prefix=table_prefix)
     # Open the target template file to write the DynamoDB table definition
     with open(target_template_path, 'w', encoding="utf-8") as f:

@@ -100,8 +100,11 @@ if [ "${TARGET_STAGE}" = "qa" ] && [ "${TARGET_ACTION}" = "http" ]; then
 fi
 
 if [ "${TARGET_STAGE}" == "mongo_docker" ]; then
+    export APP_STAGE="dev"
     APP_DB_NAME_DEV="mongo"
     APP_DB_URI_DEV="mongodb://root:example@127.0.0.1:27017/"
+else
+    export APP_STAGE="${TARGET_STAGE}"
 fi
 
 echo ""
@@ -216,6 +219,10 @@ perl -i -pe"s|APP_DB_NAME_PROD_placeholder|${APP_DB_NAME_PROD}|g" "${CONFIG_FILE
 perl -i -pe"s|APP_DB_URI_PROD_placeholder|${APP_DB_URI_PROD}|g" "${CONFIG_FILE}"
 perl -i -pe"s|APP_CORS_ORIGIN_PROD_placeholder|${APP_CORS_ORIGIN_PROD}|g" "${CONFIG_FILE}"
 perl -i -pe"s|AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_PROD_placeholder|${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_PROD}|g" "${CONFIG_FILE}"
+
+perl -i -pe"s|APP_HOST_NAME_placeholder|${APP_HOST_NAME}|g" "${CONFIG_FILE}"
+perl -i -pe"s|CLOUD_PROVIDER_placeholder|${CLOUD_PROVIDER}|g" "${CONFIG_FILE}"
+perl -i -pe"s|AWS_REGION_placeholder|${AWS_REGION}|g" "${CONFIG_FILE}"
 
 if [ -f "${REPO_BASEDIR}/scripts/aws/update_additional_envvars.sh" ]; then
     . "${REPO_BASEDIR}/scripts/aws/update_additional_envvars.sh" "${CONFIG_FILE}" "${REPO_BASEDIR}"

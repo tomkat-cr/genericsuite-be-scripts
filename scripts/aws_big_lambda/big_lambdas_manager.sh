@@ -26,11 +26,6 @@ exit_abort() {
     exit 1
 }
 
-if [ "$1" = "" ]; then
-  echo "Usage: $0 ACTION STAGE FRONTEND_DIRECTORY"
-  exit_abort
-fi
-
 ask_to_continue() {
     echo "Continue (Y/n)?"
     yes_or_no
@@ -276,21 +271,21 @@ verify_docker_image_exist() {
 
 recover_at_sign() {
     # Replace @ with \@
-    APP_SUPERADMIN_EMAIL=${APP_SUPERADMIN_EMAIL//@/\\@}
-    APP_SECRET_KEY=${APP_SECRET_KEY//@/\\@}
-    APP_DB_URI_DEV=${APP_DB_URI_DEV//@/\\@}
-    APP_DB_URI_QA=${APP_DB_URI_QA//@/\\@}
-    APP_DB_URI_STAGING=${APP_DB_URI_STAGING//@/\\@}
-    APP_DB_URI_PROD=${APP_DB_URI_PROD//@/\\@}
-    APP_DB_URI_DEMO=${APP_DB_URI_DEMO//@/\\@}
-    APP_DB_URI=${APP_DB_URI//@/\\@}
+    # APP_SUPERADMIN_EMAIL=${APP_SUPERADMIN_EMAIL//@/\\@}
+    # APP_SECRET_KEY=${APP_SECRET_KEY//@/\\@}
+    # APP_DB_URI_DEV=${APP_DB_URI_DEV//@/\\@}
+    # APP_DB_URI_QA=${APP_DB_URI_QA//@/\\@}
+    # APP_DB_URI_STAGING=${APP_DB_URI_STAGING//@/\\@}
+    # APP_DB_URI_PROD=${APP_DB_URI_PROD//@/\\@}
+    # APP_DB_URI_DEMO=${APP_DB_URI_DEMO//@/\\@}
+    # APP_DB_URI=${APP_DB_URI//@/\\@}
     SMTP_DEFAULT_SENDER=${SMTP_DEFAULT_SENDER//@/\\@}
-    SMTP_USER=${SMTP_USER//@/\\@}
-    SMTP_PASSWORD=${SMTP_PASSWORD//@/\\@}
-    OPENAI_API_KEY=${OPENAI_API_KEY//@/\\@}
-    LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY//@/\\@}
-    GOOGLE_API_KEY=${GOOGLE_API_KEY//@/\\@}
-    HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY//@/\\@}
+    # SMTP_USER=${SMTP_USER//@/\\@}
+    # SMTP_PASSWORD=${SMTP_PASSWORD//@/\\@}
+    # OPENAI_API_KEY=${OPENAI_API_KEY//@/\\@}
+    # LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY//@/\\@}
+    # GOOGLE_API_KEY=${GOOGLE_API_KEY//@/\\@}
+    # HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY//@/\\@}
 }
 
 set_env_vars_file() {
@@ -306,43 +301,36 @@ set_env_vars_file() {
     # Replace @ with \@
     recover_at_sign
 
+    if [ "${ACTION}" = "sam_run_local" ]; then
+      export APP_CORS_ORIGIN="http://app.${APP_NAME_LOWERCASE}.local:${FRONTEND_LOCAL_PORT}"
+    else
+      if [ "${STAGE_UPPERCASE}" = "QA" ]; then
+        export APP_CORS_ORIGIN="${APP_CORS_ORIGIN_QA_CLOUD}"
+      else
+        export APP_CORS_ORIGIN="$(eval echo \"\$APP_CORS_ORIGIN_${STAGE_UPPERCASE}\")"
+      fi
+    fi
+
     cat > "${TMP_BUILD_DIR}/set_env_vars.sh" <<END \
 
 export APP_DB_ENGINE=$(eval echo \$APP_DB_ENGINE_${STAGE_UPPERCASE})
 export APP_DB_NAME=$(eval echo \$APP_DB_NAME_${STAGE_UPPERCASE})
-export APP_DB_URI=$(eval echo \$APP_DB_URI_${STAGE_UPPERCASE})
-if [ "${ACTION}" = "sam_run_local" ]; then
-  export APP_CORS_ORIGIN="http://app.${APP_NAME_LOWERCASE}.local:${FRONTEND_LOCAL_PORT}"
-else
-  if [ "${STAGE_UPPERCASE}" = "QA" ]; then
-    export APP_CORS_ORIGIN="${APP_CORS_ORIGIN_QA_CLOUD}"
-  else
-    export APP_CORS_ORIGIN="$(eval echo \"\$APP_CORS_ORIGIN_${STAGE_UPPERCASE}\")"
-  fi
-fi
+export APP_STAGE="${STAGE}"
 export AWS_S3_CHATBOT_ATTACHMENTS_BUCKET=$(eval echo \$AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_${STAGE_UPPERCASE})
+export APP_CORS_ORIGIN="${APP_CORS_ORIGIN}"
 export CURRENT_FRAMEWORK="${CURRENT_FRAMEWORK}"
 export DEFAULT_LANG="${DEFAULT_LANG}"
-export APP_NAME="${APP_NAME}"
 export AI_ASSISTANT_NAME="${AI_ASSISTANT_NAME}"
 export FLASK_APP="${FLASK_APP}"
-export APP_SECRET_KEY="${APP_SECRET_KEY}"
-export APP_SUPERADMIN_EMAIL="${APP_SUPERADMIN_EMAIL}"
 export GIT_SUBMODULE_URL="${GIT_SUBMODULE_URL}"
 export GIT_SUBMODULE_LOCAL_PATH="${GIT_SUBMODULE_LOCAL_PATH}"
-export OPENAI_API_KEY="${OPENAI_API_KEY}"
 export OPENAI_MODEL="${OPENAI_MODEL}"
 export OPENAI_TEMPERATURE="${OPENAI_TEMPERATURE}"
-export GOOGLE_API_KEY="${GOOGLE_API_KEY}"
-export GOOGLE_CSE_ID="${GOOGLE_CSE_ID}"
-export LANGCHAIN_API_KEY="${LANGCHAIN_API_KEY}"
+export USER_AGENT="${APP_NAME_LOWERCASE}-${STAGE}"
 export LANGCHAIN_PROJECT="${LANGCHAIN_PROJECT}"
-export HUGGINGFACE_API_KEY="${HUGGINGFACE_API_KEY}"
 export HUGGINGFACE_ENDPOINT_URL="${HUGGINGFACE_ENDPOINT_URL}"
 export SMTP_SERVER="${SMTP_SERVER}"
 export SMTP_PORT="${SMTP_PORT}"
-export SMTP_USER="${SMTP_USER}"
-export SMTP_PASSWORD="${SMTP_PASSWORD}"
 export SMTP_DEFAULT_SENDER="${SMTP_DEFAULT_SENDER}"
 
 END
@@ -353,31 +341,21 @@ END
   CURRENT_FRAMEWORK=${CURRENT_FRAMEWORK},
   DEFAULT_LANG=${DEFAULT_LANG},
   APP_NAME=${APP_NAME},
+  APP_STAGE=${STAGE},
   AI_ASSISTANT_NAME=${AI_ASSISTANT_NAME},
   APP_DEBUG=${APP_DEBUG},
-  APP_STAGE=${APP_STAGE},
   FLASK_APP=${FLASK_APP},
   GIT_SUBMODULE_URL=${GIT_SUBMODULE_URL},
   GIT_SUBMODULE_LOCAL_PATH=${GIT_SUBMODULE_LOCAL_PATH},
   AWS_S3_CHATBOT_ATTACHMENTS_BUCKET=${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET},
   APP_CORS_ORIGIN=${APP_CORS_ORIGIN},
   APP_DB_NAME=${APP_DB_NAME},
-  APP_SECRET_KEY=${APP_SECRET_KEY},
-  SMTP_USER=${SMTP_USER},
   SMTP_DEFAULT_SENDER=${SMTP_DEFAULT_SENDER},
-  APP_SUPERADMIN_EMAIL=${APP_SUPERADMIN_EMAIL},
   SMTP_PORT=${SMTP_PORT},
-  APP_DB_URI=${APP_DB_URI},
   OPENAI_TEMPERATURE=${OPENAI_TEMPERATURE},
-  GOOGLE_API_KEY="${GOOGLE_API_KEY}"
-  GOOGLE_CSE_ID="${GOOGLE_CSE_ID}"
-  LANGCHAIN_API_KEY="${LANGCHAIN_API_KEY}"
   LANGCHAIN_PROJECT="${LANGCHAIN_PROJECT}"
-  HUGGINGFACE_API_KEY="${HUGGINGFACE_API_KEY}"
   HUGGINGFACE_ENDPOINT_URL="${HUGGINGFACE_ENDPOINT_URL}"
-  SMTP_PASSWORD=${SMTP_PASSWORD},
   SMTP_SERVER=${SMTP_SERVER},
-  OPENAI_API_KEY=${OPENAI_API_KEY},
   OPENAI_MODEL=${OPENAI_MODEL},
   APP_DB_ENGINE=${APP_DB_ENGINE}
 }"
@@ -385,30 +363,21 @@ END
   --env CURRENT_FRAMEWORK=\"${CURRENT_FRAMEWORK}\"
   --env DEFAULT_LANG=\"${DEFAULT_LANG}\"
   --env APP_NAME=\"${APP_NAME}\"
+  --env APP_STAGE=\"${STAGE}\"
+  --env AI_ASSISTANT_NAME=\"${AI_ASSISTANT_NAME}\"
   --env APP_DEBUG=\"${APP_DEBUG}\"
-  --env APP_STAGE=\"${APP_STAGE}\"
   --env FLASK_APP=\"${FLASK_APP}\"
   --env GIT_SUBMODULE_URL=\"${GIT_SUBMODULE_URL}\"
   --env GIT_SUBMODULE_LOCAL_PATH=\"${GIT_SUBMODULE_LOCAL_PATH}\"
   --env AWS_S3_CHATBOT_ATTACHMENTS_BUCKET=\"${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET}\"
   --env APP_CORS_ORIGIN=\"${APP_CORS_ORIGIN}\"
   --env APP_DB_NAME=\"${APP_DB_NAME}\"
-  --env APP_SECRET_KEY=\"${APP_SECRET_KEY}\"
-  --env SMTP_USER=\"${SMTP_USER}\"
   --env SMTP_DEFAULT_SENDER=\"${SMTP_DEFAULT_SENDER}\"
-  --env APP_SUPERADMIN_EMAIL=\"${APP_SUPERADMIN_EMAIL}\"
   --env SMTP_PORT=\"${SMTP_PORT}\"
-  --env APP_DB_URI=\"${APP_DB_URI}\"
   --env OPENAI_TEMPERATURE=\"${OPENAI_TEMPERATURE}\"
-  --env GOOGLE_API_KEY=\"${GOOGLE_API_KEY}\"
-  --env GOOGLE_CSE_ID=\"${GOOGLE_CSE_ID}\"
-  --env LANGCHAIN_API_KEY=\"${LANGCHAIN_API_KEY}\"
   --env LANGCHAIN_PROJECT=\"${LANGCHAIN_PROJECT}\"
-  --env HUGGINGFACE_API_KEY=\"${HUGGINGFACE_API_KEY}\"
   --env HUGGINGFACE_ENDPOINT_URL=\"${HUGGINGFACE_ENDPOINT_URL}\"
-  --env SMTP_PASSWORD=\"${SMTP_PASSWORD}\"
   --env SMTP_SERVER=\"${SMTP_SERVER}\"
-  --env OPENAI_API_KEY=\"${OPENAI_API_KEY}\"
   --env OPENAI_MODEL=\"${OPENAI_MODEL}\"
   --env APP_DB_ENGINE=\"${APP_DB_ENGINE}\"
 "
@@ -548,28 +517,7 @@ prepare_tmp_build_dir() {
     echo ""
     echo "__pycache__ cleanup started..."
     echo ""
-    echo "'${TMP_BUILD_DIR}/lib' __pycache__ cleanup"
-    find ${TMP_BUILD_DIR}/lib/ -name "__pycache__" -type d -exec rm -rf {} \;
-    if [ -d genericsuite ]; then
-      echo "'${TMP_BUILD_DIR}/genericsuite' __pycache__ cleanup"
-      find ${TMP_BUILD_DIR}/genericsuite/ -name "__pycache__" -type d -exec rm -rf {} \;
-    fi
-    if [ -d genericsuite_ai ]; then
-      echo "'${TMP_BUILD_DIR}/genericsuite_ai' __pycache__ cleanup"
-      find ${TMP_BUILD_DIR}/genericsuite_ai/ -name "__pycache__" -type d -exec rm -rf {} \;
-    fi
-    if [ -d chalicelib ]; then
-      echo "'${TMP_BUILD_DIR}/chalicelib' __pycache__ cleanup"
-      find ${TMP_BUILD_DIR}/chalicelib/ -name "__pycache__" -type d -exec rm -rf {} \;
-    fi
-    if [ -d fastapilib ]; then
-      echo "'${TMP_BUILD_DIR}/fastapilib' __pycache__ cleanup"
-      find ${TMP_BUILD_DIR}/fastapilib/ -name "__pycache__" -type d -exec rm -rf {} \;
-    fi
-    if [ -d flasklib ]; then
-      echo "'${TMP_BUILD_DIR}/flasklib' __pycache__ cleanup"
-      find ${TMP_BUILD_DIR}/flasklib/ -name "__pycache__" -type d -exec rm -rf {} \;
-    fi
+    find ${TMP_BUILD_DIR} -name "__pycache__" -type d -exec rm -rf {} \;
     echo ""
     echo "__pycache__ cleanup finished."
     
@@ -607,7 +555,8 @@ get_ssl_cert_arn() {
 }
 
 verify_base_names() {
-    base_names=("APP_DB_URI" "APP_DB_NAME" "APP_DB_ENGINE" "APP_NAME" "APP_SECRET_KEY" "APP_SUPERADMIN_EMAIL" "APP_HOST_NAME" "STORAGE_URL_SEED" "GIT_SUBMODULE_LOCAL_PATH")
+    local names="CLOUD_PROVIDER AWS_REGION APP_DB_URI APP_DB_NAME APP_DB_ENGINE APP_NAME APP_SECRET_KEY APP_SUPERADMIN_EMAIL APP_HOST_NAME STORAGE_URL_SEED GIT_SUBMODULE_LOCAL_PATH"
+    local base_names=(${names})
     ERROR_FLAG=0
     
     for base_name in "${base_names[@]}"; do
@@ -723,16 +672,20 @@ create_sam_yaml() {
   perl -i -pe "s|APP_STAGE_placeholder|${STAGE}|g" "${TMP_WORKING_DIR}/template.yml"
 
   perl -i -pe "s|FLASK_APP_placeholder|${FLASK_APP}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|APP_SECRET_KEY_placeholder|${APP_SECRET_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|STORAGE_URL_SEED_placeholder|${STORAGE_URL_SEED}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|APP_SUPERADMIN_EMAIL_placeholder|${APP_SUPERADMIN_EMAIL}|g" "${TMP_WORKING_DIR}/template.yml"
+  # GsSecretParameter
+  # perl -i -pe "s|APP_SECRET_KEY_placeholder|${APP_SECRET_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
+  # GsSecretParameter
+  # perl -i -pe "s|STORAGE_URL_SEED_placeholder|${STORAGE_URL_SEED}|g" "${TMP_WORKING_DIR}/template.yml"
+  # GsSecretParameter
+  # perl -i -pe "s|APP_SUPERADMIN_EMAIL_placeholder|${APP_SUPERADMIN_EMAIL}|g" "${TMP_WORKING_DIR}/template.yml"
 
   # perl -i -pe "s|APP_CORS_ORIGIN:.*|APP_CORS_ORIGIN: ${APP_CORS_ORIGIN}|g" "${TMP_WORKING_DIR}/template.yml"
   perl -i -pe "s|APP_CORS_ORIGIN_placeholder|${APP_CORS_ORIGIN}|g" "${TMP_WORKING_DIR}/template.yml"
 
   perl -i -pe "s|APP_DB_ENGINE_placeholder|${APP_DB_ENGINE}|g" "${TMP_WORKING_DIR}/template.yml"
   perl -i -pe "s|APP_DB_NAME_placeholder|${APP_DB_NAME}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|APP_DB_URI_placeholder|${APP_DB_URI}|g" "${TMP_WORKING_DIR}/template.yml"
+  # GsSecretParameter
+  # perl -i -pe "s|APP_DB_URI_placeholder|${APP_DB_URI}|g" "${TMP_WORKING_DIR}/template.yml"
 
   perl -i -pe "s|GIT_SUBMODULE_URL_placeholder|${GIT_SUBMODULE_URL}|g" "${TMP_WORKING_DIR}/template.yml"
   perl -i -pe "s|GIT_SUBMODULE_LOCAL_PATH_placeholder|${GIT_SUBMODULE_LOCAL_PATH}|g" "${TMP_WORKING_DIR}/template.yml"
@@ -741,23 +694,34 @@ create_sam_yaml() {
   perl -i -pe "s|AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_placeholder|${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET}|g" "${TMP_WORKING_DIR}/template.yml"
 
   perl -i -pe "s|SMTP_SERVER_placeholder|${SMTP_SERVER}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|SMTP_USER_placeholder|${SMTP_USER}|g" "${TMP_WORKING_DIR}/template.yml"
   perl -i -pe "s|SMTP_PORT_placeholder|${SMTP_PORT}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|SMTP_PASSWORD_placeholder|${SMTP_PASSWORD}|g" "${TMP_WORKING_DIR}/template.yml"
+  # GsSecretParameter
+  # perl -i -pe "s|SMTP_USER_placeholder|${SMTP_USER}|g" "${TMP_WORKING_DIR}/template.yml"
+  # GsSecretParameter
+  # perl -i -pe "s|SMTP_PASSWORD_placeholder|${SMTP_PASSWORD}|g" "${TMP_WORKING_DIR}/template.yml"
   perl -i -pe "s|SMTP_DEFAULT_SENDER_placeholder|${SMTP_DEFAULT_SENDER}|g" "${TMP_WORKING_DIR}/template.yml"
 
   perl -i -pe "s|OPENAI_TEMPERATURE_placeholder|${OPENAI_TEMPERATURE}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe "s|OPENAI_API_KEY_placeholder|${OPENAI_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
+  # GsSecretParameter
+  # perl -i -pe "s|OPENAI_API_KEY_placeholder|${OPENAI_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
   perl -i -pe "s|OPENAI_MODEL_placeholder|${OPENAI_MODEL}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe"s|GOOGLE_API_KEY_placeholder|${GOOGLE_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe"s|GOOGLE_CSE_ID_placeholder|${GOOGLE_CSE_ID}|g" "${TMP_WORKING_DIR}/template.yml"
+  # GsSecretParameter
+  # perl -i -pe"s|GOOGLE_API_KEY_placeholder|${GOOGLE_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
+  # GsSecretParameter
+  # perl -i -pe"s|GOOGLE_CSE_ID_placeholder|${GOOGLE_CSE_ID}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe"s|LANGCHAIN_API_KEY_placeholder|${LANGCHAIN_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
+  # GsSecretParameter
+  # perl -i -pe"s|LANGCHAIN_API_KEY_placeholder|${LANGCHAIN_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
   perl -i -pe"s|LANGCHAIN_PROJECT_placeholder|${LANGCHAIN_PROJECT}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe"s|USER_AGENT_placeholder|${USER_AGENT}|g" "${TMP_WORKING_DIR}/template.yml"
 
-  perl -i -pe"s|HUGGINGFACE_API_KEY_placeholder|${HUGGINGFACE_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
+  # GsSecretParameter
+  # perl -i -pe"s|HUGGINGFACE_API_KEY_placeholder|${HUGGINGFACE_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
   perl -i -pe"s|HUGGINGFACE_ENDPOINT_URL_placeholder|${HUGGINGFACE_ENDPOINT_URL}|g" "${TMP_WORKING_DIR}/template.yml"
+
+  perl -i -pe "s|CLOUD_PROVIDER_placeholder|${CLOUD_PROVIDER}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|AWS_REGION_placeholder|${AWS_REGION}|g" "${TMP_WORKING_DIR}/template.yml"
 
   # Prepare samconfig.toml
   if [ -f "${REPO_BASEDIR}/scripts/aws_big_lambda/template-samconfig.toml" ]; then
@@ -1641,6 +1605,10 @@ remove_temp_files() {
 
 # Action
 ACTION="$1"
+if [ "$1" = "" ]; then
+  echo "Usage: $0 ACTION STAGE FRONTEND_DIRECTORY"
+  exit_abort
+fi
 
 # Stage
 if [ "$2" = "" ]; then
@@ -1673,12 +1641,21 @@ DEPLOYMENT_METHOD="deploy_with_sam"
 # TARGET_OS="Alpine"
 TARGET_OS="AL2"
 
-# Iniitial date/time
+# Initial date/time
 sh ${SCRIPTS_DIR}/../show_date_time.sh
 
 # Assumes it's run from the project root directory...
 # set -o allexport; . .env ; set +o allexport ;
 . ${SCRIPTS_DIR}/../set_app_dir_and_main_file.sh
+
+if [ "${CLOUD_PROVIDER}" = "" ]; then
+  echo "ERROR: CLOUD_PROVIDER not set. Must be: aws, gcp, azure"
+  exit_abort
+fi
+if [ "${CLOUD_PROVIDER}" != "aws" ]; then
+  echo "ERROR: invalid CLOUD_PROVIDER. This script only works with 'aws'."
+  exit_abort
+fi
 
 if [ "${CURRENT_FRAMEWORK}" = "" ]; then
     echo "ERROR: CURRENT_FRAMEWORK environment variable not set"
@@ -1726,7 +1703,7 @@ AWS_ACCOUNT_ID=$(aws sts get-caller-identity --output json --no-paginate | jq -r
 AWS_LAMBDA_FUNCTION_NAME_AND_STAGE=$(echo ${AWS_LAMBDA_FUNCTION_NAME}-${STAGE_UPPERCASE} | tr '[:upper:]' '[:lower:]')
 # DOCKER_IMAGE_NAME=$(echo ${AWS_LAMBDA_FUNCTION_NAME} | perl -i -pe "s|-||g")
 DOCKER_IMAGE_NAME="${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}"
-AWS_DOCKER_IMAGE_URI_BASE="${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com"
+AWS_DOCKER_IMAGE_URI_BASE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 AWS_DOCKER_IMAGE_URI="${AWS_DOCKER_IMAGE_URI_BASE}/${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}:latest"
 JSON_CONFIG_FILE="lambda-config-${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}.json"
 AWS_API_GATEWAY_NAME="${AWS_LAMBDA_FUNCTION_NAME}-${STAGE}"
@@ -1847,7 +1824,7 @@ if [ "${DEBUG}" = "1" ];then
   echo "AWS_LAMBDA_FUNCTION_NAME: ${AWS_LAMBDA_FUNCTION_NAME}"
   echo "AWS_LAMBDA_FUNCTION_NAME_AND_STAGE: ${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}"
   echo "LAMBDA_PORT: ${LAMBDA_PORT}"
-  echo "API_GATEWAY_PORT: ${LAMBDA_PORT}"
+  echo "API_GATEWAY_PORT: ${API_GATEWAY_PORT}"
   echo "BACKEND_LOCAL_PORT: ${BACKEND_LOCAL_PORT}"
   echo "FRONTEND_LOCAL_PORT: ${FRONTEND_LOCAL_PORT}"
 fi

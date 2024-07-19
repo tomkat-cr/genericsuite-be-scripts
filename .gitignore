@@ -73,3 +73,6 @@ scripts/dns/Dockerfile
 response.json
 
 tmp
+
+localstack_requirements.txt
+venv
