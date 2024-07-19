@@ -1,12 +1,9 @@
-# Origin: fastapi-ec2-localstack.yml
-# 2024-06-23 | CR
 AWSTemplateFormatVersion: '2010-09-09'
 Description: CloudFormation template to deploy FastAPI app with EC2 and ECR, including all necessary resources (VPC, Subnets, Launch Configuration).
 
 Parameters:
   KeyName:
     Description: Name for the EC2 KeyPair to enable SSH access to the instance
-    # Type: String
     Type: AWS::EC2::KeyPair::KeyName
   EcrRepositoryName:
     Description: ECR docker images repository name
@@ -253,9 +250,9 @@ Resources:
   EC2Instance:
     Type: AWS::EC2::Instance
     Properties:
-      # ImageId: ami-0c55b159cbfafe1f0 # Amazon Linux 2 AMI
-      ImageId: ami-0195204d5dce06d99
-      # ImageId: ami-003d53c9bb0a387f4
+      # ImageId: ami-0c55b159cbfafe1f0
+      ImageId: ami-0195204d5dce06d99 # Amazon Linux 2 AMI / 64-bit (x86)
+      # ImageId: ami-003d53c9bb0a387f4 # Amazon Linux 2 AMI / 64-bit (Arm)
 
       InstanceType: t2.micro
 

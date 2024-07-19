@@ -347,24 +347,6 @@ copy_docker_file() {
     fi
 }
 
-# build_docker_image() {
-#     # 3. Build the Docker Image
-#     # Build your Docker image locally to make sure everything is set up correctly.
-#     echo ""
-#     echo "Starting docker build..."
-#     echo "  docker buildx build --platform linux/amd64 -t docker-image:${DOCKER_IMAGE_NAME} . "
-#     echo "On:"
-#     # cd ${TMP_WORKING_DIR}
-#     cd ${TMP_BUILD_DIR}
-#     pwd
-#     echo ""
-#     if ! docker buildx build --platform linux/amd64 -t docker-image:${DOCKER_IMAGE_NAME} . 
-#     then
-#         echo "ERROR: could not execute docker build"
-#         exit_abort
-#     fi
-# }
-
 # ---
 
 verify_requirements_with_local_dependencies() {
@@ -676,7 +658,6 @@ copy_docker_file
 
 # 3. Build the Docker Image
 
-# build_docker_image
 FORCE_ECR_IMAGE_CREATION="1"
 DOCKER_PRUNE="0"
 DOCKER_IMAGE_VERSION="${ECR_IMAGE_TAG}"

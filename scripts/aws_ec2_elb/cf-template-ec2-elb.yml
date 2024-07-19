@@ -290,37 +290,6 @@ Resources:
         - Key: Stage
           Value: !Ref AppStage
 
-  # The error "Unrecognized resource types: AWS::EC2::ManagedPrefixList" occurs because the AWS::EC2::ManagedPrefixList resource type is not available in all AWS CloudFormation versions or regions.
-  # AWSSystemsManagerPrefixList:
-  #   Type: AWS::EC2::ManagedPrefixList
-  #   Properties:
-  #     PrefixListName: AWSSystemsManagerPrefixList
-  #     Entries:
-  #       - Description: Systems Manager
-  #         PrefixListId: pl-63a5400b
-
-  # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-prefixlist.html
-  # AWSSystemsManagerPrefixList:
-  #   Type: AWS::EC2::PrefixList
-  #   Properties:
-  #     PrefixListName: !Sub ${AppName}-${AppStage}-ssm-servers
-  #     AddressFamily: "IPv4"
-  #     MaxEntries: 10
-  #     Entries:
-  #       - Description: Systems Manager
-  #         Cidr: 52.119.199.68/32  # ssm.us-east-1.amazonaws.com
-  #       - Description: Systems Manager Messages
-  #         Cidr: 52.46.132.109/32  # ssmmessages.us-east-1.amazonaws.com
-  #       - Description: EC2 Messages
-  #         Cidr: 52.46.150.209/32  # ec2messages.us-east-1.amazonaws.com
-  #     Tags:
-  #       - Key: Name
-  #         Value: !Sub ${AppName}-${AppStage}-ssm-servers
-  #       - Key: App
-  #         Value: !Ref AppName
-  #       - Key: Stage
-  #         Value: !Ref AppStage
-
   InstanceSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -333,25 +302,10 @@ Resources:
           ToPort: 80
           SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
         # # TODO: temporary, remove 22 port access after an emergency use
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: 0.0.0.0/0  # Consider restricting this to your IP range
-
-      # SecurityGroupEgress:
-      #   - IpProtocol: tcp
-      #     FromPort: 443
-      #     ToPort: 443
-      #     DestinationPrefixListId: !Ref AWSSystemsManagerPrefixList
-          # DestinationPrefixListId:
-          #   - 52.119.199.68/32  # ssm.us-east-1.amazonaws.com
-          #   - 52.46.132.109/32  # ssmmessages.us-east-1.amazonaws.com
-          #   - 52.46.150.209/32  # ec2messages.us-east-1.amazonaws.com
-          # https://docs.aws.amazon.com/systems-manager/latest/userguide/setup-create-vpc.html#create-vpc-endpoints
-          # DestinationPrefixListId:
-          #   - !Sub "ssm.${AWS::Region}.amazonaws.com"
-          #   - !Sub "ssmmessages.${AWS::Region}.amazonaws.com"
-          #   - !Sub "ec2messages.${AWS::Region}.amazonaws.com"
+        # - IpProtocol: tcp
+        #   FromPort: 22
+        #   ToPort: 22
+        #   CidrIp: 0.0.0.0/0  # Consider restricting this to your IP range
       Tags:
         - Key: App
           Value: !Ref AppName
@@ -631,13 +585,6 @@ Resources:
       DefaultActions:
         - Type: forward
           TargetGroupArn: !Ref TargetGroup
-      # Tags:
-      #   - Key: App
-      #     Value: !Ref AppName
-      #   - Key: Stage
-      #     Value: !Ref AppStage
-      #   - Key: Name
-      #     Value: !Sub "${AppName}-${AppStage}-https-listener"
 
   UpdateRoute53RecordSet:
     Type: Custom::UpdateRoute53RecordSet
