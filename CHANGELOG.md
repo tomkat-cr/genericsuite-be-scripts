@@ -17,7 +17,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
-## 1.0.11 (2024-07-19)
+## 1.0.11 (2024-07-27)
 ---
 
 ### New
@@ -37,6 +37,7 @@ Add: Secret and KMS access policies to the "template-sam.yml" file [GS-41].
 Add: "scripts/aws_cf_processor/test_localstack.sh" to test localstack EC2 functionality with the LOCALSTACK_AUTH_TOKEN envvar [GS-97].
 Add LOCAL_DNS_DISABLED and BRIDGE_PROXY_DISABLED envvars to disable local services working on the road.
 Add NGROK_ENABLED envvar to enable/disable Ngrok service in the URL_MASK_EXTERNAL_HOSTNAME and DEV_MASK_EXT_HOSTNAME assignments on "scripts/get_domain_name_dev.sh".
+Add: ".nvmrc" file to set the repo default node version.
 
 ### Changes
 Change APP_STAGE dynamic assignment in run_aws.sh, set_chalice_cnf.sh, and big_lambdas_manager.sh, and secure_local_server/docker_entrypoint.sh [GS-41].
@@ -51,7 +52,7 @@ Check the CLOUD_PROVIDER variable in big_lambdas_manager.sh and avoid execution 
 Fix 'USER_AGENT environment variable not set...' LangSmith warning message removed in run_aws.sh, big_lambdas_manager.sh, aws_big_lambda/template-sam.yml, and secure_local_server/docker_entrypoint.sh.
 Fix: issue reporting the "_placeholder" missing parameter in the SAM template in verify_base_names() of big_lambdas_manager.sh.
 Fix: API_GATEWAY_PORT report in pre-process summary in big_lambdas_manager.sh.
-Fix: relplace the fixed "us-east-1" region by $AWS_REGION on the AWS_DOCKER_IMAGE_URI_BASE assignment in big_lambdas_manager.sh.
+Fix: replace the fixed "us-east-1" region by $AWS_REGION on the AWS_DOCKER_IMAGE_URI_BASE assignment in big_lambdas_manager.sh.
 
 
 ## 1.0.10 (2024-06-07)
