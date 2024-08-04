@@ -177,11 +177,20 @@ def get_dynamodb_definition(config: dict, table_prefix: str) -> dict:
     write_capacity_units = config.get('WriteCapacityUnits', "1")
 
     dynamodb_output = {
-        table_name: {
-            "Descriptzion": f"Name for the {table_name} DynamoDB table",
+        # This gives the error "Template format error:
+        #   Outputs name 'xxx_xxxx_xxx' is non alphanumeric."
+        # table_name: {
+        definition_name: {
+            # "Description": f"Name for the {table_name} DynamoDB table",
+            "Description": table_name,
             "Value": SubRep(dynamodb_table_name),
             "Export": {
-                "Name": SubRep(f"{dynamodb_table_name}-TableName")
+                # This gives the error "Template format error:
+                #   Output XxxxxTable is malformed. The Name field of every
+                #   Export member must be specified and consist only of
+                #   alphanumeric characters, colons, or hyphens."
+                # "Name": SubRep(f"{dynamodb_table_name}-TableName")
+                "Name": SubRep(f"{definition_name}Name")
             }
         }
     }

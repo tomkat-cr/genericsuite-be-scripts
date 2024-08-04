@@ -188,6 +188,7 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
     # To avoid message from langsmith:
     # USER_AGENT environment variable not set, consider setting it to identify your requests.
     export USER_AGENT="${APP_NAME_LOWERCASE}-${STAGE}"
+    export DYNAMDB_PREFIX="${APP_NAME_LOWERCASE}_${STAGE}_"
     echo ""
     echo "APP_STAGE: ${APP_STAGE}"
     echo "USER_AGENT: ${USER_AGENT}"

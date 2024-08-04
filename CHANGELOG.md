@@ -17,7 +17,18 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
-## 1.0.11 (2024-07-27)
+## Unreleased
+## 1.0.12 (2024-08-04)
+---
+
+### New
+Add: ".nvmrc" file to set the repo default node version.
+
+### Fixes
+Make DynamoDb tables with prefix work with the GS DB Abstraction [GS-102]
+
+
+## 1.0.11 (2024-07-19)
 ---
 
 ### New
@@ -37,7 +48,6 @@ Add: Secret and KMS access policies to the "template-sam.yml" file [GS-41].
 Add: "scripts/aws_cf_processor/test_localstack.sh" to test localstack EC2 functionality with the LOCALSTACK_AUTH_TOKEN envvar [GS-97].
 Add LOCAL_DNS_DISABLED and BRIDGE_PROXY_DISABLED envvars to disable local services working on the road.
 Add NGROK_ENABLED envvar to enable/disable Ngrok service in the URL_MASK_EXTERNAL_HOSTNAME and DEV_MASK_EXT_HOSTNAME assignments on "scripts/get_domain_name_dev.sh".
-Add: ".nvmrc" file to set the repo default node version.
 
 ### Changes
 Change APP_STAGE dynamic assignment in run_aws.sh, set_chalice_cnf.sh, and big_lambdas_manager.sh, and secure_local_server/docker_entrypoint.sh [GS-41].
