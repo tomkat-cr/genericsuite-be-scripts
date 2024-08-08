@@ -50,9 +50,9 @@ if [ "$ERROR_MSG" = "" ]; then
         MONGO_DOCKER_ACTIVE=0
     fi
     if [ "${MONGO_DOCKER_ACTIVE}" = "0" ]; then
-        if ! sh ${SCRIPTS_DIR}/mongo/run_mongo_docker.sh up
+        if ! sh ${SCRIPTS_DIR}/mongo/run_mongo_docker.sh up '1'
         then
-            ERROR_MSG="Running ${SCRIPTS_DIR}/mongo/run_mongo_docker.sh up"
+            ERROR_MSG="Running ${SCRIPTS_DIR}/mongo/run_mongo_docker.sh up '1'"
         fi
         docker ps ;
     fi
@@ -77,6 +77,7 @@ if [ "$ERROR_MSG" = "" ]; then
     echo ""
     echo "Reloading .env'..."
     set -o allexport; . "${REPO_BASEDIR}/.env"; set +o allexport ;
+    export GS_LOCAL_ENVIR="true"
     if [ ${CHALICE_ON} -eq 1 ]; then
         echo ""
         echo "Running tests with pipenv..."

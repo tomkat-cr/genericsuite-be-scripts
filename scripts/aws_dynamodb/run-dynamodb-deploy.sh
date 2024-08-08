@@ -104,7 +104,9 @@ prepare_working_environment() {
     AWS_ACCOUNT_ID=$(aws sts get-caller-identity --output json --no-paginate | jq -r '.Account')
     if [ "${AWS_ACCOUNT_ID}" = "" ]; then
         echo "ERROR: AWS_ACCOUNT_ID not set"
-        exit_abort
+        if [ "${ENGINE}" != "localstack" ]; then
+            exit_abort
+        fi
     fi
 
     # Working variables

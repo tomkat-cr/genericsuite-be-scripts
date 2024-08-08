@@ -50,7 +50,7 @@ directory_csr="/tmp"
 directory_key="."
 directory_crt="."
 
-if [ ${SSL_CERT_GEN_METHOD} = "office-addin-dev-certs" ]; then
+if [ "${SSL_CERT_GEN_METHOD}" = "office-addin-dev-certs" ]; then
     src_directory="${HOME}/.office-addin-dev-certs"
 
     echo "You'll be asked for your user's password to generate the SSL keys..."

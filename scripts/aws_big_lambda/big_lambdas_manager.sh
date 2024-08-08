@@ -1714,7 +1714,11 @@ MEMORY_SIZE="512"
 
 if [ "${AWS_ACCOUNT_ID}" = "" ]; then
   echo "ERROR: AWS_ACCOUNT_ID not set"
-  exit_abort
+  if [[ "${ACTION}" = "sam_validate" || "${ACTION}" = "package" || "${ACTION}" = "sam_run_local" ]]; then
+    echo "Skip AWS_ACCOUNT_ID set because it could be an offline action ($ACTION)..."
+  else
+    exit_abort
+  fi
 fi
 
 if [ "${AWS_LAMBDA_FUNCTION_NAME}" = "" ]; then

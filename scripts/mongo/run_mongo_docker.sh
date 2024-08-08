@@ -14,11 +14,14 @@ SCRIPTS_DIR="`pwd`"
 #
 ACTION="$1"
 #
-RUN_LOCAL_APP="$2"
+if [ "${RUN_LOCAL_APP}" = "" ]; then
+    RUN_LOCAL_APP="$2"
+fi
 if [ "${RUN_LOCAL_APP}" = "" ]; then
     # The local app needs to be started by the tests with "make run"
-    # to use the local docker mongo database
-    RUN_LOCAL_APP="1"
+    # to use the local docker mongo database, so RUN_LOCAL_APP
+    # or $2 parameter must be "1". Defaults to "0"
+    RUN_LOCAL_APP="0"
 fi
 #
 if cd "${REPO_BASEDIR}"

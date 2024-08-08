@@ -149,6 +149,7 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
 
     if [ "${STAGE}" = "dev" ];then
         . ${SCRIPTS_DIR}/../get_domain_name_dev.sh "${STAGE}" "${APP_DOMAIN_NAME}" "${SCRIPTS_DIR}/.."
+        export GS_LOCAL_ENVIR="true"
     else
         . ${SCRIPTS_DIR}/../get_domain_name.sh "${STAGE}"
     fi
@@ -166,14 +167,14 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
     export AWS_S3_CHATBOT_ATTACHMENTS_BUCKET=$(eval echo \$AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_${STAGE_UPPERCASE})
 
     if [ "${CURRENT_FRAMEWORK}" = "chalice" ]; then
-        if [ ${RUN_PROTOCOL} = "https" ]; then
+        if [ "${RUN_PROTOCOL}" = "https" ]; then
             export RUN_METHOD="chalice_docker"
         else
             export RUN_METHOD="chalice"
             make down_qa
         fi
     else
-        if [ ${RUN_PROTOCOL} = "http" ]; then
+        if [ "${RUN_PROTOCOL}" = "http" ]; then
             make down_qa
             echo "NOTE: The warning '-i used with no filenames on the command line, reading from STDIN.' is normal..."
             echo ">> Old APP_CORS_ORIGIN: ${APP_CORS_ORIGIN}"
@@ -188,7 +189,12 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
     # To avoid message from langsmith:
     # USER_AGENT environment variable not set, consider setting it to identify your requests.
     export USER_AGENT="${APP_NAME_LOWERCASE}-${STAGE}"
-    export DYNAMDB_PREFIX="${APP_NAME_LOWERCASE}_${STAGE}_"
+
+    export DYNAMDB_PREFIX=$(eval echo \$DYNAMDB_PREFIX_${STAGE_UPPERCASE})
+    if [ "${DYNAMDB_PREFIX}" = "" ]; then
+        export DYNAMDB_PREFIX="${APP_NAME_LOWERCASE}_${STAGE}_"
+    fi
+
     echo ""
     echo "APP_STAGE: ${APP_STAGE}"
     echo "USER_AGENT: ${USER_AGENT}"
@@ -208,7 +214,7 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
     fi
 
     if [ "${RUN_METHOD}" = "gunicorn" ]; then
-        if [ ${RUN_PROTOCOL} = "https" ]; then
+        if [ "${RUN_PROTOCOL}" = "https" ]; then
             echo "${SCRIPTS_DIR}/../secure_local_server/run.sh"
             ${SCRIPTS_DIR}/../secure_local_server/run.sh "run" ${STAGE}
         else
@@ -229,7 +235,7 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
     fi
 
     if [ "${RUN_METHOD}" = "uvicorn" ]; then
-        if [ ${RUN_PROTOCOL} = "https" ]; then
+        if [ "${RUN_PROTOCOL}" = "https" ]; then
             echo "${SCRIPTS_DIR}/../secure_local_server/run.sh"
             ${SCRIPTS_DIR}/../secure_local_server/run.sh "run" ${STAGE}
         else

@@ -84,7 +84,7 @@ format_check:
 qa: lint types tests format_check pycodestyle
 
 mongo_docker:
-	sh node_modules/genericsuite-be-scripts/scripts/mongo/run_mongo_docker.sh run
+	sh node_modules/genericsuite-be-scripts/scripts/mongo/run_mongo_docker.sh run "0"
 
 mongo_docker_down:
 	sh node_modules/genericsuite-be-scripts/scripts/mongo/run_mongo_docker.sh down
@@ -161,6 +161,8 @@ generate_sam_dynamodb:
 	sh node_modules/genericsuite-be-scripts/scripts/aws_big_lambda/generate_sam_dynamodb/run_generate_sam_dynamodb.sh
 
 generate_cf_dynamodb:
+	# make generate_cf_dynamodb
+	# ACTION=create_tables STAGE=dev make generate_cf_dynamodb
 	sh node_modules/genericsuite-be-scripts/scripts/aws_dynamodb/generate_dynamodb_cf/generate_dynamodb_cf.sh
 
 ## Deployment
@@ -229,7 +231,8 @@ aws_secrets:
 
 ## Application Specific Commands
 
-run: config_qa clean_logs
+# run: config_qa clean_logs
+run: config_local clean_logs mongo_docker
 	sh node_modules/genericsuite-be-scripts/scripts/aws/run_aws.sh run_local
 
 run_qa: config_qa clean_logs
@@ -242,8 +245,9 @@ restart_qa: config_qa clean_logs
 	sh node_modules/genericsuite-be-scripts/scripts/secure_local_server/run.sh "down" ""
 	sh node_modules/genericsuite-be-scripts/scripts/aws/run_aws.sh run_local qa
 
-run_local_docker: config_local clean_logs
-	sh node_modules/genericsuite-be-scripts/scripts/aws/run_aws.sh run_local dev
+run_local_docker: run
+# run_local_docker: config_local clean_logs
+# 	sh node_modules/genericsuite-be-scripts/scripts/aws/run_aws.sh run_local dev
 
 run_prod: config clean_logs
 	sh node_modules/genericsuite-be-scripts/scripts/aws/run_aws.sh run
