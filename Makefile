@@ -231,8 +231,8 @@ aws_secrets:
 
 ## Application Specific Commands
 
-# run: config_qa clean_logs
-run: config_local clean_logs mongo_docker
+run: config_local clean_logs
+	sh node_modules/genericsuite-be-scripts/scripts/mongo/run_mongo_docker.sh run "0" dev
 	sh node_modules/genericsuite-be-scripts/scripts/aws/run_aws.sh run_local
 
 run_qa: config_qa clean_logs
@@ -246,8 +246,6 @@ restart_qa: config_qa clean_logs
 	sh node_modules/genericsuite-be-scripts/scripts/aws/run_aws.sh run_local qa
 
 run_local_docker: run
-# run_local_docker: config_local clean_logs
-# 	sh node_modules/genericsuite-be-scripts/scripts/aws/run_aws.sh run_local dev
 
 run_prod: config clean_logs
 	sh node_modules/genericsuite-be-scripts/scripts/aws/run_aws.sh run

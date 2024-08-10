@@ -24,6 +24,15 @@ if [ "${RUN_LOCAL_APP}" = "" ]; then
     RUN_LOCAL_APP="0"
 fi
 #
+if [ "${STAGE}" = "" ]; then
+    STAGE="$3"
+fi
+#
+echo ""
+echo "ACTION: ${ACTION}"
+echo "RUN_LOCAL_APP: ${RUN_LOCAL_APP}"
+echo "STAGE: ${STAGE}"
+#
 if cd "${REPO_BASEDIR}"
 then
     # REPO_BASEDIR="`pwd`" ;
@@ -74,6 +83,20 @@ if [ "${ACTION}" == "" ] || [ "${ACTION}" == "up" ] || [ "${ACTION}" == "run" ];
                 echo ""
             else
                 ERROR="ERROR: running ${SCRIPTS_DIR}/../aws/set_chalice_cnf.sh"
+            fi
+        fi
+        #
+        if [ "${ERROR}" == "" ]; then
+            if [ "${STAGE}" == "dev" ]; then
+                if [ "${APP_DB_ENGINE_DEV}" == "DYNAMO_DB" ]; then
+                    echo ""
+                    echo "Creating DynamoDB tables on the Dev environment..."
+                    echo ""
+                    if ! sh ${SCRIPTS_DIR}/../aws_dynamodb/generate_dynamodb_cf/generate_dynamodb_cf.sh create_tables dev
+                    then
+                        ERROR="ERROR: running 'sh ${SCRIPTS_DIR}/../aws_dynamodb/generate_dynamodb_cf/generate_dynamodb_cf.sh create_tables dev'"
+                    fi
+                fi
             fi
         fi
         #
