@@ -94,13 +94,19 @@ if [ "${ACTION}" = "generate" ]; then
 fi
 if [ "${ACTION}" = "create_tables" ]; then
     # "create_tables": create the tables in the local Docker DynamoDB instance.
-    cd "${REPO_BASEDIR}"
-    if ! make mongo_docker
+    
+    # Verify if DynamoDB local container is running to avoid cycling "make mongo_docker" call
+    if ! docker ps | grep dynamodb-local -q
     then
-        echo ""
-        echo "ERROR: Failed to start the local Docker databases container"
-        exit 1
+        cd "${REPO_BASEDIR}"
+        if ! make mongo_docker
+        then
+            echo ""
+            echo "ERROR: Failed to start the local Docker databases container"
+            exit 1
+        fi
     fi
+
     cd "${SCRIPTS_DIR}"
     if ! python -m generate_dynamodb_cf "${BASE_CONFIG_PATH}" "${WORKING_DIR}/${CF_TEMPLATE_NAME}" "${DYNAMDB_PREFIX}" "1"
     then

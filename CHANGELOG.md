@@ -23,17 +23,20 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 
 ### New
 Add ".nvmrc" file to set the repo default node version.
-Add GS_LOCAL_ENVIR envvar to detect a local database running in a docker container [GS-102].
 Add DynamoDB database running along with MongoDB in a docker container when running the App in the "dev" stage [GS-102].
-Add DynamoDB docker container to "mongodb_stack_for_test.yml" [GS-102].
 Add local DynamoDB tables generation in "generate_dynamodb_cf.py" [GS-102].
+Add DynamoDB docker container to "mongodb_stack_for_test.yml" [GS-102].
 Add DynamoDB local workbench manager (taydy/dynamodb-manager) to the "mongodb_stack_for_test.yml" [GS-102].
 Add DYNAMDB_PREFIX envvar to the "run_aws.sh" script with the value "${APP_NAME_LOWERCASE}_${STAGE}_" [GS-102].
+Add GS_LOCAL_ENVIR envvar to detect a local database running in a docker container [GS-102].
 Add "run_mongo_docker.sh" runs "generate_dynamodb_cf.sh create_tables dev" to create the DynamoDB tables in the local Docker container [GS-102].
 
 ### Changes
 Make DynamoDb tables with prefix work with the GS DB Abstraction [GS-102].
 Makefile "mongo_docker" runs the MongoDB and DynamoDB docker containers without calling "make run" by default [GS-102].
+
+### Fixes
+Fix error in "run_mongo_docker.sh" when Docker Desktop is not running [GS-102].
 
 
 ## 1.0.11 (2024-07-19)
