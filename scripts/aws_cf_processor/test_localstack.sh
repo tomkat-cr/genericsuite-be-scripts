@@ -9,7 +9,7 @@ docker_dependencies() {
       # To restart Docker app:
       # $ killall Docker
       echo ""
-      echo "Trying to open Docker Desktop..."
+      echo "Opening Docker Desktop..."
       if ! open /Applications/Docker.app
       then
           echo ""

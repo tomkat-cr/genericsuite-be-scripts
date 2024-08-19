@@ -18,7 +18,7 @@ docker_dependencies() {
       # To restart Docker app:
       # $ killall Docker
       echo ""
-      echo "Trying to open Docker Desktop..."
+      echo "Opening Docker Desktop..."
       if ! open /Applications/Docker.app
       then
           echo ""
@@ -27,6 +27,7 @@ docker_dependencies() {
       else
           sleep 20
       fi
+      CREATE_TABLES="1"
   fi
 
   if ! docker ps > /dev/null 2>&1;
@@ -85,18 +86,22 @@ then
 else
     ERROR="Could not change directory to: ${REPO_BASEDIR}"
 fi
+
+CREATE_TABLES="0"
+
 #
 if [ "${ACTION}" == "" ] || [ "${ACTION}" == "up" ] || [ "${ACTION}" == "run" ]; then
-    docker_dependencies
-
-    # Verify if MongoDB local container is running to avoid re-loading
-    if docker ps | grep mongo-db -q
-    then
-        echo ""
-        echo "MongoDb docker container was already started..."
-        echo ""
-    else
-        if [ "${ERROR}" == "" ]; then
+    if [ "${ERROR}" == "" ]; then
+        # Verify if Docker Destop is running
+        docker_dependencies
+        # Verify if MongoDB local container is running to avoid re-loading
+        if docker ps | grep mongo-db -q
+        then
+            echo ""
+            echo "MongoDb docker container was already started..."
+            echo ""
+        else
+            # Start local dev database docker containers
             echo ""
             echo "Starting MongoDb docker container..."
             echo ""
@@ -108,10 +113,11 @@ if [ "${ACTION}" == "" ] || [ "${ACTION}" == "up" ] || [ "${ACTION}" == "run" ];
                 export APP_DB_NAME=mongo
                 export APP_DB_URI=mongodb://root:example@127.0.0.1:27017/
                 docker ps ;
+                CREATE_TABLES="1"
             else
                 ERROR="ERROR: could not start mongo docker container" ;
             fi
-            #
+            # Chalice specific setup
             if [ "${ERROR}" == "" ]; then
                 echo ""
                 echo "Starting Lambda configuration for local MongoDb on docker..."
@@ -127,20 +133,6 @@ if [ "${ACTION}" == "" ] || [ "${ACTION}" == "up" ] || [ "${ACTION}" == "run" ];
             fi
             #
             if [ "${ERROR}" == "" ]; then
-                if [ "${STAGE}" == "dev" ]; then
-                    if [ "${APP_DB_ENGINE_DEV}" == "DYNAMO_DB" ]; then
-                        echo ""
-                        echo "Creating DynamoDB tables on the Dev environment..."
-                        echo ""
-                        if ! sh ${SCRIPTS_DIR}/../aws_dynamodb/generate_dynamodb_cf/generate_dynamodb_cf.sh create_tables dev
-                        then
-                            ERROR="ERROR: running 'sh ${SCRIPTS_DIR}/../aws_dynamodb/generate_dynamodb_cf/generate_dynamodb_cf.sh create_tables dev'"
-                        fi
-                    fi
-                fi
-            fi
-            #
-            if [ "${ERROR}" == "" ]; then
                 echo ""
                 echo "Please remember to perform the 'supad-create'"
                 echo ""
@@ -152,6 +144,40 @@ if [ "${ACTION}" == "" ] || [ "${ACTION}" == "up" ] || [ "${ACTION}" == "run" ];
                         echo "${APP_NAME} API over local MongoDb on docker ran successfully."
                     else
                         ERROR="ERROR: running ${REPO_BASEDIR}/make api"
+                    fi
+                fi
+            fi
+        fi
+        # Verify local DynamoDb container is started
+        if [ "${ERROR}" == "" ]; then
+            if [ "${APP_DB_ENGINE_DEV}" == "DYNAMO_DB" ]; then
+                if ! docker ps | grep dynamodb-local -q
+                then
+                    ERROR="ERROR: Failed to start the local Docker DynamoDB database container"
+                    echo ""
+                    echo "For some reason, the local Docker DynamoDB database container is not running."
+                    echo "The logs are:"
+                    docker logs dynamodb-local
+                    echo ""
+                    echo "Shutting down the databases container to fix this error on the next run"
+                    echo ""
+                    make mongo_docker_down
+                fi
+            fi
+        fi
+        # Create tables
+        if [ "${ERROR}" == "" ]; then
+            if [ "${STAGE}" == "dev" ]; then
+                if [ "${CREATE_TABLES}" == "1" ]; then
+                    if [ "${APP_DB_ENGINE_DEV}" == "DYNAMO_DB" ]; then
+                        echo ""
+                        echo "Creating DynamoDB tables on the Dev environment..."
+                        echo ""
+                        if ! sh ${SCRIPTS_DIR}/../aws_dynamodb/generate_dynamodb_cf/generate_dynamodb_cf.sh create_tables dev
+                        then
+                            ERROR="ERROR: running 'sh ${SCRIPTS_DIR}/../aws_dynamodb/generate_dynamodb_cf/generate_dynamodb_cf.sh create_tables dev'"
+                            
+                        fi
                     fi
                 fi
             fi
@@ -174,4 +200,5 @@ if [ "${ERROR}" == "" ]; then
     echo "MongoDb docker container processing done."
 else
     echo ${ERROR}
+    exit 1
 fi

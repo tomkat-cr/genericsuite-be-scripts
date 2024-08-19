@@ -36,7 +36,7 @@ Make DynamoDb tables with prefix work with the GS DB Abstraction [GS-102].
 Makefile "mongo_docker" runs the MongoDB and DynamoDB docker containers without calling "make run" by default [GS-102].
 
 ### Fixes
-Fix error in "run_mongo_docker.sh" when Docker Desktop is not running [GS-102].
+Fix error in "run_mongo_docker.sh" starting containers when Docker Desktop is not running [GS-102].
 
 
 ## 1.0.11 (2024-07-19)
