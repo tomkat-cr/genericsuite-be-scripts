@@ -1,9 +1,9 @@
 #!/bin/sh
-# run_generate_dynamodb_cf.sh
+# generate_dynamodb_cf.sh
 # 2024-05-21 | CR
 # Generates the DynamoDB tables section for a SAM template.
 # Usage:
-# sh scripts/aws_dynamodb/generate_dynamodb_cf/run_generate_dynamodb_cf.sh
+# sh scripts/aws_dynamodb/generate_dynamodb_cf/generate_dynamodb_cf.sh
 # ACTION=create_tables STAGE=dev make generate_cf_dynamodb
 
 yes_or_no() {
