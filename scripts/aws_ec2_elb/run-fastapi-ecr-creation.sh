@@ -4,6 +4,7 @@
 # 2024-06-22 | CR
 # Usage:
 # ECR_IMAGE_TAG="0.0.16" STAGE=qa sh node_modules/genericsuite-be-scripts/scripts/aws_ec2_elb/run-fastapi-ecr-creation.sh
+# ECR_IMAGE_TAG="0.0.16" STAGE=qa make deploy_ecr_creation
 
 # ------------------
 
