@@ -30,6 +30,7 @@ Add DynamoDB local workbench manager (taydy/dynamodb-manager) to the "mongodb_st
 Add DYNAMDB_PREFIX envvar to the "run_aws.sh" script with the value "${APP_NAME_LOWERCASE}_${STAGE}_" [GS-102].
 Add GS_LOCAL_ENVIR envvar to detect a local database running in a docker container [GS-102].
 Add "run_mongo_docker.sh" runs "generate_dynamodb_cf.sh create_tables dev" to create the DynamoDB tables in the local Docker container [GS-102].
+Add "/users/current_user_d" endpoint [GS-2].
 
 ### Changes
 Make DynamoDb tables with prefix work with the GS DB Abstraction [GS-102].
