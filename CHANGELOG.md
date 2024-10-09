@@ -17,27 +17,48 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
-## 1.0.11 (2024-07-27)
+## 1.0.12 (2024-10-07)
+---
+
+### New
+Add ".nvmrc" file to set the repo default node version.
+Add DynamoDB database running along with MongoDB in a docker container when running the App in the "dev" stage [GS-102].
+Add local DynamoDB tables generation in "generate_dynamodb_cf.py" [GS-102].
+Add DynamoDB docker container to "mongodb_stack_for_test.yml" [GS-102].
+Add DynamoDB local workbench manager (taydy/dynamodb-manager) to the "mongodb_stack_for_test.yml" [GS-102].
+Add DYNAMDB_PREFIX envvar to the "run_aws.sh" script with the value "${APP_NAME_LOWERCASE}_${STAGE}_" [GS-102].
+Add GS_LOCAL_ENVIR envvar to detect a local database running in a docker container [GS-102].
+Add "run_mongo_docker.sh" runs "generate_dynamodb_cf.sh create_tables dev" to create the DynamoDB tables in the local Docker container [GS-102].
+Add "/users/current_user_d" endpoint [GS-2].
+
+### Changes
+Make DynamoDb tables with prefix work with the GS DB Abstraction [GS-102].
+Makefile "mongo_docker" runs the MongoDB and DynamoDB docker containers without calling "make run" by default [GS-102].
+
+### Fixes
+Fix error in "run_mongo_docker.sh" starting containers when Docker Desktop is not running [GS-102].
+
+
+## 1.0.11 (2024-07-19)
 ---
 
 ### New
 Add EC2+ALB App deployment using AWS CloudFormation (EBS volume encryption postponed) [GS-96].
 Add password and API Keys to AWS Secrets using AWS CloudFormation [GS-41].
 Add DynamoDB tables creation from the JSON configs using AWS CloudFormation [GS-84].
-Add: "scripts/aws_dynamodb/generate_dynamodb_cf/generate_dynamodb_cf.py" and its ".sh" to generate the "cf-template-dynamodb.yml" file in the project's scripts directory [GS-84]. 
-Add: "scripts/aws_dynamodb/run-dynamodb-deploy.sh" to deploy generated "cf-template-dynamodb.yml" [GS-84].
-Add: GET_SECRETS_CRITICAL and GET_SECRETS_CRITICAL envvars to fine-grained disabling of cloud secrets manager for critical secrets and plain envvars [GS-41].
+Add "scripts/aws_dynamodb/generate_dynamodb_cf/generate_dynamodb_cf.py" and its ".sh" to generate the "cf-template-dynamodb.yml" file in the project's scripts directory [GS-84]. 
+Add "scripts/aws_dynamodb/run-dynamodb-deploy.sh" to deploy generated "cf-template-dynamodb.yml" [GS-84].
+Add GET_SECRETS_CRITICAL and GET_SECRETS_CRITICAL envvars to fine-grained disabling of cloud secrets manager for critical secrets and plain envvars [GS-41].
 Add aws_secrets to Makefile to deploy envvars to the AWS Secrets manager [GS-41].
 Add depLoy_ec2 to Makefile [GS-96].
 Add deploy_ecr_creation to Makefile to build the FastAPI docker image [GS-96].
 Add: generate_cf_dynamodb and deploy_dynamodb to Makefile [GS-84].
 Add "scripts/aws_cf_processor/run-cf-deployment.sh" to standarize all Cloudformation calls [GS-96].
-Add: "run-cf-deployment.sh" enhanced to simulate the EC2 + ALB in AWS LocalStack [GS-97].
-Add: Secret and KMS access policies to the "template-sam.yml" file [GS-41].
-Add: "scripts/aws_cf_processor/test_localstack.sh" to test localstack EC2 functionality with the LOCALSTACK_AUTH_TOKEN envvar [GS-97].
+Add "run-cf-deployment.sh" enhanced to simulate the EC2 + ALB in AWS LocalStack [GS-97].
+Add Secret and KMS access policies to the "template-sam.yml" file [GS-41].
+Add "scripts/aws_cf_processor/test_localstack.sh" to test localstack EC2 functionality with the LOCALSTACK_AUTH_TOKEN envvar [GS-97].
 Add LOCAL_DNS_DISABLED and BRIDGE_PROXY_DISABLED envvars to disable local services working on the road.
 Add NGROK_ENABLED envvar to enable/disable Ngrok service in the URL_MASK_EXTERNAL_HOSTNAME and DEV_MASK_EXT_HOSTNAME assignments on "scripts/get_domain_name_dev.sh".
-Add: ".nvmrc" file to set the repo default node version.
 
 ### Changes
 Change APP_STAGE dynamic assignment in run_aws.sh, set_chalice_cnf.sh, and big_lambdas_manager.sh, and secure_local_server/docker_entrypoint.sh [GS-41].
@@ -50,9 +71,9 @@ Check the CLOUD_PROVIDER variable in big_lambdas_manager.sh and avoid execution 
 
 ### Fixes
 Fix 'USER_AGENT environment variable not set...' LangSmith warning message removed in run_aws.sh, big_lambdas_manager.sh, aws_big_lambda/template-sam.yml, and secure_local_server/docker_entrypoint.sh.
-Fix: issue reporting the "_placeholder" missing parameter in the SAM template in verify_base_names() of big_lambdas_manager.sh.
-Fix: API_GATEWAY_PORT report in pre-process summary in big_lambdas_manager.sh.
-Fix: replace the fixed "us-east-1" region by $AWS_REGION on the AWS_DOCKER_IMAGE_URI_BASE assignment in big_lambdas_manager.sh.
+Fix issue reporting the "_placeholder" missing parameter in the SAM template in verify_base_names() of big_lambdas_manager.sh.
+Fix API_GATEWAY_PORT report in pre-process summary in big_lambdas_manager.sh.
+Fix replace the fixed "us-east-1" region by $AWS_REGION on the AWS_DOCKER_IMAGE_URI_BASE assignment in big_lambdas_manager.sh.
 
 
 ## 1.0.10 (2024-06-07)

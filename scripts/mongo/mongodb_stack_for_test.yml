@@ -30,3 +30,35 @@ services:
       ME_CONFIG_MONGODB_ADMINUSERNAME: admin
       ME_CONFIG_MONGODB_ADMINPASSWORD: pass
       ME_CONFIG_MONGODB_URL: mongodb://root:example@mongo:27017/
+
+  dynamodb-local:
+    # dynamodb.endpoint = 'http://127.0.0.1:8000'
+    # dynamodb.endpoint = 'http://dynamodb-local:8000'
+    container_name: dynamodb-local
+    image: amazon/dynamodb-local:latest
+    # YoyaTeam/dynamodb-manager : Error "Configuration is not in effect
+    # https://github.com/YoyaTeam/dynamodb-manager/issues/9
+    command: -Djava.library.path=./DynamoDBLocal_lib -jar DynamoDBLocal.jar -sharedDb -cors http://127.0.0.1:8095
+    platform: linux/x86_64
+    expose:
+      - 8000
+    ports:
+      - 8000:8000
+
+  dynamodb-manager:
+    # http://127.0.0.1:8095
+    # [Add connection]
+    #     Alias: Local
+    #     Endpoint: http://127.0.0.1:8000
+    #     Region: us-east-1
+    #     Access Key: test
+    #     Secret Key: test
+    container_name: dynamodb-manager
+    image: taydy/dynamodb-manager
+    platform: linux/x86_64
+    expose:
+      - 8095
+    ports:
+      - 8095:80
+    environment:
+      DISABLE_CORS_CHECKS: 1

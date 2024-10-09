@@ -12,7 +12,7 @@ docker_dependencies() {
       # To restart Docker app:
       # $ killall Docker
       echo ""
-      echo "Trying to open Docker Desktop..."
+      echo "Opening Docker Desktop..."
       if ! open /Applications/Docker.app
       then
           echo ""
@@ -125,14 +125,26 @@ prepare_docker_conf() {
         echo "Could not copy docker-compose.yml"
         exit 1
     fi
+    local gs_be_ai_local="0"
     if grep -q "-e ..\/genericsuite-be-ai" "${REPO_BASEDIR}/requirements.txt"; then
+        gs_be_ai_local="1"
+    elif grep -q "..\/genericsuite-be-ai" "${REPO_BASEDIR}/requirements.txt"; then
+        gs_be_ai_local="1"
+    fi
+    if [ "${gs_be_ai_local}" = "1" ]; then
         echo "Local Genericsuite-be-ai requirements found... replacing: # - \${REPO_BASEDIR}/../genericsuite-be-ai:/genericsuite-be-ai..."
         echo ""
         export LOCAL_GE_BE_AI_REPO="/genericsuite-be-ai"
         # https://wiki.ultraedit.com/Perl_regular_expressions
         perl -i -pe "s|# - \\$\{REPO_BASEDIR}\/\.\.\/genericsuite-be-ai\:\/genericsuite-be-ai$|- \\$\{REPO_BASEDIR}\/\.\.\/genericsuite-be-ai\:${LOCAL_GE_BE_AI_REPO}|g" "${TMP_WORKING_DIR}/docker-compose.yml"
     fi
+    local gs_be_core_local="0"
     if grep -q "-e ..\/genericsuite-be" "${REPO_BASEDIR}/requirements.txt"; then
+        gs_be_core_local="1"
+    elif grep -q "..\/genericsuite-be" "${REPO_BASEDIR}/requirements.txt"; then
+        gs_be_core_local="1"
+    fi
+    if [ "${gs_be_core_local}" = "1" ]; then
         echo "Local Genericsuite-be requirements found... replacing: # - \${REPO_BASEDIR}/../genericsuite-be:/genericsuite-be..."
         echo ""
         export LOCAL_GE_BE_REPO="/genericsuite-be"
@@ -166,7 +178,6 @@ prepare_environment() {
     generate_requirements
     # Prepare Docker configuration in tmp dir
     prepare_docker_conf
-
 }
 
 start_sls_docker_containers() {
@@ -255,7 +266,7 @@ if [ "${ACTION}" = "" ] || [ "${ACTION}" = "run" ]; then
         # Attach to the container to see server activity
         echo ""
         echo "The local backend server is already running."
-        echo "Do you want to 1) Rebuild, 2) Attach or 3) View Logs (default) ? (1/2)"
+        echo "Do you want to 1) Rebuild, 2) Attach or 3) View Logs (default) ? (1/2/3)"
         read ANSWER
         if [ "${ANSWER}" = "1" ]; then
             cd "${TMP_WORKING_DIR}"

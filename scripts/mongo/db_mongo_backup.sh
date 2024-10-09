@@ -1,7 +1,9 @@
 #!/bin/sh
 # File: scripts/mongo/db_mongo_backup.sh
 # 2022-03-12 | CR
-# Prerequisite: https://www.mongodb.com/docs/database-tools/installation/installation/
+# Prerequisite:
+#   https://www.mongodb.com/docs/database-tools/installation/installation/
+#   brew install mongodb-database-tools
 #
 REPO_BASEDIR="`pwd`"
 cd "`dirname "$0"`"

@@ -20,7 +20,8 @@
     "FLASK_APP": "FLASK_APP_placeholder",
     "APP_HOST_NAME": "APP_HOST_NAME_placeholder",
     "CLOUD_PROVIDER": "CLOUD_PROVIDER_placeholder",
-    "AWS_REGION": "AWS_REGION_placeholder"
+    "AWS_REGION": "AWS_REGION_placeholder",
+    "DYNAMDB_PREFIX": "DYNAMDB_PREFIX_placeholder"
   },
   "stages": {
     "dev": {

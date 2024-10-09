@@ -130,6 +130,7 @@ APP_DB_URI_QA=${APP_DB_URI_QA//@/\\@}
 APP_DB_URI_STAGING=${APP_DB_URI_STAGING//@/\\@}
 APP_DB_URI_PROD=${APP_DB_URI_PROD//@/\\@}
 APP_DB_URI_DEMO=${APP_DB_URI_DEMO//@/\\@}
+DYNAMDB_PREFIX="${APP_NAME_LOWERCASE}_${STAGE}_"
 
 if [ "${APP_CORS_ORIGIN_DEV}" = "" ]; then
     APP_CORS_ORIGIN_DEV="*"
@@ -223,6 +224,7 @@ perl -i -pe"s|AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_PROD_placeholder|${AWS_S3_CHATBO
 perl -i -pe"s|APP_HOST_NAME_placeholder|${APP_HOST_NAME}|g" "${CONFIG_FILE}"
 perl -i -pe"s|CLOUD_PROVIDER_placeholder|${CLOUD_PROVIDER}|g" "${CONFIG_FILE}"
 perl -i -pe"s|AWS_REGION_placeholder|${AWS_REGION}|g" "${CONFIG_FILE}"
+perl -i -pe"s|DYNAMDB_PREFIX_placeholder|${DYNAMDB_PREFIX}|g" "${CONFIG_FILE}"
 
 if [ -f "${REPO_BASEDIR}/scripts/aws/update_additional_envvars.sh" ]; then
     . "${REPO_BASEDIR}/scripts/aws/update_additional_envvars.sh" "${CONFIG_FILE}" "${REPO_BASEDIR}"

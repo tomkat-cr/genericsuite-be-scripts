@@ -1,7 +1,9 @@
 #!/bin/sh
 # File: scripts/mongo/db_mongo_restore.sh
 # 2022-03-12 | CR
-# Prerequisite: https://www.mongodb.com/docs/database-tools/installation/installation/
+# Prerequisite:
+#   https://www.mongodb.com/docs/database-tools/installation/installation/
+#   brew install mongodb-database-tools
 #
 DUMP_DIR="/tmp/mongodb_restore_tmp"
 

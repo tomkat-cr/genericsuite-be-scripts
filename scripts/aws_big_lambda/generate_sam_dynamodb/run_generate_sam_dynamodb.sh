@@ -55,7 +55,7 @@ deactivate
 rm -rf __pycache__
 rm -rf venv
 
-if [ ${ERROR} = "1" ]; then
+if [ "${ERROR}" = "1" ]; then
     echo "Error generating SAM template file."
 else
     echo ""

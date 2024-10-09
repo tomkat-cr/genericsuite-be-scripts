@@ -10,6 +10,7 @@ import os
 import sys
 import json
 import yaml
+import boto3
 
 DEBUG = True
 
@@ -48,6 +49,9 @@ Parameters:
 
 END_STRING = """
 """
+
+DEFAULT_WRITE_CAPACITY_UNITS = 1
+DEFAULT_READ_CAPACITY_UNITS = 1
 
 
 class SubRep(tuple):
@@ -177,11 +181,20 @@ def get_dynamodb_definition(config: dict, table_prefix: str) -> dict:
     write_capacity_units = config.get('WriteCapacityUnits', "1")
 
     dynamodb_output = {
-        table_name: {
-            "Descriptzion": f"Name for the {table_name} DynamoDB table",
+        # This gives the error "Template format error:
+        #   Outputs name 'xxx_xxxx_xxx' is non alphanumeric."
+        # table_name: {
+        definition_name: {
+            # "Description": f"Name for the {table_name} DynamoDB table",
+            "Description": table_name,
             "Value": SubRep(dynamodb_table_name),
             "Export": {
-                "Name": SubRep(f"{dynamodb_table_name}-TableName")
+                # This gives the error "Template format error:
+                #   Output XxxxxTable is malformed. The Name field of every
+                #   Export member must be specified and consist only of
+                #   alphanumeric characters, colons, or hyphens."
+                # "Name": SubRep(f"{dynamodb_table_name}-TableName")
+                "Name": SubRep(f"{definition_name}Name")
             }
         }
     }
@@ -196,7 +209,10 @@ def get_dynamodb_definition(config: dict, table_prefix: str) -> dict:
     for field in field_elements:
         if field.get('type') == '_id':
             if not partition_key:
-                partition_key = field.get('name')
+                if field.get('name') == 'id':
+                    partition_key = '_id'
+                else:
+                    partition_key = field.get('name')
             else:
                 sort_key = field.get('name')
         # elif field.get('type') == '_sort':
@@ -274,9 +290,6 @@ def generate_dynamodb_definitions(basedir: str, table_prefix: str):
                     table_definition = get_dynamodb_definition(config,
                                                                table_prefix)
                     if table_definition:
-                        # table_name = \
-                        #   table_definition['Properties']['TableName']
-                        # dynamodb_definitions[table_name] = table_definition
                         dynamodb_definitions.update(table_definition['ts'])
                         dynamodb_outputs.update(table_definition['output'])
 
@@ -286,30 +299,8 @@ def generate_dynamodb_definitions(basedir: str, table_prefix: str):
     }
 
 
-def generate_dynamodb_cf():
-    """
-    Generates DynamoDB table definitions for a SAM template.
-    """
-    print('')
-    print('Generating DynamoDB table definitions for SAM template')
-    print('')
-
-    if len(sys.argv) < 4:
-        print('Usage: python generate_dynamodb_cf.py ' +
-              '<base_config_path> <target_template_path> <table_prefix>')
-        sys.exit(1)
-
-    base_config_path = sys.argv[1]
-    target_template_path = sys.argv[2]
-    table_prefix = sys.argv[3]
-
-    print(f'base_config_path: {base_config_path}')
-    print(f'target_template_path: {target_template_path}')
-    print('')
-
-    dynamodb_def = generate_dynamodb_definitions(
-        basedir=base_config_path,
-        table_prefix=table_prefix)
+def write_dynamodb_cf_template_file(target_template_path: str,
+                                    dynamodb_def: str):
     # Open the target template file to write the DynamoDB table definition
     with open(target_template_path, 'w', encoding="utf-8") as f:
         # Save the template file
@@ -324,6 +315,101 @@ def generate_dynamodb_cf():
 
     print('')
     print(f'DynamoDB table definitions saved to {target_template_path}')
+
+
+def create_dynamodb_local_tables(
+    dynamodb_def: dict,
+    table_prefix: str,
+    endpoint_url: str
+):
+    """
+    Create the tables in the DynamoDB database.
+    """
+    default_provisioned_throughput = {
+        'ReadCapacityUnits': DEFAULT_READ_CAPACITY_UNITS,
+        'WriteCapacityUnits': DEFAULT_WRITE_CAPACITY_UNITS
+    }
+    client = boto3.resource('dynamodb', endpoint_url=endpoint_url)
+    item_list = dynamodb_def['ts'].keys()
+    for item_name in item_list:
+        table_props = dynamodb_def['ts'][item_name]['Properties']
+        output_props = dynamodb_def['output'][item_name]
+        original_table_name = output_props['Description']
+        table_name = f'{table_prefix}{original_table_name}'
+        try:
+            client.Table(table_name).table_status
+            table_exists = True
+            if DEBUG:
+                print('Dynamodb Table alredy exists: ' + table_name)
+        except client.meta.client.exceptions.ResourceNotFoundException:
+            table_exists = False
+        if table_exists:
+            continue
+        if DEBUG:
+            print('Creating Dynamodb Table: ' + table_name)
+        # Create table in Dynamodb
+        create_table_params = {
+            'TableName': table_name,
+            'KeySchema': table_props['KeySchema'],
+            'AttributeDefinitions': table_props['AttributeDefinitions'],
+            'ProvisionedThroughput': table_props.get(
+                'provisioned_throughput', default_provisioned_throughput
+            ),
+        }
+        if table_props.get('GlobalSecondaryIndexes'):
+            create_table_params['GlobalSecondaryIndexes'] = \
+                table_props.get('GlobalSecondaryIndexes')
+        table = client.create_table(**create_table_params)
+        # Wait until the table exists.
+        table.wait_until_exists()
+        # Print out some data about the table.
+        if DEBUG:
+            print(
+                '>>--> Dynamodb Table: ' + table_name +
+                ' CREATED! - table.item_count: ' + str(table.item_count)
+            )
+
+
+def generate_dynamodb_cf():
+    """
+    Generates DynamoDB table definitions for a SAM template.
+    """
+    print('')
+    print('Generating DynamoDB table definitions for SAM template')
+    print('')
+
+    if len(sys.argv) < 5:
+        print('Usage: python generate_dynamodb_cf.py ' +
+              '<base_config_path> <target_template_path> <table_prefix>' +
+              ' <create_local_tables>')
+        sys.exit(1)
+
+    base_config_path = sys.argv[1]
+    target_template_path = sys.argv[2]
+    table_prefix = sys.argv[3]
+    create_local_tables = sys.argv[4]
+
+    print(f'base_config_path: {base_config_path}')
+    print(f'target_template_path: {target_template_path}')
+    print(f'table_prefix: {table_prefix}')
+    print(f'create_local_tables: {create_local_tables}')
+    print('')
+
+    dynamodb_def = generate_dynamodb_definitions(
+        basedir=base_config_path,
+        table_prefix=table_prefix)
+    if create_local_tables == '1':
+        create_dynamodb_local_tables(
+            dynamodb_def=dynamodb_def,
+            table_prefix=table_prefix,
+            endpoint_url=os.environ.get('DYNAMODB_LOCAL_ENDPOINT_URL',
+                                        'http://127.0.0.1:8000')
+        )
+    else:
+        write_dynamodb_cf_template_file(
+            target_template_path=target_template_path,
+            dynamodb_def=dynamodb_def,
+        )
 
 
 if __name__ == '__main__':

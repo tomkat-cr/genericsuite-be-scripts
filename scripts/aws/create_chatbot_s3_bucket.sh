@@ -21,19 +21,19 @@ set -o allexport ; . .env ; set +o allexport ;
 # in ".env" file or externally to make this work
 
 if [ "${AWS_S3_CHATBOT_ATTACHMENTS_CREATION}" = "1" ]; then
-  if [ $1 = "dev" ]; then
+  if [ "$1" = "dev" ]; then
     sh ${SCRIPTS_DIR}/create_s3_bucket.sh ${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_DEV}
   fi
-  if [ $1 = "qa" ]; then
+  if [ "$1" = "qa" ]; then
     sh ${SCRIPTS_DIR}/create_s3_bucket.sh ${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_QA}
   fi
-  if [ $1 = "staging" ]; then
+  if [ "$1" = "staging" ]; then
     sh ${SCRIPTS_DIR}/create_s3_bucket.sh ${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_STAGING}
   fi
-  if [ $1 = "prod" ]; then
+  if [ "$1" = "prod" ]; then
     sh ${SCRIPTS_DIR}/aws/create_s3_bucket.sh ${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_PROD}
   fi
-  if [ $1 = "demo" ]; then
+  if [ "$1" = "demo" ]; then
     sh ${SCRIPTS_DIR}/aws/create_s3_bucket.sh ${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_DEMO}
   fi
 else

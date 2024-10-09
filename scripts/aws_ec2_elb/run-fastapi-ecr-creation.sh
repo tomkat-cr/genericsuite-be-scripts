@@ -4,6 +4,7 @@
 # 2024-06-22 | CR
 # Usage:
 # ECR_IMAGE_TAG="0.0.16" STAGE=qa sh node_modules/genericsuite-be-scripts/scripts/aws_ec2_elb/run-fastapi-ecr-creation.sh
+# ECR_IMAGE_TAG="0.0.16" STAGE=qa make deploy_ecr_creation
 
 # ------------------
 
@@ -181,6 +182,7 @@ OPENAI_MODEL="${OPENAI_MODEL}"
 OPENAI_TEMPERATURE="${OPENAI_TEMPERATURE}"
 LANGCHAIN_PROJECT="${LANGCHAIN_PROJECT}"
 USER_AGENT="${APP_NAME_LOWERCASE}-${STAGE}"
+DYNAMDB_PREFIX="${APP_NAME_LOWERCASE}_${STAGE}_"
 HUGGINGFACE_ENDPOINT_URL="${HUGGINGFACE_ENDPOINT_URL}"
 SMTP_SERVER="${SMTP_SERVER}"
 SMTP_PORT="${SMTP_PORT}"

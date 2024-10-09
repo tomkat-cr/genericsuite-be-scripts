@@ -327,6 +327,7 @@ export GIT_SUBMODULE_LOCAL_PATH="${GIT_SUBMODULE_LOCAL_PATH}"
 export OPENAI_MODEL="${OPENAI_MODEL}"
 export OPENAI_TEMPERATURE="${OPENAI_TEMPERATURE}"
 export USER_AGENT="${APP_NAME_LOWERCASE}-${STAGE}"
+export DYNAMDB_PREFIX="${APP_NAME_LOWERCASE}_${STAGE}_"
 export LANGCHAIN_PROJECT="${LANGCHAIN_PROJECT}"
 export HUGGINGFACE_ENDPOINT_URL="${HUGGINGFACE_ENDPOINT_URL}"
 export SMTP_SERVER="${SMTP_SERVER}"
@@ -1548,7 +1549,7 @@ docker_dependencies() {
       # To restart Docker app:
       # $ killall Docker
       echo ""
-      echo "Trying to open Docker Desktop..."
+      echo "Opening Docker Desktop..."
       if ! open /Applications/Docker.app
       then
           echo ""
@@ -1713,7 +1714,11 @@ MEMORY_SIZE="512"
 
 if [ "${AWS_ACCOUNT_ID}" = "" ]; then
   echo "ERROR: AWS_ACCOUNT_ID not set"
-  exit_abort
+  if [[ "${ACTION}" = "sam_validate" || "${ACTION}" = "package" || "${ACTION}" = "sam_run_local" ]]; then
+    echo "Skip AWS_ACCOUNT_ID set because it could be an offline action ($ACTION)..."
+  else
+    exit_abort
+  fi
 fi
 
 if [ "${AWS_LAMBDA_FUNCTION_NAME}" = "" ]; then

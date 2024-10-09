@@ -3,23 +3,67 @@
 # sh scripts/mongo/run_mongo_docker.sh
 # 2023-05-21 | CR
 #
+
+exit_abort() {
+    echo ""
+    echo "Aborting..."
+    echo ""
+    sh ${SCRIPTS_DIR}/../show_date_time.sh
+    exit 1
+}
+
+docker_dependencies() {
+  if ! docker ps > /dev/null 2>&1;
+  then
+      # To restart Docker app:
+      # $ killall Docker
+      echo ""
+      echo "Opening Docker Desktop..."
+      if ! open /Applications/Docker.app
+      then
+          echo ""
+          echo "Could not run Docker Desktop automatically"
+          exit_abort
+      else
+          sleep 20
+      fi
+      CREATE_TABLES="1"
+  fi
+
+  if ! docker ps > /dev/null 2>&1;
+  then
+      echo ""
+      echo "Docker is not running"
+      exit_abort
+  fi
+}
+
 ERROR=""
-#
-# cd "`dirname "$0"`" ;
-# SCRIPTS_DIR="`pwd`" ;
-# REPO_BASEDIR="${SCRIPTS_DIR}/../.."
+
 REPO_BASEDIR="`pwd`"
 cd "`dirname "$0"`"
 SCRIPTS_DIR="`pwd`"
 #
 ACTION="$1"
 #
-RUN_LOCAL_APP="$2"
+if [ "${RUN_LOCAL_APP}" = "" ]; then
+    RUN_LOCAL_APP="$2"
+fi
 if [ "${RUN_LOCAL_APP}" = "" ]; then
     # The local app needs to be started by the tests with "make run"
-    # to use the local docker mongo database
-    RUN_LOCAL_APP="1"
+    # to use the local docker mongo database, so RUN_LOCAL_APP
+    # or $2 parameter must be "1". Defaults to "0"
+    RUN_LOCAL_APP="0"
 fi
+#
+if [ "${STAGE}" = "" ]; then
+    STAGE="$3"
+fi
+#
+echo ""
+echo "ACTION: ${ACTION}"
+echo "RUN_LOCAL_APP: ${RUN_LOCAL_APP}"
+echo "STAGE: ${STAGE}"
 #
 if cd "${REPO_BASEDIR}"
 then
@@ -42,50 +86,99 @@ then
 else
     ERROR="Could not change directory to: ${REPO_BASEDIR}"
 fi
+
+CREATE_TABLES="0"
+
 #
 if [ "${ACTION}" == "" ] || [ "${ACTION}" == "up" ] || [ "${ACTION}" == "run" ]; then
     if [ "${ERROR}" == "" ]; then
-        echo ""
-        echo "Starting MongoDb docker container..."
-        echo ""
-        if docker-compose -f ${SCRIPTS_DIR}/mongodb_stack_for_test.yml up -d
+        # Verify if Docker Destop is running
+        docker_dependencies
+        # Verify if MongoDB local container is running to avoid re-loading
+        if docker ps | grep mongo-db -q
         then
             echo ""
-            echo "MongoDb docker container started successfully."
+            echo "MongoDb docker container was already started..."
             echo ""
-            export APP_DB_NAME=mongo
-            export APP_DB_URI=mongodb://root:example@127.0.0.1:27017/
-            docker ps ;
         else
-            ERROR="ERROR: could not start mongo docker container" ;
-        fi
-        #
-        if [ "${ERROR}" == "" ]; then
+            # Start local dev database docker containers
             echo ""
-            echo "Starting Lambda configuration for local MongoDb on docker..."
+            echo "Starting MongoDb docker container..."
             echo ""
-            if sh ${SCRIPTS_DIR}/../aws/set_chalice_cnf.sh mongo_docker
+            if docker-compose -f ${SCRIPTS_DIR}/mongodb_stack_for_test.yml up -d
             then
                 echo ""
-                echo "Lambda configuration for local MongoDb on docker ran successfully."
+                echo "MongoDb docker container started successfully."
                 echo ""
+                export APP_DB_NAME=mongo
+                export APP_DB_URI=mongodb://root:example@127.0.0.1:27017/
+                docker ps ;
+                CREATE_TABLES="1"
             else
-                ERROR="ERROR: running ${SCRIPTS_DIR}/../aws/set_chalice_cnf.sh"
+                ERROR="ERROR: could not start mongo docker container" ;
+            fi
+            # Chalice specific setup
+            if [ "${ERROR}" == "" ]; then
+                echo ""
+                echo "Starting Lambda configuration for local MongoDb on docker..."
+                echo ""
+                if sh ${SCRIPTS_DIR}/../aws/set_chalice_cnf.sh mongo_docker
+                then
+                    echo ""
+                    echo "Lambda configuration for local MongoDb on docker ran successfully."
+                    echo ""
+                else
+                    ERROR="ERROR: running ${SCRIPTS_DIR}/../aws/set_chalice_cnf.sh"
+                fi
+            fi
+            #
+            if [ "${ERROR}" == "" ]; then
+                echo ""
+                echo "Please remember to perform the 'supad-create'"
+                echo ""
+                if [ "${RUN_LOCAL_APP}" = "1" ]; then
+                    echo "Starting ${APP_NAME} API over local MongoDb on docker..."
+                    echo ""
+                    if make run
+                    then
+                        echo "${APP_NAME} API over local MongoDb on docker ran successfully."
+                    else
+                        ERROR="ERROR: running ${REPO_BASEDIR}/make api"
+                    fi
+                fi
             fi
         fi
-        #
+        # Verify local DynamoDb container is started
         if [ "${ERROR}" == "" ]; then
-            echo ""
-            echo "Please remember to perform the 'supad-create'"
-            echo ""
-            if [ "${RUN_LOCAL_APP}" = "1" ]; then
-                echo "Starting ${APP_NAME} API over local MongoDb on docker..."
-                echo ""
-                if make run
+            if [ "${APP_DB_ENGINE_DEV}" == "DYNAMO_DB" ]; then
+                if ! docker ps | grep dynamodb-local -q
                 then
-                    echo "${APP_NAME} API over local MongoDb on docker ran successfully."
-                else
-                    ERROR="ERROR: running ${REPO_BASEDIR}/make api"
+                    ERROR="ERROR: Failed to start the local Docker DynamoDB database container"
+                    echo ""
+                    echo "For some reason, the local Docker DynamoDB database container is not running."
+                    echo "The logs are:"
+                    docker logs dynamodb-local
+                    echo ""
+                    echo "Shutting down the databases container to fix this error on the next run"
+                    echo ""
+                    make mongo_docker_down
+                fi
+            fi
+        fi
+        # Create tables
+        if [ "${ERROR}" == "" ]; then
+            if [ "${STAGE}" == "dev" ]; then
+                if [ "${CREATE_TABLES}" == "1" ]; then
+                    if [ "${APP_DB_ENGINE_DEV}" == "DYNAMO_DB" ]; then
+                        echo ""
+                        echo "Creating DynamoDB tables on the Dev environment..."
+                        echo ""
+                        if ! sh ${SCRIPTS_DIR}/../aws_dynamodb/generate_dynamodb_cf/generate_dynamodb_cf.sh create_tables dev
+                        then
+                            ERROR="ERROR: running 'sh ${SCRIPTS_DIR}/../aws_dynamodb/generate_dynamodb_cf/generate_dynamodb_cf.sh create_tables dev'"
+                            
+                        fi
+                    fi
                 fi
             fi
         fi
@@ -107,4 +200,5 @@ if [ "${ERROR}" == "" ]; then
     echo "MongoDb docker container processing done."
 else
     echo ${ERROR}
+    exit 1
 fi
