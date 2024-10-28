@@ -1,0 +1,22 @@
+[
+    {
+        "name": "Generic-CRUD-Editor-Configuration.md",
+        "path": "https://github.com/tomkat-cr/genericsuite-basecamp/blob/GS-137_example_monorepos/docs/Configuration-Guide/Generic-CRUD-Editor-Configuration.md"
+    },
+    {
+        "name": "backend/users.json",
+        "path": "https://github.com/tomkat-cr/genericsuite-basecamp/blob/GS-137_example_monorepos/docs/Sample-Code/genericsuite-configs/backend/users.json"
+    },
+    {
+        "name": "backend/users_config.json",
+        "path": "https://github.com/tomkat-cr/genericsuite-basecamp/blob/GS-137_example_monorepos/docs/Sample-Code/genericsuite-configs/backend/users_config.json"
+    },
+    {
+        "name": "frontend/users.json",
+        "path": "https://github.com/tomkat-cr/genericsuite-basecamp/blob/GS-137_example_monorepos/docs/Sample-Code/genericsuite-configs/frontend/users.json"
+    },
+    {
+        "name": "frontend/users_config.json",
+        "path": "https://github.com/tomkat-cr/genericsuite-basecamp/blob/GS-137_example_monorepos/docs/Sample-Code/genericsuite-configs/frontend/users_config.json"
+    }
+]
