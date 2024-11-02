@@ -18,5 +18,13 @@
     {
         "name": "frontend/users_config.json",
         "path": "https://github.com/tomkat-cr/genericsuite-basecamp/blob/GS-137_example_monorepos/docs/Sample-Code/genericsuite-configs/frontend/users_config.json"
+    },
+    {
+        "name": "ai_gpt_fn_index.py",
+        "path": "https://github.com/tomkat-cr/genericsuite-basecamp/blob/72d116b85a9edad6cf8ea7d2057ea73ba880f41a/docs/Sample-Code/genericsuite-be-ai/Chalice/lib/models/ai_chatbot/ai_gpt_fn_index.py"
+    },
+    {
+        "name": "ai_gpt_fn_tables.py",
+        "path": "https://github.com/tomkat-cr/genericsuite-basecamp/blob/72d116b85a9edad6cf8ea7d2057ea73ba880f41a/docs/Sample-Code/genericsuite-be-ai/Chalice/lib/models/ai_chatbot/ai_gpt_fn_tables.py"
     }
 ]

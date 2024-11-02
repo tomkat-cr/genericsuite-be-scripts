@@ -2,46 +2,60 @@
 schema_files_generator.py
 2024-10-27 | CR
 """
+from typing import Any
 import time
 import os
 from datetime import datetime
-import requests
 
 import json
-import argparse
 import pprint
+
+import requests
+import argparse
 
 import ollama
 from ollama import Client
-
 from openai import OpenAI
+from groq import Groq
 
 DEBUG = True
 USE_PPRINT = False
 
-DEFAULT_AI_PROVIDER = "nvidia"
-# DEFAULT_AI_PROVIDER = "chat_openai"
+DEFAULT_AI_PROVIDER = "chat_openai"
+# DEFAULT_AI_PROVIDER = "groq"
 # DEFAULT_AI_PROVIDER = "ollama"
+# DEFAULT_AI_PROVIDER = "nvidia"
+# DEFAULT_AI_PROVIDER = "rhymes"
 
 DEFAULT_MODEL_TO_USE = ""
+# Nvidia
 # DEFAULT_MODEL_TO_USE = "nvidia/llama-3.1-nemotron-70b-instruct"
-# DEFAULT_MODEL_TO_USE = "nemotron"
-# DEFAULT_MODEL_TO_USE = "llava"
+# Groq
+# DEFAULT_MODEL_TO_USE = "llama3-8b-8192"
+# Ollama
 # DEFAULT_MODEL_TO_USE = "llama3.2"
+# DEFAULT_MODEL_TO_USE = "llava"
+# DEFAULT_MODEL_TO_USE = "deepseek-coder-v2"
+# DEFAULT_MODEL_TO_USE = "nemotron"
+# Rhymes.ai
+# DEFAULT_MODEL_TO_USE = "aria"
+
+DEFAULT_TEMPERATURE = "0.5"
+DEFAULT_STREAM = ""
+
+DEFAULT_AGENTS_COUNT = 0
 
 OLLAMA_BASE_URL = ""
 # OLLAMA_BASE_URL = "localhost:11434"
-OLLAMA_TEMPERATURE = ""
-OLLAMA_STREAM = ""
-
-AGENTS_COUNT = 0
 
 
 # Default prompt to generate the .json files for the frontend and backend
 DEFAULT_PROMPT = """
-You are a developer specialized in JSON files generation.
+You are a developer specialized in JSON files generation and
+Python Langchain Tools implementation.
 Your task is to create the JSON files for the frontend and backend
-of the given application.
+of the given application and the Langchain Tools to perform the search,
+insert and update operations.
 """
 USER_MESSAGE_PROMPT = """
 The given application and its schema/table descriptions are described below:
@@ -50,16 +64,21 @@ The given application and its schema/table descriptions are described below:
 ----------------
 Based on the following documentation and examples:
 {files}
-Give me ONLY the generic CRUD editor configuration JSON files for
-the given application.
-The JSON files must be build according to the specifications and instructions
+Give me the generic CRUD editor configuration JSON files for
+the given application, and the python code to implement the Langchain Tools
+to perform the search, insert and update operations for the given application
+tables.
+The JSON files must be build according to the specs and instructions
 in the `Generic-CRUD-Editor-Configuration.md` file.
-The JSON example files: `frontend/users.json`, `frontend/users_config.json`,
+The example files: `frontend/users.json`, `frontend/users_config.json`,
 `backend/users.json`, and `backend/users_config.json` are included only as
-a reference.
-Don't give recommendations, observations, or explanations, just
-give me the JSON files names and content for the given application
-(not the JSON example files).
+a reference for you to know how to build the JSON files.
+The Python files: `ai_gpt_fn_index.py` and `ai_gpt_fn_tables.py`
+are included as a reference for you to know how to implement the
+Langchain Tools.
+Don't give recommendations, observations, or explanations about the database,
+just give me the names and content of JSON files (not the JSON example files)
+for the given application and the Langchain Tools python code.
 """
 
 
@@ -86,6 +105,8 @@ class JsonGenerator:
         )
         self.final_input = None
         self.final_summary = None
+        self.provider_model_used = None
+        self.model_config = {}
 
     def read_arguments(self):
         """
@@ -103,7 +124,7 @@ class JsonGenerator:
             '--provider',
             type=str,
             default=DEFAULT_AI_PROVIDER,
-            help='Provider to use (ollama, nvidia, chat_openai). ' +
+            help='Provider to use (ollama, nvidia, chat_openai, groq). ' +
             f'Default: {DEFAULT_MODEL_TO_USE}'
         )
         parser.add_argument(
@@ -115,20 +136,20 @@ class JsonGenerator:
         parser.add_argument(
             '--temperature',
             type=str,
-            default=OLLAMA_TEMPERATURE,
+            default=DEFAULT_TEMPERATURE,
             help=f'Temperature to use. Default: {0.5}'
         )
         parser.add_argument(
             '--stream',
             type=str,
-            default=OLLAMA_STREAM,
+            default=DEFAULT_STREAM,
             help=f'Stream to use. Default: {"1"}'
         )
         parser.add_argument(
-            '--agents_count',
+            '--DEFAULT_AGENTS_COUNT',
             type=int,
-            default=AGENTS_COUNT,
-            help=f'Number of agents to use. Default: {AGENTS_COUNT}'
+            default=DEFAULT_AGENTS_COUNT,
+            help=f'Number of agents to use. Default: {DEFAULT_AGENTS_COUNT}'
         )
         parser.add_argument(
             '--ollama_base_url',
@@ -239,38 +260,54 @@ class JsonGenerator:
             return self.unify_messages(messages)
         return messages
 
+    def get_openai_api_response(self, response_raw: Any) -> str:
+        """
+        Returns the response from the OpenAI API
+        """
+        if self.model_config.get('stream', False):
+            response = ""
+            for chunk in response_raw:
+                if chunk.choices[0].delta.content is not None:
+                    print(chunk.choices[0].delta.content, end="")
+                    response += chunk.choices[0].delta.content
+        else:
+            response = response_raw.choices[0].message.content
+        return response
+
     def get_model_response(self, model: str, messages: list):
         """
         Returns the response from the model
         """
-        model_config = {
+        self.model_config = {
             'messages': self.fix_messages(messages),
             'model': model,
         }
 
         if self.args.temperature:
             if self.args.provider == "ollama":
-                model_config['options'] = {
+                self.model_config['options'] = {
                     "temperature": float(self.args.temperature)
                 }
             else:
-                model_config['temperature'] = float(self.args.temperature)
+                self.model_config['temperature'] = float(self.args.temperature)
         elif self.args.provider == "nvidia":
-            model_config['temperature'] = 0.5
+            self.model_config['temperature'] = 0.5
 
         if self.args.stream:
-            model_config['stream'] = self.args.stream == "1"
+            self.model_config['stream'] = self.args.stream == "1"
         if self.args.provider == "nvidia":
-            model_config['stream'] = True
+            self.model_config['stream'] = True
 
         # Reference:
         # https://pypi.org/project/ollama/
         # https://github.com/ollama/ollama/blob/main/docs/api.md
         #
+        self.provider_model_used = \
+            f"Provider: {self.args.provider}" + \
+            f" | Model: {self.model_config['model']}"
         self.log_debug("")
-        self.log_debug(f"Provider: {self.args.provider}" +
-                       f" | Model: {model_config['model']}")
-        # self.log_debug_structured(model_config)
+        self.log_debug(self.provider_model_used)
+        # self.log_debug_structured(self.model_config)
 
         if self.args.provider == "ollama":
             if self.args.ollama_base_url:
@@ -279,41 +316,62 @@ class JsonGenerator:
                     f" {self.args.ollama_base_url}")
                 self.log_debug("")
                 client = Client(host=self.args.ollama_base_url)
-                response_raw = client.chat(**model_config)
+                response_raw = client.chat(**self.model_config)
             else:
-                response_raw = ollama.chat(**model_config)
+                response_raw = ollama.chat(**self.model_config)
             response = response_raw['message']['content']
 
+        elif self.args.provider == "groq":
+            client = Groq(
+                api_key=os.environ.get("GROQ_API_KEY"),
+            )
+            response_raw = client.chat.completions.create(
+                **self.model_config)
+            response = response_raw.choices[0].message.content
+
         elif self.args.provider == "nvidia":
+            # Reference:
+            # https://build.nvidia.com/nvidia/llama-3_1-nemotron-70b-instruct
             client = OpenAI(
                 base_url="https://integrate.api.nvidia.com/v1",
                 api_key=os.environ.get("NVIDIA_API_KEY"),
             )
-            completion = client.chat.completions.create(
+            response_raw = client.chat.completions.create(
                 top_p=1,
                 # max_tokens=1024,
-                **model_config
-            )
-            response = ""
-            for chunk in completion:
-                if chunk.choices[0].delta.content is not None:
-                    print(chunk.choices[0].delta.content, end="")
-                    response += chunk.choices[0].delta.content
+                **self.model_config)
+            response = self.get_openai_api_response(response_raw)
 
-        elif self.args.provider == "chat_openai":
+        elif self.args.provider == "rhymes":
+            # Reference:
+            # https://lablab.ai/t/aria-api-tutorial
+            client = OpenAI(
+                base_url='https://api.rhymes.ai/v1',
+                api_key=os.environ.get("RHYMES_ARIA_API_KEY"),
+            )
+            response_raw = client.chat.completions.create(
+                stop=["<|im_end|>"],
+                top_p=1,
+                # max_tokens=1024,
+                **self.model_config)
+            response = self.get_openai_api_response(response_raw)
+
+        elif self.args.provider == "chat_openai" \
+                or self.args.provider == "openai":
             client = OpenAI(
                 api_key=os.environ.get("OPENAI_API_KEY"),
             )
             response_raw = client.chat.completions.create(
                 top_p=1,
-                **model_config
-            )
-            response = response_raw.choices[0].message.content
+                **self.model_config)
+            response = self.get_openai_api_response(response_raw)
+
         else:
             raise ValueError(f"Invalid provider: {self.args.provider}")
 
-        self.log_debug("")
-        self.log_debug(f'Response: {response}')
+        # Model response debugging
+        # self.log_debug("")
+        # self.log_debug(f'Response: {response}')
 
         return response
 
@@ -323,7 +381,7 @@ class JsonGenerator:
         """
         system_prompt = 'You are o1, an AI assistant focused on clear ' + \
             'step-by-step reasoning. Break every task into ' + \
-            f'{self.args.agents_count} actionable step(s). ' + \
+            f'{self.args.DEFAULT_AGENTS_COUNT} actionable step(s). ' + \
             'Always answer in short.' \
             if not is_final else \
             'Summarize the following plan and its implementation into a ' + \
@@ -464,6 +522,8 @@ class JsonGenerator:
                 f.write(self.final_input)
                 f.write("\n")
             f.write("\n")
+            f.write(f">>> Generated by: {self.provider_model_used}")
+            f.write("\n")
             f.write(">>> Final summary:\n")
             f.write("\n")
             f.write(self.final_summary)
@@ -475,7 +535,7 @@ class JsonGenerator:
         """
         start_time = self.log_procesing_time(
             "Main process" +
-            f"{self.args.agents_count} agent steps...")
+            f"{self.args.DEFAULT_AGENTS_COUNT} agent steps...")
 
         # Step # 1: Get high level plan from CEO
         initial_plan = self.CEO_Agent(f'{self.prompt}\n{self.user_input}')
@@ -483,7 +543,7 @@ class JsonGenerator:
         # Step # 2: Create agents, execute all agent steps, and get detailed
         # implementation for each step
         agents = [self.create_agent(i)
-                  for i in range(1, self.args.agents_count + 1)]
+                  for i in range(1, self.args.DEFAULT_AGENTS_COUNT + 1)]
         implementations = [agent(initial_plan) for agent in agents]
 
         # Step # 3: Combine everything to get the final summary from CEO
@@ -540,7 +600,7 @@ class JsonGenerator:
         """
         Main entry point to generate the .json files
         """
-        if self.args.agents_count == 0:
+        if self.args.DEFAULT_AGENTS_COUNT == 0:
             # If the number of agents is 0, we don't need to use the agents
             return self.simple_processing()
         else:
