@@ -218,7 +218,7 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
             echo "${SCRIPTS_DIR}/../secure_local_server/run.sh"
             ${SCRIPTS_DIR}/../secure_local_server/run.sh "run" ${STAGE}
         else
-            echo "pipenv run run gunicorn --bind 0.0.0.0:${BACKEND_LOCAL_PORT} ${APP_DIR}.${APP_MAIN_FILE}:app --reload  --forwarded-allow-ips=${IP_ADDRESS}"
+            echo "pipenv run gunicorn --bind 0.0.0.0:${BACKEND_LOCAL_PORT} ${APP_DIR}.${APP_MAIN_FILE}:app --reload  --forwarded-allow-ips=${IP_ADDRESS}"
             echo ""
             pipenv run gunicorn ${APP_DIR}.${APP_MAIN_FILE}:app \
                 --bind 0.0.0.0:${BACKEND_LOCAL_PORT} \
