@@ -17,6 +17,17 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
+## Unreleased
+## 1.0.13 (2025-01-07)
+---
+
+### Changes
+The "--loglevel debug" option were added to the gunicorn server for Generic Endpoint Builder for Flask [GS-15].
+
+### Fixes
+Fix flask run with gunicorn when local machine is running a VPN, getting the local IP address, which is the first one reported by the "ifconfig" command  [GS-15]
+
+
 ## 1.0.12 (2024-10-07)
 ---
 

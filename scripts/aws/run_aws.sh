@@ -229,6 +229,7 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
                 --forwarded-allow-ips="${IP_ADDRESS},127.0.0.1,0.0.0.0" \
                 --do-handshake-on-connect \
                 --strip-header-spaces \
+                --log-level debug \
                 --env PORT=${BACKEND_LOCAL_PORT} \
                 --env APP_STAGE="${APP_STAGE}"
         fi
