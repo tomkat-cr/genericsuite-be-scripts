@@ -17,6 +17,17 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
+## Unreleased
+## 1.0.14 (2025-02-19)
+---
+
+### New
+Add the "link_gs_libs_for_dev.sh" script to link LOCAL GenericSuite libraries and trigger the uvicorn/gunicorn reload without need to run "pipenv update". Add to the Makefie and run with `make link_gs_libs` [FA-84].
+
+### Fixes
+Fix poetry 2.x "The option --no-update does not exist" error message [FA-84].
+
+
 ## 1.0.13 (2025-02-18)
 ---
 

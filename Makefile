@@ -97,12 +97,16 @@ mongo_restore:
 	# E.g. STAGE=qa RESTORE_DIR=/tmp/exampleapp make mongo_restore
 	sh node_modules/genericsuite-be-scripts/scripts/mongo/db_mongo_restore.sh ${STAGE} ${RESTORE_DIR}
 
+link_gs_libs:
+	sh node_modules/genericsuite-be-scripts/scripts/link_gs_libs_for_dev.sh
+
 ## Chalice Specific Commands
 
 config:
 	sh node_modules/genericsuite-be-scripts/scripts/aws/set_chalice_cnf.sh prod
 
 config_dev:
+	sh node_modules/genericsuite-be-scripts/scripts/aws/set_chalice_cnf.sh
 	sh node_modules/genericsuite-be-scripts/scripts/aws/set_chalice_cnf.sh
 
 config_local:
@@ -308,7 +312,8 @@ publish:
 
 pypi-build:
 	# Build 'dist' directory needed for the Pypi publish
-	poetry lock --no-update
+	poetry lock
+	# poetry lock --no-update
 	rm -rf dist
 	python3 -m build
 
