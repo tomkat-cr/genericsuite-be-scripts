@@ -1974,13 +1974,19 @@ if [ "${ACTION}" = "sam_run_local" ]; then
   echo "${TMP_WORKING_DIR}"
   echo ""
   SAM_BUILD_OPTIONS=""
-  if [ "${REQUIREMENTS_REBUILD}" = "1" ]; then
+  if [ "${SAM_BUILD_CONTAINER}" = "1" ]; then
+    SAM_BUILD_OPTIONS="${SAM_BUILD_OPTIONS} --use-container --debug"
+    echo ""
+    echo "SAM_BUILD_CONTAINER was set. Using --use-container and --debug flags..."
+  elif [ "${REQUIREMENTS_REBUILD}" = "1" ]; then
     SAM_BUILD_OPTIONS="${SAM_BUILD_OPTIONS} --debug"
-    # SAM_BUILD_OPTIONS="${SAM_BUILD_OPTIONS} --use-container"
+    echo ""
+    echo "REQUIREMENTS_REBUILD was set (because requirements.txt changed). Using --debug flag..."
   fi
   # "sam build" is always needed...
-  # if ! sam build --use-container --debug
-  # if ! sam build --debug
+  echo ""
+  echo "Running: sam build ${SAM_BUILD_OPTIONS}"
+  echo ""
   if ! sam build ${SAM_BUILD_OPTIONS}
   then
     echo ""

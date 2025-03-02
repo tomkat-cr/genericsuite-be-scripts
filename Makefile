@@ -23,10 +23,14 @@ locked_dev:
 locked_install:
 	pipenv install --ignore-pipfile
 
-lock_pip_file:
-	sh node_modules/genericsuite-be-scripts/scripts/aws/run_aws.sh pipfile
+lock:
+	pipenv lock
 
-requirements: lock_pip_file
+# lock_pip_file:
+# 	sh node_modules/genericsuite-be-scripts/scripts/aws/run_aws.sh pipfile
+
+requirements:
+	sh node_modules/genericsuite-be-scripts/scripts/aws/run_aws.sh pipfile
 
 ## Cleaning
 
@@ -299,7 +303,8 @@ init_chalice:
 
 ## NPM scripts library
 
-lock:
+# lock:
+npm_lock:
 	npm install --package-lock-only
 
 pre-publish:

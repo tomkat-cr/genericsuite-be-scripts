@@ -22,7 +22,12 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ---
 
 ### New
-Add the "link_gs_libs_for_dev.sh" script to link LOCAL GenericSuite libraries and trigger the uvicorn/gunicorn reload without need to run "pipenv update". Add to the Makefie and run with `make link_gs_libs` [FA-84].
+Add the "link_gs_libs_for_dev.sh" script to link LOCAL GenericSuite libraries and trigger the uvicorn/gunicorn reload without need to run "pipenv update". Add to the Makefile and run with `make link_gs_libs` [FA-84].
+Add the BASE_DEVELOPMENT_PATH envvar to specify the base development path (parent directory of the current repository) when running "make link_gs_libs_for_dev" [FA-84].
+Add the SAM_BUILD_CONTAINER envvar to force "sam build --use-container --debug" when "make deploy_run_local_qa" is executed [GS-87].
+
+### Changes
+Remove "make lock_pip_file", add "make lock" and "make npm_lock" [FA-84] [GS-15].
 
 ### Fixes
 Fix poetry 2.x "The option --no-update does not exist" error message [FA-84].
