@@ -32,6 +32,7 @@ Remove "make lock_pip_file" and replace it with "make requirements". Add "make l
 ### Fixes
 Fix poetry 2.x "The option --no-update does not exist" error message [FA-84].
 Fix TMP_BUILD_DIR assignment in dynamodb deploy script.
+Fix error with Bottleneck building https dev environment due to missing "gcc" in the "python:3.11-slim" image [GS-197].
 
 
 ## 1.0.13 (2025-02-18)

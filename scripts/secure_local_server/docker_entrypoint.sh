@@ -21,7 +21,7 @@ then
 fi
 echo ""
 echo "Installing OS dependencies..."
-if ! apt-get install -y git
+if ! apt-get install -y git gcc libpq-dev
 then
     echo ""
     echo "Error installing OS dependencies"
