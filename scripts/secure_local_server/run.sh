@@ -160,15 +160,6 @@ prepare_docker_conf() {
     ls -lah ${TMP_WORKING_DIR}/docker-compose.yml
 }
 
-stop_sls_docker_containers() {
-    cd "${TMP_WORKING_DIR}"
-    docker-compose down
-    docker stop sls-backend
-    docker rm sls-backend
-    docker stop sls-nginx
-    docker rm sls-nginx
-}
-
 prepare_environment() {
     # Verify if SSL certificates exist... if not, generate it
     ssl_certificates_verification
@@ -178,6 +169,15 @@ prepare_environment() {
     generate_requirements
     # Prepare Docker configuration in tmp dir
     prepare_docker_conf
+}
+
+stop_sls_docker_containers() {
+    cd "${TMP_WORKING_DIR}"
+    docker-compose down
+    docker stop sls-backend
+    docker rm sls-backend
+    docker stop sls-nginx
+    docker rm sls-nginx
 }
 
 start_sls_docker_containers() {
@@ -193,7 +193,21 @@ start_sls_docker_containers() {
     fi
     docker ps
     # Leave the logs view while the container is running
-    docker logs sls-backend -f
+    docker-compose logs -f
+}
+
+restart_sls_docker_containers() {
+    # Restart the App in the docker container from the tmp dir.
+    cd "${TMP_WORKING_DIR}"
+    if ! docker-compose restart; then
+        echo ""
+        echo "ERROR: Could not restart the local backend server over a secure connection [1]."
+        echo ""
+        exit 1
+    fi
+    docker ps
+    # Leave the logs view while the container is running
+    docker-compose logs -f
 }
 
 # ..................
@@ -266,32 +280,36 @@ if [ "${ACTION}" = "" ] || [ "${ACTION}" = "run" ]; then
         # Attach to the container to see server activity
         echo ""
         echo "The local backend server is already running."
-        echo "Do you want to 1) Rebuild, 2) Attach or 3) View Logs (default) ? (1/2/3)"
+        echo "Do you want to 0) Restart, 1) Rebuild, 2) Attach or 3) View Logs (default) ? (0/1/2/3)"
         read ANSWER
-        if [ "${ANSWER}" = "1" ]; then
+        if [ "${ANSWER}" = "0" ]; then
+            # >> Restart:
+            restart_sls_docker_containers
+        elif [ "${ANSWER}" = "1" ]; then
+            # >> Rebuild:
             cd "${TMP_WORKING_DIR}"
             # Stop SLS docker containers
             stop_sls_docker_containers
             # Start SLS docker containers
             start_sls_docker_containers
+        elif [ "${ANSWER}" = "2" ]; then
+            # >> Attach:
+            # key sequence to detach from docker-compose up
+            # https://github.com/docker/compose/issues/4560
+            # CTRL-Z, then disown %1 to release the job
+            echo ""
+            echo "Attaching to the container to see server activity."
+            echo "To detach from the container, press Ctrl+Z and run:"
+            echo "disown %1"
+            echo ""
+            docker attach sls-backend
         else
-            if [ "${ANSWER}" = "2" ]; then
-                # key sequence to detach from docker-compose up
-                # https://github.com/docker/compose/issues/4560
-                # CTRL-Z, then disown %1 to release the job
-                echo ""
-                echo "Attaching to the container to see server activity."
-                echo "To detach from the container, press Ctrl+Z and run:"
-                echo "disown %1"
-                echo ""
-                docker attach sls-backend
-            else
-                echo ""
-                echo "Viewing the logs of the local backend server over a secure connection."
-                echo "To stop logs view, press Ctrl+C."
-                echo ""
-                docker logs sls-backend -f
-            fi
+            # >> View Logs:
+            echo ""
+            echo "Viewing the logs of the local backend server over a secure connection."
+            echo "To stop logs view, press Ctrl+C."
+            echo ""
+            docker-compose logs -f
         fi
     fi
 fi

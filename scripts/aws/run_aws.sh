@@ -45,10 +45,6 @@ export APP_NAME_LOWERCASE=$(echo ${APP_NAME} | tr '[:upper:]' '[:lower:]')
 
 AWS_STACK_NAME='${APP_NAME_LOWERCASE}-be-stack'
 
-SSL_KEY_PATH="./app.${APP_NAME_LOWERCASE}.local.key"
-SSL_CERT_PATH="./app.${APP_NAME_LOWERCASE}.local.chain.crt"
-SSL_CA_CERT_PATH="./ca.crt"
-
 # RUN_METHOD="uvicorn"
 # RUN_METHOD="gunicorn"
 # RUN_METHOD="chalice"

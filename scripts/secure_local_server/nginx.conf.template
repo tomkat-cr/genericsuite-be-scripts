@@ -15,6 +15,9 @@ http {
         listen 80;
         server_name app.APP_NAME_LOWERCASE_placeholder.local; # Replace with your domain or IP address
 
+        access_log /var/log/nginx/access.log;
+        error_log /var/log/nginx/error.log;
+
         location / {
             proxy_pass http://backend:8000; # Name of your Python backend container
             proxy_set_header Host $host;
@@ -31,6 +34,11 @@ http {
 
         ssl_certificate /etc/nginx/ssl/app.APP_NAME_LOWERCASE_placeholder.local.crt; # Path to your SSL certificate
         ssl_certificate_key /etc/nginx/ssl/app.APP_NAME_LOWERCASE_placeholder.local.key; # Path to your SSL certificate key
+        ssl_client_certificate /etc/nginx/ssl/ca.crt; # Path to your CA certificate
+        # ssl_trusted_certificate /etc/nginx/ssl/app.APP_NAME_LOWERCASE_placeholder.local.chain.crt; # Path to your SSL certificate chain
+
+        access_log /var/log/nginx/access.log;
+        error_log /var/log/nginx/error.log;
 
         location / {
             proxy_pass http://backend:8000; # Name of your Python backend container

@@ -20,8 +20,11 @@ set -e
 
 # Default values
 
-# SSL_CERT_GEN_METHOD=""
-SSL_CERT_GEN_METHOD="office-addin-dev-certs"
+if [ "${SSL_CERT_GEN_METHOD}" = "" ]; then
+    SSL_CERT_GEN_METHOD="mkcert"
+    # SSL_CERT_GEN_METHOD="office-addin-dev-certs"
+    # SSL_CERT_GEN_METHOD="openssl"
+fi
 
 set -o allexport; source .env; set +o allexport ;
 
@@ -45,12 +48,55 @@ if [ "${domain}" = "" ]; then
     fi
 fi
 
+destination_dir="$2"
+if [ "${destination_dir}" = "" ]; then
+    destination_dir="."
+fi
+
 # Directories
 directory_csr="/tmp"
-directory_key="."
-directory_crt="."
+directory_key="${destination_dir}"
+directory_crt="${destination_dir}"
 
-if [ "${SSL_CERT_GEN_METHOD}" = "office-addin-dev-certs" ]; then
+cert_key="$directory_key/${domain}.key"
+cert_crt="$directory_crt/${domain}.crt"
+cert_chain="$directory_crt/${domain}.chain.crt"
+cert_ca="$directory_crt/ca.crt"
+
+if [ "${SSL_CERT_GEN_METHOD}" = "mkcert" ]; then
+    # Generate and Trust a Local Certificate Authority
+    # Use a tool like mkcert to create a local Certificate Authority (CA) and generate trusted SSL certificates for your development environment.
+    # https://github.com/FiloSottile/mkcert
+
+    # 1) Install mkcert in MacOS:
+    brew install mkcert nss
+
+    # 2) Install the local CA:
+    mkcert -install
+
+    # 3) Generate a certificate for the local domain name, e.g. app.exampleapp.local, in the current directory:
+    mkcert -key-file "${cert_key}" -cert-file "${cert_crt}" "${domain}"
+
+    mkcert_cert_ca_path="$(mkcert -CAROOT)/rootCA.pem"
+
+    echo ""
+    echo "Copying: '${mkcert_cert_ca_path}' to '${cert_ca}'"
+    if ! cp -p "${mkcert_cert_ca_path}" "${cert_ca}"
+    then
+        echo ""
+        echo "Error copying mkcert CA certificate"
+        exit 1
+    fi
+    echo ""
+    echo "Concatenating: '${cert_crt}' and '${cert_ca}' to '${cert_chain}'"
+    if ! cat "${cert_crt}" "${cert_ca}" > "${cert_chain}"
+    then
+        echo ""
+        echo "Error concatenating mkcert CA certificate and certificate"
+        exit 1
+    fi
+
+elif [ "${SSL_CERT_GEN_METHOD}" = "office-addin-dev-certs" ]; then
     src_directory="${HOME}/.office-addin-dev-certs"
 
     echo "You'll be asked for your user's password to generate the SSL keys..."
@@ -84,23 +130,6 @@ if [ "${SSL_CERT_GEN_METHOD}" = "office-addin-dev-certs" ]; then
     cp $src_directory/localhost.crt $directory_crt/${domain}.crt
     cp $src_directory/ca.crt $directory_crt/ca.crt
 
-    echo
-    echo "--------------------------------------"
-    echo "-----Below is your CA Certificate-----"
-    echo "---------------------------------------"
-    echo "Filespec: $directory_crt/ca.crt"
-    echo "---------------------------------------"
-    echo
-    cat $directory_crt/ca.crt 
-
-    echo
-    echo "-----------------------------------------"
-    echo "-----Below is your Chain Certificate-----"
-    echo "-----------------------------------------"
-    echo "Filespec: $directory_crt/${domain}.chain.crt"
-    echo "-----------------------------------------"
-    echo
-    cat $directory_crt/ca.crt 
 else
     # Required
     commonname=$domain
@@ -138,8 +167,18 @@ else
     openssl req -new -key $directory_key/${domain}.key -out $directory_csr/$domain.csr -passin pass:$password -subj "/C=$country/ST=$state/L=$locality/O=$organization/OU=$organizationalunit/CN=$commonname/emailAddress=$email"
 
     # Generate the cert (good for 1 years)
+    echo "Generating certificate"
     openssl x509 -req -days 365 -in $directory_csr/$domain.csr -signkey $directory_key/${domain}.key -out $directory_crt/${domain}.crt 
 
+    # Creating the ca.crt file
+    echo "Creating ca.crt file"
+    cp -p $directory_crt/${domain}.crt $directory_crt/ca.crt
+
+    # Creating the chain file
+    echo "Creating chain file"
+    cat $directory_crt/${domain}.crt $directory_crt/ca.crt > $directory_crt/${domain}.chain.crt
+
+    echo ""
     echo "---------------------------"
     echo "-----Below is your CSR-----"
     echo "---------------------------"
@@ -153,19 +192,37 @@ echo
 echo "---------------------------"
 echo "-----Below is your Key-----"
 echo "---------------------------"
-echo "Filespec: $directory_key/${domain}.key"
+echo "Filespec: $cert_key"
 echo "---------------------------"
 echo
-cat $directory_key/${domain}.key
+cat $cert_key
 
 echo
 echo "-----------------------------------"
 echo "-----Below is your Certificate-----"
 echo "-----------------------------------"
-echo "Filespec: $directory_crt/${domain}.crt"
+echo "Filespec: $cert_crt"
 echo "-----------------------------------"
 echo
-cat $directory_crt/${domain}.crt 
+cat $cert_crt 
+
+echo
+echo "-----------------------------------------"
+echo "-----Below is your CA Certificate-----"
+echo "-----------------------------------------"
+echo "Filespec: $cert_ca"
+echo "-----------------------------------------"
+echo
+cat $cert_ca 
+
+echo
+echo "-----------------------------------------"
+echo "-----Below is your Chain Certificate-----"
+echo "-----------------------------------------"
+echo "Filespec: $cert_chain"
+echo "-----------------------------------------"
+echo
+cat $cert_chain 
 
 echo ""
 echo "Done!"
