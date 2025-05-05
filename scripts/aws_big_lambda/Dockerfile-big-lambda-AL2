@@ -13,9 +13,12 @@ RUN yum -y upgrade
     # https://github.com/docker/compose/issues/8105
     # https://github.com/pyca/cryptography/blob/main/docs/installation.rst#alpine
 
+# Install gcc, g++ and other development tools
+RUN yum -y groupinstall 'Development Tools'
+
 RUN yum -y install \
     libxslt-devel libxml2-devel \
-    redhat-rpm-config gcc libffi-devel python3-devel openssl-devel cargo pkg-config \
+    redhat-rpm-config libffi-devel python3-devel openssl-devel cargo pkg-config \
     git
 
 # To avoid: "The extension's directory "/opt/extensions" does not exist, assuming no extensions to be loaded."

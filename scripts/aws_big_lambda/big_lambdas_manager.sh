@@ -736,18 +736,34 @@ create_sam_yaml() {
 
 verify_requirements_with_local_dependencies() {
     echo ""
+
     LOCAL_DEPENDENCIES_ERROR=""
-    # Verify "Local" dependencies
-    if grep -q "-e ..\/genericsuite-be-ai" "${REPO_BASEDIR}/requirements.txt"; then
-        echo "Local Genericsuite-BE-AI found in requirements.txt..."
+    local_ge_be_ai=""
+    local_ge_be_core=""
+
+    echo "Checking "Local" dependencies..."
+    local_ge_count=$(grep -c "\.\.\/genericsuite-be" "${REPO_BASEDIR}/requirements.txt")
+    if [ "${local_ge_count}" != "" ]; then
+        if [ ${local_ge_count} -gt 1 ]; then
+            local_ge_be_ai="1"
+            local_ge_be_core="1"
+        elif [ ${local_ge_count} -gt 0 ]; then
+            local_ge_be_core="1"
+        fi
+    fi
+    if [ "${local_ge_be_ai}" != "" ]; then
+        echo ""
+        echo "Local Genericsuite AI found in requirements.txt..."
         echo "It was installed with e.g. pipenv install ../genericsuite-be-ai"
         LOCAL_DEPENDENCIES_ERROR="1"
     fi
-    if grep -q "-e ..\/genericsuite-be" "${REPO_BASEDIR}/requirements.txt"; then
-        echo "Local Genericsuite-BE found in requirements.txt..."
+    if [ "${local_ge_be_core}" != "" ]; then
+        echo ""
+        echo "Local Genericsuite Core found in requirements.txt..."
         echo "It was installed with e.g. pipenv install ../genericsuite-be"
         LOCAL_DEPENDENCIES_ERROR="1"
     fi
+
     # Local dependecies are not allowed because it makes the docker image for deployment creation to fail
     if [ "${LOCAL_DEPENDENCIES_ERROR}" = "1" ]; then
         echo ""
@@ -756,17 +772,36 @@ verify_requirements_with_local_dependencies() {
         echo "   pipenv install genericsuite-ai"
         echo "   pipenv install genericsuite"
         echo "   or"
-        echo "   pipenv install git+https://github.com/tomkat-cr/genericsuite-be-ai"
+        echo "   pipenv install git+https://github.com/tomkat-cr/genericsuite-be-ai@branch_name"
         echo "   pipenv install git+https://github.com/tomkat-cr/genericsuite-be@branch_name"
         exit_abort
     fi
-    # Verify "Git" dependencies
+
+    local_ge_be_ai=""
+    local_ge_be_core=""
+
+    echo "Checking "Git" dependencies..."
+    echo ""
+
     if grep -q "genericsuite-ai@ git" "${REPO_BASEDIR}/requirements.txt"; then
-        echo "Git Genericsuite-BE-AI found in requirements.txt..."
-        LOCAL_DEPENDENCIES_ERROR="1"
+        local_ge_be_ai="1"
+    fi
+    if grep -q "genericsuite-ai @ git" "${REPO_BASEDIR}/requirements.txt"; then
+        local_ge_be_ai="1"
     fi
     if grep -q "genericsuite@ git" "${REPO_BASEDIR}/requirements.txt"; then
-        echo "Git Genericsuite-BE found in requirements.txt..."
+        local_ge_be_core="1"
+    fi
+    if grep -q "genericsuite @ git" "${REPO_BASEDIR}/requirements.txt"; then
+        local_ge_be_core="1"
+    fi
+
+    if [ "${local_ge_be_ai}" != "" ]; then
+        echo "Git Genericsuite AI found in requirements.txt..."
+        LOCAL_DEPENDENCIES_ERROR="1"
+    fi
+    if [ "${local_ge_be_core}" != "" ]; then
+        echo "Git Genericsuite Core found in requirements.txt..."
         LOCAL_DEPENDENCIES_ERROR="1"
     fi
     # Local dependecies are allowed but warn about it just in case a commit+push is needed...
@@ -791,9 +826,13 @@ requirements_rebuild() {
 }
 
 build_docker() {
-    requirements_rebuild
-    verify_requirements_with_local_dependencies
+    # Create and upload the docker image to ECR (docker_image, ecr_image)
+
+    # requirements_rebuild
+    # verify_requirements_with_local_dependencies
     docker_system_prune
+
+    # Prepare the build directory
 
     echo "Building Docker image..."
     echo prepare_tmp_build_dir
@@ -841,10 +880,12 @@ build_docker() {
     cd ${TMP_BUILD_DIR}
     pwd
 
+    # Build the docker image (previously buildx)
     echo ""
-    echo docker buildx build --platform linux/amd64 -t docker-image:${DOCKER_IMAGE_NAME} . 
-    docker buildx build --platform linux/amd64 -t docker-image:${DOCKER_IMAGE_NAME} . 
+    echo "docker buildx build --platform linux/amd64 -t docker-image:${DOCKER_IMAGE_NAME} --provenance=false ."
+    docker buildx build --platform linux/amd64 -t docker-image:${DOCKER_IMAGE_NAME} --provenance=false . 
 
+    # Run the docker container for the local testing
     echo ""
     echo docker run -d --platform linux/amd64 --name ${LOCAL_LAMBDA_DOCKER_NAME} -p 9000:8080 ${ENV_VARIABLES_DOCKER_RUN} docker-image:${DOCKER_IMAGE_NAME}
     docker run -d --platform linux/amd64 --name ${LOCAL_LAMBDA_DOCKER_NAME} -p 9000:8080 ${ENV_VARIABLES_DOCKER_RUN} docker-image:${DOCKER_IMAGE_NAME}
@@ -853,6 +894,7 @@ build_docker() {
     echo "Wait for the container to finish bootstrap..."
     sleep 5
 
+    # Test the docker container
     echo ""
     echo test_lambda_docker
     test_lambda_docker
@@ -862,6 +904,7 @@ build_docker() {
     cd ${TMP_BUILD_DIR}
     pwd
 
+    # Stop and remove the docker container
     echo ""
     echo docker kill ${LOCAL_LAMBDA_DOCKER_NAME}
     docker kill ${LOCAL_LAMBDA_DOCKER_NAME}
@@ -1552,7 +1595,7 @@ docker_dependencies() {
       echo "Opening Docker Desktop..."
       if ! open /Applications/Docker.app
       then
-          echo ""
+          echo "" 
           echo "Could not run Docker Desktop automatically"
           exit_abort
       else
@@ -1747,6 +1790,12 @@ echo "2) Stage (STAGE): ${STAGE}"
 echo "3) Frontend Directory (FRONTEND_DIRECTORY): ${FRONTEND_DIRECTORY}"
 echo ""
 echo "==========================="
+
+# Re-build requirements if Pipfile changed
+requirements_rebuild
+
+# Verify local requirements and avoid "-e ../genericsuite..."
+verify_requirements_with_local_dependencies
 
 if [[ "${ACTION}" = "sam_validate" || "${ACTION}" = "package" || "${ACTION}" = "sam_run_local" ]]; then
   COPY_VERSION_TO_FRONTEND="0"
@@ -1956,14 +2005,11 @@ if [ "${ACTION}" = "sam_run_local" ]; then
   REMOVE_TEMP_FILES="0"
 
   # Re-build requirements if Pipfile changed
-  requirements_rebuild
-  # cd "${REPO_BASEDIR}"
-  # if [[ Pipfile -nt requirements.txt ]]; then
-  #   make requirements
-  # fi
+  # requirements_rebuild
 
   # Verify local requirements and avoid "-e ../genericsuite..."
-  verify_requirements_with_local_dependencies
+  # verify_requirements_with_local_dependencies
+
   # Prepare SAM template.yml
   prepare_tmp_build_dir
   # Build local SAM project

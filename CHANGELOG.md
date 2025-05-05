@@ -34,9 +34,12 @@ Remove "make lock_pip_file" and replace it with "make requirements". Add "make l
 
 ### Fixes
 Fix poetry 2.x "The option --no-update does not exist" error message [FA-84].
-Fix TMP_BUILD_DIR assignment in dynamodb deploy script.
-Fix error with Bottleneck building https dev environment due to missing "gcc" in the "python:3.11-slim" image [GS-197].
+Fix error with the "Bottleneck" dependency building https dev environment (sls-backend) due to missing "gcc" in the "python:3.11-slim" image [GS-197].
+Fix the GenericSuite dependencies verification in "big_lambdas_manager.sh" to abort the execution if there are local dependencies [FA-169].
+Fix missing "g++" running docker build in "big_lambdas_manager.sh", adding "RUN yum -y groupinstall 'Development Tools'" to the "Dockerfile-big-lambda-AL2" [FA-169].
+Fix the error "The image manifest, config or layer media type for the source image xx.dkr.ecr.us-east-1.amazonaws.com/xxx:version is not supported" running docker build in "big_lambdas_manager.sh", adding `--provenance=false` to stop BuiltKit from generating said manifest [FA-169].
 Fix the net:ERR_CERT_AUTHORITY_INVALID error in GenericSuite FE/BE using the https protocol [GS-198].
+Fix TMP_BUILD_DIR assignment in dynamodb deploy script.
 
 
 ## 1.0.13 (2025-02-18)
