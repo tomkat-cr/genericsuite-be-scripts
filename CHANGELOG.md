@@ -26,8 +26,10 @@ Add the "link_gs_libs_for_dev.sh" script to link LOCAL GenericSuite libraries an
 Add the BASE_DEVELOPMENT_PATH envvar to specify the GS base development path (parent directory of genericsuite-be* repos) to enable "make link_gs_libs_for_dev" [FA-84].
 Add the SAM_BUILD_CONTAINER envvar to force "sam build --use-container --debug" when "make deploy_run_local_qa" is executed [GS-87].
 Add the "mkcert" method to enhance the self-signed SSL certificates creation for the local development environment using "https" (previously it was using "office-addin-dev-certs" by default) [GS-198].
-Add: restart option to "secure_local_server/run.sh", so the backend dev container should not be rebuilt if it's not necesaty [GS-198].
-Add: error and access logs to the secure_local_server nginx [GS-198].
+Add restart option to "secure_local_server/run.sh", so the backend dev container should not be rebuilt if it's not necesaty [GS-198].
+Add error and access logs to the secure_local_server nginx [GS-198].
+Add GOOGLE_MAPS_API_KEY, ANTHROPIC_API_KEY, GROQ_API_KEY, AIMLAPI_API_KEY, NVIDIA_API_KEY, RHYMES_CHAT_API_KEY, RHYMES_VIDEO_API_KEY, IBM_WATSONX_API_KEY, IBM_WATSONX_PROJECT_ID, OPENROUTER_API_KEY, XAI_API_KEY, TOGETHER_API_KEY to the EXTENSION_SECRETS envvar in aws_secrets_manager.sh [GS-198].
+ 
 
 ### Changes
 Remove "make lock_pip_file" and replace it with "make requirements". Add "make lock" and "make npm_lock" [FA-84] [GS-15].
