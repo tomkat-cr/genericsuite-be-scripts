@@ -14,6 +14,23 @@ yes_or_no() {
   done
 }
 
+docker_dependencies() {
+    if ! source "${SCRIPTS_DIR}/../../container_engine_manager.sh" start "${CONTAINERS_ENGINE}"
+    then
+        echo ""
+        echo "Could not run container engine '${CONTAINERS_ENGINE}' automatically"
+        echo ""
+        exit 1
+    fi
+
+    if [ "${DOCKER_CMD}" = "" ]; then
+        echo ""
+        echo "DOCKER_CMD is not set"
+        echo ""
+        exit 1
+    fi
+}
+
 if [ "${ACTION}" = "" ]; then
     ACTION="$1"
 fi
@@ -35,6 +52,8 @@ SCRIPTS_DIR="`pwd`" ;
 
 WORKING_DIR="/tmp/generate_dynamodb_cf"
 mkdir -p "${WORKING_DIR}"
+
+docker_dependencies
 
 python -m venv venv
 . venv/bin/activate
@@ -96,7 +115,7 @@ if [ "${ACTION}" = "create_tables" ]; then
     # "create_tables": create the tables in the local Docker DynamoDB instance.
     
     # Verify if DynamoDB local container is running to avoid cycling "make mongo_docker" call
-    if ! docker ps | grep dynamodb-local -q
+    if ! ${DOCKER_CMD} ps | grep dynamodb-local -q
     then
         cd "${REPO_BASEDIR}"
         if ! make mongo_docker

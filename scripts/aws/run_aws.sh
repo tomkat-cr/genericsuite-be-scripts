@@ -82,6 +82,9 @@ if [ "$1" = "pipfile" ]; then
     pipenv --python ${PYTHON_VERSION}
     pipenv lock
     pipenv requirements > ${REPO_BASEDIR}/requirements.txt
+    # if ! grep -q "setuptools" ${REPO_BASEDIR}/requirements.txt; then
+    #     echo "setuptools>=75.5.0 # not directly required, pinned by Snyk to avoid a vulnerability" >> ${REPO_BASEDIR}/requirements.txt
+    # fi
 fi
 
 if [ "$1" = "clean" ]; then
@@ -125,22 +128,30 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
     echo "Stage: ${STAGE}"
     echo "Port: ${BACKEND_LOCAL_PORT}"
     echo "Run method (RUN_METHOD): ${RUN_METHOD}"
+    echo "Run protocol (RUN_PROTOCOL): ${RUN_PROTOCOL}"
     echo "Python entry point (APP_DIR.APP_MAIN_FILE): ${APP_DIR}.${APP_MAIN_FILE}"
     echo ""
 
     export IP_ADDRESS=$(sh ${SCRIPTS_DIR}/../get_localhost_ip.sh)
     export APP_VERSION=$(cat ${REPO_BASEDIR}/version.txt)
 
-    echo "Run over: 1) http, 2) https ?"
-    read RUN_PROTOCOL
-    while [[ ! ${RUN_PROTOCOL} =~ ^[12]$ ]]; do
-        echo "Please enter 1 or 2"
+    if [ "${RUN_PROTOCOL}" = "" ]; then
+        echo "Run over: 1) http, 2) https ?"
         read RUN_PROTOCOL
-    done
-    if [ "${RUN_PROTOCOL}" = "1" ]; then
-        export RUN_PROTOCOL="http"
-    else
-        export RUN_PROTOCOL="https"
+        while [[ ! ${RUN_PROTOCOL} =~ ^[12]$ ]]; do
+            echo "Please enter 1 or 2"
+            read RUN_PROTOCOL
+        done
+        if [ "${RUN_PROTOCOL}" = "1" ]; then
+            export RUN_PROTOCOL="http"
+        else
+            export RUN_PROTOCOL="https"
+        fi
+    elif [ "${RUN_PROTOCOL}" != "http" ]; then
+        if [ "${RUN_PROTOCOL}" != "https" ]; then
+            echo "ERROR: Invalid run protocol: ${RUN_PROTOCOL}"
+            exit 1
+        fi
     fi
 
     if [ "${STAGE}" = "dev" ];then

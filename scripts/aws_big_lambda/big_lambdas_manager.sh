@@ -225,8 +225,8 @@ docker_system_prune() {
     if [[ ${DOCKER_PRUNE} = "y" ]]; then
       # To handle the error "yum install ... Disk Requirements: ... At least ...MB more space needed on the / filesystem." during the "docker buildx build ..."
       echo ""
-      echo docker system prune -a
-      docker system prune -a
+      echo ${DOCKER_CMD} system prune -a
+      ${DOCKER_CMD} system prune -a
       echo ""
     fi
 }    
@@ -843,8 +843,8 @@ build_docker() {
     cd ${TMP_BUILD_DIR}
 
     echo ""
-    echo docker-compose -f docker-compose-big-lambda-${TARGET_OS}.yml down
-    docker-compose -f docker-compose-big-lambda-${TARGET_OS}.yml down
+    echo ${DOCKER_COMPOSE_CMD} -f docker-compose-big-lambda-${TARGET_OS}.yml down
+    ${DOCKER_COMPOSE_CMD} -f docker-compose-big-lambda-${TARGET_OS}.yml down
 
     echo ""
     echo "Removing unnecessary files..."
@@ -864,11 +864,11 @@ build_docker() {
     # Build and test
 
     echo ""
-    if ! docker kill ${LOCAL_LAMBDA_DOCKER_NAME}
+    if ! ${DOCKER_CMD} kill ${LOCAL_LAMBDA_DOCKER_NAME}
     then
       echo ">> R: ${LOCAL_LAMBDA_DOCKER_NAME} container is not running..."
     fi
-    if ! docker rm ${LOCAL_LAMBDA_DOCKER_NAME}
+    if ! ${DOCKER_CMD} rm ${LOCAL_LAMBDA_DOCKER_NAME}
     then
       echo ">> R: ${LOCAL_LAMBDA_DOCKER_NAME} container doesn't exist..."
     fi
@@ -882,13 +882,13 @@ build_docker() {
 
     # Build the docker image (previously buildx)
     echo ""
-    echo "docker buildx build --platform linux/amd64 -t docker-image:${DOCKER_IMAGE_NAME} --provenance=false ."
-    docker buildx build --platform linux/amd64 -t docker-image:${DOCKER_IMAGE_NAME} --provenance=false . 
+    echo "${DOCKER_CMD} buildx build --platform linux/amd64 -t docker-image:${DOCKER_IMAGE_NAME} --provenance=false ."
+    ${DOCKER_CMD} buildx build --platform linux/amd64 -t docker-image:${DOCKER_IMAGE_NAME} --provenance=false . 
 
     # Run the docker container for the local testing
     echo ""
-    echo docker run -d --platform linux/amd64 --name ${LOCAL_LAMBDA_DOCKER_NAME} -p 9000:8080 ${ENV_VARIABLES_DOCKER_RUN} docker-image:${DOCKER_IMAGE_NAME}
-    docker run -d --platform linux/amd64 --name ${LOCAL_LAMBDA_DOCKER_NAME} -p 9000:8080 ${ENV_VARIABLES_DOCKER_RUN} docker-image:${DOCKER_IMAGE_NAME}
+    echo "${DOCKER_CMD} run -d --platform linux/amd64 --name ${LOCAL_LAMBDA_DOCKER_NAME} -p 9000:8080 ${ENV_VARIABLES_DOCKER_RUN} docker-image:${DOCKER_IMAGE_NAME}"
+    ${DOCKER_CMD} run -d --platform linux/amd64 --name ${LOCAL_LAMBDA_DOCKER_NAME} -p 9000:8080 ${ENV_VARIABLES_DOCKER_RUN} docker-image:${DOCKER_IMAGE_NAME}
 
     echo ""
     echo "Wait for the container to finish bootstrap..."
@@ -906,12 +906,12 @@ build_docker() {
 
     # Stop and remove the docker container
     echo ""
-    echo docker kill ${LOCAL_LAMBDA_DOCKER_NAME}
-    docker kill ${LOCAL_LAMBDA_DOCKER_NAME}
+    echo "${DOCKER_CMD} kill ${LOCAL_LAMBDA_DOCKER_NAME}"
+    ${DOCKER_CMD} kill ${LOCAL_LAMBDA_DOCKER_NAME}
 
     echo ""
-    echo docker rm ${LOCAL_LAMBDA_DOCKER_NAME}
-    docker rm ${LOCAL_LAMBDA_DOCKER_NAME}
+    echo "${DOCKER_CMD} rm ${LOCAL_LAMBDA_DOCKER_NAME}"
+    ${DOCKER_CMD} rm ${LOCAL_LAMBDA_DOCKER_NAME}
 
     # Deploy ECR image
 
@@ -922,8 +922,8 @@ build_docker() {
       echo ""
       echo "Login ECR"
       echo ""
-      echo "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_DOCKER_IMAGE_URI_BASE}"
-      aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_DOCKER_IMAGE_URI_BASE}
+      echo "aws ecr get-login-password --region ${AWS_REGION} | ${DOCKER_CMD} login --username AWS --password-stdin ${AWS_DOCKER_IMAGE_URI_BASE}"
+      aws ecr get-login-password --region ${AWS_REGION} | ${DOCKER_CMD} login --username AWS --password-stdin ${AWS_DOCKER_IMAGE_URI_BASE}
       
       echo ""
       echo "Create repository"
@@ -946,14 +946,14 @@ build_docker() {
       echo ""
       echo "Tag docker image"
       echo ""
-      echo "docker tag docker-image:${DOCKER_IMAGE_NAME} ${AWS_DOCKER_IMAGE_URI}"
-      docker tag docker-image:${DOCKER_IMAGE_NAME} ${AWS_DOCKER_IMAGE_URI}
+      echo "${DOCKER_CMD} tag docker-image:${DOCKER_IMAGE_NAME} ${AWS_DOCKER_IMAGE_URI}"
+      ${DOCKER_CMD} tag docker-image:${DOCKER_IMAGE_NAME} ${AWS_DOCKER_IMAGE_URI}
       
       echo ""
       echo "Docker push"
       echo ""
-      echo docker push ${AWS_DOCKER_IMAGE_URI}
-      docker push ${AWS_DOCKER_IMAGE_URI}
+      echo "${DOCKER_CMD} push ${AWS_DOCKER_IMAGE_URI}"
+      ${DOCKER_CMD} push ${AWS_DOCKER_IMAGE_URI}
     fi
     echo ""
     echo "Deploy ECR image - END"
@@ -1569,9 +1569,9 @@ test_lambda_docker() {
 '}
     echo ""
     echo ""
-    echo "2.5)" docker logs ${LOCAL_LAMBDA_DOCKER_NAME}
+    echo "2.5)" ${DOCKER_CMD} logs ${LOCAL_LAMBDA_DOCKER_NAME}
     echo ""
-    docker logs ${LOCAL_LAMBDA_DOCKER_NAME}
+    ${DOCKER_CMD} logs ${LOCAL_LAMBDA_DOCKER_NAME}
     echo ""
 }
 
@@ -1580,37 +1580,34 @@ test_nginx() {
     echo ""
     curl -XPOST "https://app.${APP_NAME_LOWERCASE}.local:${BACKEND_LOCAL_PORT}/users/login"
     echo ""
-    echo "3.5)" docker logs local-lambda-nginx
+    echo "3.5)" ${DOCKER_CMD} logs local-lambda-nginx
     echo ""
-    docker logs local-lambda-nginx
+    ${DOCKER_CMD} logs local-lambda-nginx
     echo ""
 }
 
 docker_dependencies() {
-  if ! docker ps > /dev/null 2>&1;
+  if ! source "${SCRIPTS_DIR}/../container_engine_manager.sh" start "${CONTAINERS_ENGINE}"
   then
-      # To restart Docker app:
-      # $ killall Docker
-      echo ""
-      echo "Opening Docker Desktop..."
-      if ! open /Applications/Docker.app
-      then
-          echo "" 
-          echo "Could not run Docker Desktop automatically"
-          exit_abort
-      else
-          sleep 20
-      fi
+      echo "" 
+      echo "Could not run container engine '${CONTAINERS_ENGINE}' automatically"
+      exit_abort
   fi
 
-  if ! docker ps > /dev/null 2>&1;
+  if [ "${DOCKER_CMD}" = "" ]; then
+      echo "" 
+      echo "DOCKER_CMD is empty"
+      exit_abort
+  fi
+
+  if ! ${DOCKER_CMD} ps > /dev/null 2>&1;
   then
       echo ""
       echo "Docker is not running"
       exit_abort
   fi
 
-  if ! docker ps | grep dns-server -q
+  if ! ${DOCKER_CMD} ps | grep dns-server -q
   then
       echo ""
       echo "0)" make local_dns
@@ -1915,12 +1912,12 @@ if [ "${ACTION}" = "down" ]; then
         prepare_tmp_build_dir
     fi
     # set -o allexport; . "${TMP_BUILD_DIR}/set_env_vars.sh" ; set +o allexport ;
-    docker-compose -f ${TMP_BUILD_DIR}/docker-compose-big-lambda-${TARGET_OS}.yml down
-    docker ps
+    ${DOCKER_COMPOSE_CMD} -f ${TMP_BUILD_DIR}/docker-compose-big-lambda-${TARGET_OS}.yml down
+    ${DOCKER_CMD} ps
 fi
 
 if [ "${ACTION}" = "enter" ]; then
-    docker exec -ti ${LOCAL_LAMBDA_DOCKER_NAME} sh
+    ${DOCKER_CMD} exec -ti ${LOCAL_LAMBDA_DOCKER_NAME} sh
 fi
 
 if [ "${ACTION}" = "test" ]; then
@@ -1957,16 +1954,16 @@ fi
 
 if [ "${ACTION}" = "rebuild" ]; then
     prepare_tmp_build_dir
-    if docker ps | grep ${LOCAL_LAMBDA_DOCKER_NAME} -q
+    if ${DOCKER_CMD} ps | grep ${LOCAL_LAMBDA_DOCKER_NAME} -q
     then
         echo ""
-        echo docker-compose -f ${TMP_BUILD_DIR}/docker-compose-big-lambda-${TARGET_OS}.yml down
-        docker-compose -f ${TMP_BUILD_DIR}/docker-compose-big-lambda-${TARGET_OS}.yml down
+        echo ${DOCKER_COMPOSE_CMD} -f ${TMP_BUILD_DIR}/docker-compose-big-lambda-${TARGET_OS}.yml down
+        ${DOCKER_COMPOSE_CMD} -f ${TMP_BUILD_DIR}/docker-compose-big-lambda-${TARGET_OS}.yml down
     fi
     echo ""
-    echo docker-compose -f ${TMP_BUILD_DIR}/docker-compose-big-lambda-${TARGET_OS}.yml up -d --build
-    docker-compose -f ${TMP_BUILD_DIR}/docker-compose-big-lambda-${TARGET_OS}.yml up -d --build
-    docker ps
+    echo ${DOCKER_COMPOSE_CMD} -f ${TMP_BUILD_DIR}/docker-compose-big-lambda-${TARGET_OS}.yml up -d --build
+    ${DOCKER_COMPOSE_CMD} -f ${TMP_BUILD_DIR}/docker-compose-big-lambda-${TARGET_OS}.yml up -d --build
+    ${DOCKER_CMD} ps
     echo ""
     echo "Rebuild done"
     echo ""
@@ -1975,17 +1972,17 @@ fi
 
 if [ "${ACTION}" = "" ]; then
     prepare_tmp_build_dir
-    if docker ps | grep ${LOCAL_LAMBDA_DOCKER_NAME} -q
+    if ${DOCKER_CMD} ps | grep ${LOCAL_LAMBDA_DOCKER_NAME} -q
     then
         echo ""
-        echo docker restart ${LOCAL_LAMBDA_DOCKER_NAME}
-        docker restart ${LOCAL_LAMBDA_DOCKER_NAME}
+        echo ${DOCKER_CMD} restart ${LOCAL_LAMBDA_DOCKER_NAME}
+        ${DOCKER_CMD} restart ${LOCAL_LAMBDA_DOCKER_NAME}
     else
         echo ""
-        echo docker-compose -f ${TMP_BUILD_DIR}/docker-compose-big-lambda-${TARGET_OS}.yml up -d
-        docker-compose -f ${TMP_BUILD_DIR}/docker-compose-big-lambda-${TARGET_OS}.yml up -d
+        echo ${DOCKER_COMPOSE_CMD} -f ${TMP_BUILD_DIR}/docker-compose-big-lambda-${TARGET_OS}.yml up -d
+        ${DOCKER_COMPOSE_CMD} -f ${TMP_BUILD_DIR}/docker-compose-big-lambda-${TARGET_OS}.yml up -d
     fi
-    docker ps
+    ${DOCKER_CMD} ps
     echo ""
     echo "All is set!"
     echo ""
@@ -2060,8 +2057,8 @@ fi
 if [ "${ACTION}" = "package" ]; then
   DOCKER_IMAGE_NAME="${DOCKER_IMAGE_NAME}_${APP_VERSION}"
   echo "Removing docker image docker-image:${DOCKER_IMAGE_NAME}..."
-  if docker image inspect docker-image:${DOCKER_IMAGE_NAME} > /dev/null 2>&1; then
-    docker rmi docker-image:${DOCKER_IMAGE_NAME}
+  if ${DOCKER_CMD} image inspect docker-image:${DOCKER_IMAGE_NAME} > /dev/null 2>&1; then
+    ${DOCKER_CMD} rmi docker-image:${DOCKER_IMAGE_NAME}
     echo "Docker image docker-image:${DOCKER_IMAGE_NAME} removed successfully."
   else
     echo "Docker image docker-image:${DOCKER_IMAGE_NAME} does not exist."

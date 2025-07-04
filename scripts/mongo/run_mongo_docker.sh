@@ -13,29 +13,24 @@ exit_abort() {
 }
 
 docker_dependencies() {
-  if ! docker ps > /dev/null 2>&1;
-  then
-      # To restart Docker app:
-      # $ killall Docker
-      echo ""
-      echo "Opening Docker Desktop..."
-      if ! open /Applications/Docker.app
-      then
-          echo ""
-          echo "Could not run Docker Desktop automatically"
-          exit_abort
-      else
-          sleep 20
-      fi
-      CREATE_TABLES="1"
-  fi
+    if ! source "${SCRIPTS_DIR}/../container_engine_manager.sh" start "${CONTAINERS_ENGINE}"
+    then
+        echo ""
+        echo "Could not run container engine '${CONTAINERS_ENGINE}' automatically"
+        exit_abort
+    fi
 
-  if ! docker ps > /dev/null 2>&1;
-  then
-      echo ""
-      echo "Docker is not running"
-      exit_abort
-  fi
+    if [ "${DOCKER_WAS_NOT_RUNNING}" = "1" ]; then
+        # If docker is not running, the tables must be created
+        CREATE_TABLES="1"
+    fi
+
+    if [ "${DOCKER_CMD}" = "" ]; then
+        echo ""
+        echo "DOCKER_CMD is not set"
+        echo ""
+        exit 1
+    fi
 }
 
 ERROR=""
@@ -95,7 +90,7 @@ if [ "${ACTION}" == "" ] || [ "${ACTION}" == "up" ] || [ "${ACTION}" == "run" ];
         # Verify if Docker Destop is running
         docker_dependencies
         # Verify if MongoDB local container is running to avoid re-loading
-        if docker ps | grep mongo-db -q
+        if ${DOCKER_CMD} ps | grep mongo-db -q
         then
             echo ""
             echo "MongoDb docker container was already started..."
@@ -105,14 +100,14 @@ if [ "${ACTION}" == "" ] || [ "${ACTION}" == "up" ] || [ "${ACTION}" == "run" ];
             echo ""
             echo "Starting MongoDb docker container..."
             echo ""
-            if docker-compose -f ${SCRIPTS_DIR}/mongodb_stack_for_test.yml up -d
+            if ${DOCKER_COMPOSE_CMD} -f ${SCRIPTS_DIR}/mongodb_stack_for_test.yml up -d
             then
                 echo ""
                 echo "MongoDb docker container started successfully."
                 echo ""
                 export APP_DB_NAME=mongo
                 export APP_DB_URI=mongodb://root:example@127.0.0.1:27017/
-                docker ps ;
+                ${DOCKER_CMD} ps ;
                 CREATE_TABLES="1"
             else
                 ERROR="ERROR: could not start mongo docker container" ;
@@ -151,13 +146,13 @@ if [ "${ACTION}" == "" ] || [ "${ACTION}" == "up" ] || [ "${ACTION}" == "run" ];
         # Verify local DynamoDb container is started
         if [ "${ERROR}" == "" ]; then
             if [ "${APP_DB_ENGINE_DEV}" == "DYNAMO_DB" ]; then
-                if ! docker ps | grep dynamodb-local -q
+                if ! ${DOCKER_CMD} ps | grep dynamodb-local -q
                 then
                     ERROR="ERROR: Failed to start the local Docker DynamoDB database container"
                     echo ""
                     echo "For some reason, the local Docker DynamoDB database container is not running."
                     echo "The logs are:"
-                    docker logs dynamodb-local
+                    ${DOCKER_CMD} logs dynamodb-local
                     echo ""
                     echo "Shutting down the databases container to fix this error on the next run"
                     echo ""
@@ -188,8 +183,8 @@ fi
 if [ "${ACTION}" == "down" ]; then
     if [ "${ERROR}" == "" ]; then
         echo "Starting MongoDb local docker container unmount..."
-        echo "docker-compose -f ${SCRIPTS_DIR}/mongodb_stack_for_test.yml down"
-        if docker-compose -f "${SCRIPTS_DIR}/mongodb_stack_for_test.yml" down
+        echo "${DOCKER_COMPOSE_CMD} -f ${SCRIPTS_DIR}/mongodb_stack_for_test.yml down"
+        if ${DOCKER_COMPOSE_CMD} -f "${SCRIPTS_DIR}/mongodb_stack_for_test.yml" down
         then
             ERROR="MongoDb local docker container UNMOUNTED successfully."
         fi

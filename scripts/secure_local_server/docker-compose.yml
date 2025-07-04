@@ -33,7 +33,8 @@ services:
     environment:
       - APP_NAME_LOWERCASE=${APP_NAME_LOWERCASE}
     volumes:
-      - ${TMP_WORKING_DIR}/nginx.conf.tmp:/etc/nginx/nginx.conf
+      # - ${TMP_WORKING_DIR}/nginx.conf.tmp:/etc/nginx/nginx1.conf
+      - ${TMP_WORKING_DIR}/conf.d/:/etc/nginx/conf.d/:Z
       - ${REPO_BASEDIR}/app.${APP_NAME_LOWERCASE}.local.key:/etc/nginx/ssl/app.${APP_NAME_LOWERCASE}.local.key
       - ${REPO_BASEDIR}/app.${APP_NAME_LOWERCASE}.local.crt:/etc/nginx/ssl/app.${APP_NAME_LOWERCASE}.local.crt
       - ${REPO_BASEDIR}/app.${APP_NAME_LOWERCASE}.local.chain.crt:/etc/nginx/ssl/app.${APP_NAME_LOWERCASE}.local.chain.crt

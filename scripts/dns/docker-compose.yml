@@ -1,4 +1,3 @@
-version: '3'
 services:
   dns-server:
     build:
@@ -10,7 +9,7 @@ services:
       #   Mac OS Sonoma use Port 53
       #   https://developer.apple.com/forums/thread/738662
       # As a workaround, deactivate network acceleration by adding "kernelForUDP": false, in the settings.json
-      # $ code "${HOME}/Library/Group Containers/group.com.docker/settings.json"
+      # $ nano "${HOME}/Library/Group Containers/group.com.docker/settings.json"
       # Change:
       #   "kernelForUDP": true,
       # With:
