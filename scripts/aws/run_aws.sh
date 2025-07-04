@@ -51,7 +51,7 @@ fi
 
 export APP_NAME_LOWERCASE=$(echo ${APP_NAME} | tr '[:upper:]' '[:lower:]')
 
-AWS_STACK_NAME='${APP_NAME_LOWERCASE}-be-stack'
+AWS_STACK_NAME="${APP_NAME_LOWERCASE}-be-stack"
 
 # Default RUN_METHOD:
 # RUN_METHOD="uvicorn"
@@ -293,11 +293,13 @@ fi
 
 if [ "$1" = "create_stack" ]; then
     check_chalice_framework
+    echo "Running: aws cloudformation deploy --template-file \"${REPO_BASEDIR}/.chalice/dynamodb_cf_template.yaml\" --stack-name \"${AWS_STACK_NAME}\""
     aws cloudformation deploy --template-file "${REPO_BASEDIR}/.chalice/dynamodb_cf_template.yaml" --stack-name "${AWS_STACK_NAME}"
 fi
 
 if [ "$1" = "describe_stack" ]; then
     check_chalice_framework
+    echo "Running: aws cloudformation describe-stack-events --stack-name \"${AWS_STACK_NAME}\""
     aws cloudformation describe-stack-events --stack-name "${AWS_STACK_NAME}"
 fi
 
@@ -305,11 +307,13 @@ if [ "$1" = "delete_app" ]; then
     # Delete application
     check_chalice_framework
     cd ${REPO_BASEDIR}
+    echo "Running: pipenv run chalice delete --stage ${STAGE}"
     pipenv run chalice delete --stage ${STAGE}
 fi
 
 if [ "$1" = "delete_stack" ]; then
     # Delete DynamoDb tables
     check_chalice_framework
+    echo "Running: aws cloudformation delete-stack --stack-name \"${AWS_STACK_NAME}\""
     aws cloudformation delete-stack --stack-name "${AWS_STACK_NAME}"
 fi

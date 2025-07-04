@@ -44,6 +44,8 @@ Fix missing "g++" running docker build in "big_lambdas_manager.sh", adding "RUN 
 Fix the error "The image manifest, config or layer media type for the source image xx.dkr.ecr.us-east-1.amazonaws.com/xxx:version is not supported" running docker build in "big_lambdas_manager.sh", adding `--provenance=false` to stop BuiltKit from generating said manifest [FA-169].
 Fix the net:ERR_CERT_AUTHORITY_INVALID error in GenericSuite FE/BE using the https protocol [GS-198].
 Fix TMP_BUILD_DIR assignment in dynamodb deploy script.
+Fix "run_aws.sh" to assign the correct AWS Stack Name and avoid the error "An error occurred (ValidationError) when calling the DescribeStacks operation: 1 validation error detected: Value '${APP_NAME_LOWERCASE}-be-stack' at 'stackName' failed to satisfy constraint: Member must satisfy regular expression pattern: [a-zA-Z][-a-zA-Z0-9]*|arn:[-a-zA-Z0-9:/._+]*" [GS-137].
+Fix ".chalice/config_example.json" to remove the API_GATEWAY_STAGE_placeholder from the "api_gateway_stage" attribute and assign the correct value, and remove unused attributes in the QA stage [FA-248].
 
 
 ## 1.0.13 (2025-02-18)
