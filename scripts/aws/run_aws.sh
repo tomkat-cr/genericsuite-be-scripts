@@ -4,9 +4,11 @@
 #
 check_chalice_framework() {
     if [[ "${CURRENT_FRAMEWORK}" != "chalice" && "${CURRENT_FRAMEWORK}" != "chalice_docker" ]]; then
-        echo "CURRENT_FRAMEWORK '${CURRENT_FRAMEWORK}' doesn't need 'set_chalice_cnf.sh' script to run..."
+        echo "CURRENT_FRAMEWORK '${CURRENT_FRAMEWORK}' doesn't need 'set_chalice_cnf.sh' script to run [2]..."
         exit 0
     fi
+    echo "sh ${SCRIPTS_DIR}/set_chalice_cnf.sh ${STAGE}" http
+    sh ${SCRIPTS_DIR}/set_chalice_cnf.sh ${STAGE} http
 }
 
 REPO_BASEDIR="`pwd`"
@@ -214,8 +216,7 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
     echo "USER_AGENT: ${USER_AGENT}"
 
     if [ "${RUN_METHOD}" = "chalice" ]; then
-        echo "sh ${SCRIPTS_DIR}/set_chalice_cnf.sh ${STAGE}" http
-        sh ${SCRIPTS_DIR}/set_chalice_cnf.sh ${STAGE} http
+        check_chalice_framework
         echo ""
         echo "pipenv run chalice local --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT} --stage ${STAGE}"
         echo ""

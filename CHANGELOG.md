@@ -34,7 +34,7 @@ Implement Podman as an alternative to Docker [GS-215].
 
 ### Changes
 Remove "make lock_pip_file" and replace it with "make requirements". Add "make lock" and "make npm_lock" [FA-84] [GS-15].
-run_aws.sh validates that CURRENT_FRAMEWORK is Chalice for "run", "deploy", "create_stack", "describe_stack", "delete_app", "delete_stack" commands [GS-15].
+"run_aws.sh" validates that CURRENT_FRAMEWORK is Chalice for "run", "deploy", "create_stack", "describe_stack", "delete_app", "delete_stack" commands, and runs "set_chalice_cnf.sh" for all those commands when it's Chalice [GS-15].
 
 ### Fixes
 Fix poetry 2.x "The option --no-update does not exist" error message [FA-84].
