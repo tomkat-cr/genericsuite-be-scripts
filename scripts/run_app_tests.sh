@@ -24,13 +24,13 @@ CHALICE_ON=1
 PERFORM_TEST=1
 
 
-if ! ${SCRIPTS_DIR}/container_engine_manager.sh start "${CONTAINER_ENGINE}"; then
+if ! source ${SCRIPTS_DIR}/container_engine_manager.sh start "${CONTAINER_ENGINE}"; then
     ERROR_MSG="Running ${SCRIPTS_DIR}/container_engine_manager.sh start \"${CONTAINER_ENGINE}\""
 fi
   
 if [ "$ERROR_MSG" = "" ]; then
     if [ "${DOCKER_CMD}" = "" ];then
-        ERROR_MSG="ERROR: missing DOCKER_CMD."
+        ERROR_MSG="ERROR: missing DOCKER_CMD (test)."
     fi
 fi
 

@@ -6,7 +6,7 @@
 #
 exit_abort() {
   echo "Usage:"
-  echo "  source scripts/get_domain_name.sh STAGE APP_DOMAIN_NAME SELF_SCRIPTS_DIR"
+  echo "  source scripts/get_domain_name_dev.sh STAGE APP_DOMAIN_NAME SELF_SCRIPTS_DIR"
   echo "where..."
   echo "  STAGE: dev, qa, staging, demo, prod"
   echo "  APP_DOMAIN_NAME: domain name of the application. E.g. exampleapp.com"
@@ -290,6 +290,19 @@ STAGE="$1"
 APP_DOMAIN_NAME="$2"
 SELF_SCRIPTS_DIR="$3"
 
+if [ "${SELF_SCRIPTS_DIR}" = "" ];then
+  cd "`dirname "$0"`"
+  SELF_SCRIPTS_DIR="`pwd`"
+  cd "${REPO_BASEDIR}"
+fi
+
+if [ "${DOCKER_CMD}" = "" ];then
+  if ! source ${SELF_SCRIPTS_DIR}/container_engine_manager.sh start "${CONTAINER_ENGINE}"; then
+      echo "ERROR: Running ${SELF_SCRIPTS_DIR}/container_engine_manager.sh start \"${CONTAINER_ENGINE}\""
+      exit_abort
+  fi
+fi
+
 if [ "${DOCKER_CMD}" = "" ];then
   echo "ERROR: missing DOCKER_CMD."
   exit_abort
@@ -307,12 +320,6 @@ fi
 
 if [ "${RUN_PROTOCOL}" = "" ];then
   RUN_PROTOCOL="https"
-fi
-
-if [ "${SELF_SCRIPTS_DIR}" = "" ];then
-  cd "`dirname "$0"`"
-  SELF_SCRIPTS_DIR="`pwd`"
-  cd "${REPO_BASEDIR}"
 fi
 
 echo ""
