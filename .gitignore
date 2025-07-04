@@ -28,6 +28,7 @@ dump/
 
 node_modules
 
+# Chalice
 chalicelib/bin
 chalicelib/include
 chalicelib/lib
@@ -39,14 +40,14 @@ chalicelib/src
 .chalice/venv/
 .chalice/deployed/
 .chalice/config.json
+.chalice/deployment/deployment.zip
+.chalice/deployment/sam.json
+.chalice/policy-*.json
 
 # Editor
 .vscode
 .idea
 .python-version
-.chalice/deployment/deployment.zip
-.chalice/deployment/sam.json
-.chalice/policy-*.json
 
 # SSL Certificates used by the API webserver
 *.pem

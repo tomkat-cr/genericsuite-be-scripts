@@ -2,6 +2,12 @@
 # scripts/aws/run_aws.sh
 # 2023-02-02 | CR
 #
+check_chalice_framework() {
+    if [[ "${CURRENT_FRAMEWORK}" != "chalice" && "${CURRENT_FRAMEWORK}" != "chalice_docker" ]]; then
+        echo "CURRENT_FRAMEWORK '${CURRENT_FRAMEWORK}' doesn't need 'set_chalice_cnf.sh' script to run..."
+        exit 0
+    fi
+}
 
 REPO_BASEDIR="`pwd`"
 cd "`dirname "$0"`"
@@ -45,6 +51,7 @@ export APP_NAME_LOWERCASE=$(echo ${APP_NAME} | tr '[:upper:]' '[:lower:]')
 
 AWS_STACK_NAME='${APP_NAME_LOWERCASE}-be-stack'
 
+# Default RUN_METHOD:
 # RUN_METHOD="uvicorn"
 # RUN_METHOD="gunicorn"
 # RUN_METHOD="chalice"
@@ -115,13 +122,13 @@ if [ "$1" = "clean" ]; then
 fi
 
 if [[ "$1" = "test" ]]; then
-    # echo "Error: no test specified" && exit 1
     echo "Run test..."
     python -m pytest
     echo "Done..."
 fi
 
 if [[ "$1" = "run_local" || "$1" = "" ]]; then
+    # Run FastAPI, Flask or Chalice
     cd ${REPO_BASEDIR}
 
     echo ""
@@ -260,6 +267,8 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
 fi
 
 if [ "$1" = "run" ]; then
+    # Run Chalice
+    check_chalice_framework
     cd ${REPO_BASEDIR}
     echo ""
     echo "PRODUCCION RUNNING: pipenv run chalice local --port ${BACKEND_LOCAL_PORT} --stage PROD"
@@ -268,6 +277,7 @@ if [ "$1" = "run" ]; then
 fi
 
 if [ "$1" = "deploy" ]; then
+    check_chalice_framework
     # This must be run first (and it's run by "make"):
     #    pipenv requirements > ${REPO_BASEDIR}/requirements.txt
     # Check option "pipfile"
@@ -281,20 +291,24 @@ if [ "$1" = "deploy" ]; then
 fi
 
 if [ "$1" = "create_stack" ]; then
+    check_chalice_framework
     aws cloudformation deploy --template-file "${REPO_BASEDIR}/.chalice/dynamodb_cf_template.yaml" --stack-name "${AWS_STACK_NAME}"
 fi
 
 if [ "$1" = "describe_stack" ]; then
+    check_chalice_framework
     aws cloudformation describe-stack-events --stack-name "${AWS_STACK_NAME}"
 fi
 
 if [ "$1" = "delete_app" ]; then
     # Delete application
+    check_chalice_framework
     cd ${REPO_BASEDIR}
     pipenv run chalice delete --stage ${STAGE}
 fi
 
 if [ "$1" = "delete_stack" ]; then
     # Delete DynamoDb tables
+    check_chalice_framework
     aws cloudformation delete-stack --stack-name "${AWS_STACK_NAME}"
 fi
