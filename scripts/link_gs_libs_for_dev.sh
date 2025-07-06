@@ -29,7 +29,7 @@ link_gs_libs_for_dev() {
         exit 1
     fi
 
-    BASE_VIR_ENVS_PATH=`pipenv --venv | head -1`
+    BASE_VIR_ENVS_PATH=$(pipenv --venv | head -1)
     if [ "$BASE_VIR_ENVS_PATH" = "" ]; then
         echo "ERROR: No virtual environment found. Please run 'pipenv shell' first."
         exit 1

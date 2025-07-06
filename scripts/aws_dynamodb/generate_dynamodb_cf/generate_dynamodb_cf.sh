@@ -15,7 +15,7 @@ yes_or_no() {
 }
 
 docker_dependencies() {
-    if ! source "${SCRIPTS_DIR}/../../container_engine_manager.sh" start "${CONTAINERS_ENGINE}"
+    if ! source "${SCRIPTS_DIR}/../../container_engine_manager.sh" start "${CONTAINERS_ENGINE}" "${OPEN_CONTAINERS_ENGINE_APP}"
     then
         echo ""
         echo "Could not run container engine '${CONTAINERS_ENGINE}' automatically"

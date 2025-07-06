@@ -741,7 +741,7 @@ verify_requirements_with_local_dependencies() {
     local_ge_be_ai=""
     local_ge_be_core=""
 
-    echo "Checking "Local" dependencies..."
+    echo 'Checking "Local" dependencies...'
     local_ge_count=$(grep -c "\.\.\/genericsuite-be" "${REPO_BASEDIR}/requirements.txt")
     if [ "${local_ge_count}" != "" ]; then
         if [ ${local_ge_count} -gt 1 ]; then
@@ -780,7 +780,7 @@ verify_requirements_with_local_dependencies() {
     local_ge_be_ai=""
     local_ge_be_core=""
 
-    echo "Checking "Git" dependencies..."
+    echo 'Checking "Git" dependencies...'
     echo ""
 
     if grep -q "genericsuite-ai@ git" "${REPO_BASEDIR}/requirements.txt"; then
@@ -1587,7 +1587,7 @@ test_nginx() {
 }
 
 docker_dependencies() {
-  if ! source "${SCRIPTS_DIR}/../container_engine_manager.sh" start "${CONTAINERS_ENGINE}"
+  if ! source "${SCRIPTS_DIR}/../container_engine_manager.sh" start "${CONTAINERS_ENGINE}" "${OPEN_CONTAINERS_ENGINE_APP}"
   then
       echo "" 
       echo "Could not run container engine '${CONTAINERS_ENGINE}' automatically"

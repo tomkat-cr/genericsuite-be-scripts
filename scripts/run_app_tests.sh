@@ -24,8 +24,8 @@ CHALICE_ON=1
 PERFORM_TEST=1
 
 
-if ! source ${SCRIPTS_DIR}/container_engine_manager.sh start "${CONTAINER_ENGINE}"; then
-    ERROR_MSG="Running ${SCRIPTS_DIR}/container_engine_manager.sh start \"${CONTAINER_ENGINE}\""
+if ! source ${SCRIPTS_DIR}/container_engine_manager.sh start "${CONTAINER_ENGINE}" "${OPEN_CONTAINERS_ENGINE_APP}"; then
+    ERROR_MSG="Running ${SCRIPTS_DIR}/container_engine_manager.sh start \"${CONTAINER_ENGINE}\" \"${OPEN_CONTAINERS_ENGINE_APP}\""
 fi
   
 if [ "$ERROR_MSG" = "" ]; then

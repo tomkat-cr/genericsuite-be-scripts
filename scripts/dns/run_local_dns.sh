@@ -3,7 +3,7 @@
 # 2023-11-27 | CR
 
 docker_dependencies() {
-    if ! source "${SCRIPTS_DIR}/../container_engine_manager.sh" start "${CONTAINERS_ENGINE}"
+    if ! source "${SCRIPTS_DIR}/../container_engine_manager.sh" start "${CONTAINERS_ENGINE}" "${OPEN_CONTAINERS_ENGINE_APP}"
     then
         echo ""
         echo "Could not run container engine '${CONTAINERS_ENGINE}' automatically"
@@ -168,7 +168,7 @@ EOF
     cp ${SCRIPTS_DIR}/dns/Dockerfile.template ${TMP_WORKING_DIR}/dns/Dockerfile
     perl -i -pe "s|APP_NAME_LOWERCASE_placeholder|${APP_NAME_LOWERCASE}|g" "${TMP_WORKING_DIR}/dns/Dockerfile"
 
-    if ! source "${SCRIPTS_DIR}/container_engine_manager.sh" start "${CONTAINERS_ENGINE}"
+    if ! source "${SCRIPTS_DIR}/container_engine_manager.sh" start "${CONTAINERS_ENGINE}" "${OPEN_CONTAINERS_ENGINE_APP}"
     then
         echo ""
         echo "Could not run container engine '${CONTAINERS_ENGINE}' automatically"

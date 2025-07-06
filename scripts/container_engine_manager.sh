@@ -3,24 +3,26 @@
 # 2025-06-23 | CR
 
 # Usage:
-# sh container_engine_manager.sh <action> <engine>
-# action: start, stop, restart, status
-# engine: docker, [podman]
+# sh container_engine_manager.sh <action> <engine> <open_containers_engine_app>
+#   action: start, stop, restart, status
+#   engine: docker, [podman]
+#   open_containers_engine_app: [1]/0
 
 set_default_values() {
     # Set default values
     if [ "${CONTAINERS_ENGINE}" = "" ]; then
+        # Default containers engine:
         CONTAINERS_ENGINE="docker"
         # CONTAINERS_ENGINE="podman"
     fi
+    if [ "${OPEN_CONTAINERS_ENGINE_APP}" = "" ]; then
+        # Open containers engine app automatically by default
+        OPEN_CONTAINERS_ENGINE_APP="1"
+    fi
+    # Set commands to call the containers engine
     if [ "${CONTAINERS_ENGINE}" = "podman" ]; then
-        alias docker="podman"
-        alias docker-compose="podman compose"
         export DOCKER_CMD="podman"
         export DOCKER_COMPOSE_CMD="podman compose"
-        echo ""
-        echo "Aliases set:"
-        alias | grep docker
     else
         export DOCKER_CMD="docker"
         export DOCKER_COMPOSE_CMD="docker compose"
@@ -31,25 +33,22 @@ start_docker_engine() {
     if ! docker ps > /dev/null 2>&1;
     then
         export DOCKER_WAS_NOT_RUNNING="1"
-        # To restart Docker app:
-        echo ""
-        echo "Opening Docker Desktop..."
-        # if ! open "/Applications/Docker.app"
-        # if ! open "/Applications/Docker.app/Contents/MacOS/Docker Desktop.app"
-        if ! sudo open "/Applications/Docker.app"
-        then
-            echo "" 
-            echo "Could not run Docker Desktop automatically"
-            exit 1
-        else
-            sleep 20
+        if [ "${OPEN_CONTAINERS_ENGINE_APP}" = "1" ]; then
+            echo ""
+            echo "Opening Docker Desktop..."
+            if ! sudo open "/Applications/Docker.app"
+            then
+                echo "" 
+                echo "ERROR: Could not run Docker Desktop automatically"
+                exit 1
+            else
+                sleep 20
+            fi
         fi
         if ! docker ps > /dev/null 2>&1;
         then
             echo "" 
-            echo ">>> ERROR <<<"
-            echo "Could not run Docker Desktop automatically. Please run it manually."
-            echo ">>> ERROR <<<"
+            echo "ERROR: Could not run Docker Desktop automatically. Please start it manually."
             echo "" 
             exit 1
         fi
@@ -63,37 +62,49 @@ start_docker_engine() {
 start_podman_engine() {
     if ! podman --version > /dev/null 2>&1;
     then
-        echo ""
-        echo "Podman is not installed... running 'brew install podman'..."
-        if ! brew install podman
-        then
+        if [ "${OPEN_CONTAINERS_ENGINE_APP}" = "1" ]; then
             echo ""
-            echo "Could not install Podman automatically"
+            echo "ERROR: Podman is not installed... running 'brew install podman'..."
+            if ! brew install podman
+            then
+                echo ""
+                echo "ERROR: Could not install Podman automatically"
+                exit 1
+            fi
+        else
+            echo ""
+            echo "ERROR: Podman is not installed... run 'brew install podman' manually."
             exit 1
         fi
     fi
     if ! podman ps > /dev/null 2>&1;
     then
         export DOCKER_WAS_NOT_RUNNING="1"
-        if ! podman machine list | grep podman-machine-default -q
-        then
-            echo ""
-            echo "Podman machine 'podman-machine-default' does not exist... running 'podman machine init'..."
-            if ! podman machine init
+        if [ "${OPEN_CONTAINERS_ENGINE_APP}" = "1" ]; then
+            if ! podman machine list | grep podman-machine-default -q
             then
                 echo ""
-                echo "Could not initialize Podman automatically"
+                echo "Podman machine 'podman-machine-default' does not exist... running 'podman machine init'..."
+                if ! podman machine init
+                then
+                    echo ""
+                    echo "ERROR: Could not initialize Podman automatically"
+                    exit 1
+                fi
+            fi
+            # Start Podman
+            echo ""
+            echo "Starting podman machine..."
+            podman machine set --rootful=true --user-mode-networking=true
+            if ! podman machine start
+            then
+                echo "" 
+                echo "ERROR: Could not run podman machine start automatically"
                 exit 1
             fi
-        fi
-        # Start Podman
-        echo ""
-        echo "Starting podman machine..."
-        podman machine set --rootful=true --user-mode-networking=true
-        if ! podman machine start
-        then
-            echo "" 
-            echo "Could not run podman machine start automatically"
+        else
+            echo ""
+            echo "ERROR: Podman machine 'podman-machine-default' does not exist... run 'podman machine init' manually."
             exit 1
         fi
     else
@@ -104,6 +115,7 @@ start_podman_engine() {
 
 ACTION="$1"
 CONTAINERS_ENGINE="$2"
+OPEN_CONTAINERS_ENGINE_APP="$3"
 
 set_default_values
 
