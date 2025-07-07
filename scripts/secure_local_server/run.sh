@@ -243,6 +243,10 @@ if [ "${APP_NAME}" = "" ]; then
     exit 1
 fi
 
+if [ "$BACKEND_LOCAL_PORT" = "" ]; then
+    BACKEND_LOCAL_PORT="5001"
+fi
+
 export APP_NAME_LOWERCASE=$(echo ${APP_NAME} | tr '[:upper:]' '[:lower:]')
 export STAGE="$2"
 ACTION="$1"

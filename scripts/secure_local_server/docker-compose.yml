@@ -25,11 +25,13 @@ services:
     ports:
       # - "80:80"
       # - "443:443"
-      - "5001:443"
-      - "5002:80"
+      # - "5001:443"
+      # - "5002:80"
+      - "${BACKEND_LOCAL_PORT}:443"
     expose:
-      - 5001
-      - 5002
+      # - 5001
+      # - 5002
+      - "${BACKEND_LOCAL_PORT}"
     environment:
       - APP_NAME_LOWERCASE=${APP_NAME_LOWERCASE}
     volumes:

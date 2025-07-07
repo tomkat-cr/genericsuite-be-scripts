@@ -17,7 +17,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
-## 1.0.14 (2025-07-05)
+## 1.0.14 (2025-07-07)
 ---
 
 ### New
@@ -32,6 +32,7 @@ Add GOOGLE_MAPS_API_KEY, ANTHROPIC_API_KEY, GROQ_API_KEY, AIMLAPI_API_KEY, NVIDI
 Implement RUN_PROTOCOL envvar to have the http/https protocol automatically on app local running, no user intervention, as part of the Turborepo initiative [GS-188].
 Implement Podman as an alternative to Docker [GS-215].
 Add CONTAINER_ENGINE and OPEN_CONTAINERS_ENGINE_APP envvars to GenericSuite BE Core [GS-215].
+Add configurable backend port using the envvar BACKEND_LOCAL_PORT to the "sls" (secure local server) [GS-137].
 
 ### Changes
 Remove "make lock_pip_file" and replace it with "make requirements". Add "make lock" and "make npm_lock" [FA-84] [GS-15].
