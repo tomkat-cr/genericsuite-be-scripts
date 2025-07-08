@@ -1594,7 +1594,7 @@ docker_dependencies() {
       exit_abort
   fi
 
-  if [ "${DOCKER_CMD}" = "" ]; then
+  if [ -z "${DOCKER_CMD}" ]; then
       echo "" 
       echo "DOCKER_CMD is empty"
       exit_abort

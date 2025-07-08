@@ -23,17 +23,23 @@ services:
     container_name: sls-nginx
     image: nginx:latest
     ports:
-      # - "80:80"
       # - "443:443"
       # - "5001:443"
-      # - "5002:80"
       - "${BACKEND_LOCAL_PORT}:443"
+      # - "80:80"
+      # - "5002:80"
+      - "${BACKEND_DEBUG_LOCAL_PORT}:80"
     expose:
       # - 5001
-      # - 5002
       - "${BACKEND_LOCAL_PORT}"
+      # - 5002
+      - "${BACKEND_DEBUG_LOCAL_PORT}"
     environment:
       - APP_NAME_LOWERCASE=${APP_NAME_LOWERCASE}
+      - BACKEND_LOCAL_PORT=${BACKEND_LOCAL_PORT}
+      - BACKEND_DEBUG_LOCAL_PORT=${BACKEND_DEBUG_LOCAL_PORT}
+      - REPO_BASEDIR=${REPO_BASEDIR}
+      - SCRIPTS_DIR=${SCRIPTS_DIR}
     volumes:
       # - ${TMP_WORKING_DIR}/nginx.conf.tmp:/etc/nginx/nginx1.conf
       - ${TMP_WORKING_DIR}/conf.d/:/etc/nginx/conf.d/:Z

@@ -17,7 +17,7 @@ docker_dependencies() {
         exit 1
     fi
 
-    if [ "${DOCKER_CMD}" = "" ]; then
+    if [ -z "${DOCKER_CMD}" ]; then
         echo ""
         echo "DOCKER_CMD is not set"
         echo ""
@@ -182,6 +182,11 @@ start_sls_docker_containers() {
     prepare_environment
     # Run the App in the docker container from the tmp dir.
     cd "${TMP_WORKING_DIR}"
+    echo ""
+    echo "Running the local backend server over a secure connection..."
+    echo "BACKEND_LOCAL_PORT: ${BACKEND_LOCAL_PORT}"
+    echo "BACKEND_DEBUG_LOCAL_PORT: ${BACKEND_DEBUG_LOCAL_PORT}"
+    echo ""
     if ! ${DOCKER_COMPOSE_CMD} up -d ; then
         echo ""
         echo "ERROR: Could not run the local backend server over a secure connection [1]."
@@ -244,7 +249,11 @@ if [ "${APP_NAME}" = "" ]; then
 fi
 
 if [ "$BACKEND_LOCAL_PORT" = "" ]; then
-    BACKEND_LOCAL_PORT="5001"
+    export BACKEND_LOCAL_PORT="5001"
+fi
+
+if [ "$BACKEND_DEBUG_LOCAL_PORT" = "" ]; then
+    export BACKEND_DEBUG_LOCAL_PORT="5002"
 fi
 
 export APP_NAME_LOWERCASE=$(echo ${APP_NAME} | tr '[:upper:]' '[:lower:]')
@@ -267,6 +276,12 @@ echo "Python entry point (APP_DIR.APP_MAIN_FILE): ${APP_DIR}.${APP_MAIN_FILE}"
 echo ""
 echo "Scripts directory (SCRIPTS_DIR): ${SCRIPTS_DIR}"
 echo "Repository base directory (REPO_BASEDIR): ${REPO_BASEDIR}"
+echo ""
+echo "Ports:"
+echo "Backend local port (BACKEND_LOCAL_PORT): ${BACKEND_LOCAL_PORT}"
+echo "Backend debug local port (BACKEND_DEBUG_LOCAL_PORT): ${BACKEND_DEBUG_LOCAL_PORT}"
+echo ""
+echo "Docker command (DOCKER_CMD): ${DOCKER_CMD}"
 echo ""
 
 if [ "${ACTION}" = "" ] || [ "${ACTION}" = "run" ]; then

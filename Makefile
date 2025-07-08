@@ -111,7 +111,6 @@ config:
 
 config_dev:
 	sh node_modules/genericsuite-be-scripts/scripts/aws/set_chalice_cnf.sh
-	sh node_modules/genericsuite-be-scripts/scripts/aws/set_chalice_cnf.sh
 
 config_local:
 	sh node_modules/genericsuite-be-scripts/scripts/aws/set_chalice_cnf.sh mongo_docker

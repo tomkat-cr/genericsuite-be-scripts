@@ -11,7 +11,7 @@ docker_dependencies() {
         exit 1
     fi
 
-    if [ "${DOCKER_CMD}" = "" ]; then
+    if [ -z "${DOCKER_CMD}" ]; then
         echo ""
         echo "DOCKER_CMD is not set"
         echo ""
@@ -176,7 +176,7 @@ EOF
         exit 1
     fi
 
-    if [ "${DOCKER_CMD}" = "" ]; then
+    if [ -z "${DOCKER_CMD}" ]; then
         echo "" 
         echo "DOCKER_CMD is empty"
         exit_abort
