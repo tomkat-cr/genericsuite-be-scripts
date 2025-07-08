@@ -11,6 +11,9 @@ echo ""
 echo "Loading environment variables from '.env' file..."
 set -o allexport ; . .env ; set +o allexport
 
+APP_NAME_LOWERCASE=$(echo ${APP_NAME} | tr '[:upper:]' '[:lower:]')
+STAGE_UPPERCASE=$(echo $STAGE | tr '[:lower:]' '[:upper:]')
+
 echo ""
 echo "Installing OS updates..."
 if ! apt-get update -y
@@ -21,16 +24,20 @@ then
 fi
 echo ""
 echo "Installing OS dependencies..."
-if ! apt-get install -y git
+# gcc libpq-dev are required to compile python dependencies like bottleneck
+if ! apt-get install -y git gcc libpq-dev
 then
     echo ""
     echo "Error installing OS dependencies"
     exit 1
 fi
+
 echo ""
 echo "Installing Python dependencies..."
-# pip install --trusted-host pypi.python.org -r requirements.txt
-if ! pip install -r requirements.txt ; then
+pip install --upgrade pip
+#if ! pip install --trusted-host pypi.python.org -r requirements.txt
+if ! pip install -r requirements.txt
+then
     echo ""
     echo "Error installing Python dependencies"
     exit 1
@@ -50,13 +57,6 @@ if [ "${LOCAL_GE_BE_AI_REPO}" != "" ]; then
     ls -la "${LOCAL_GE_BE_AI_REPO}"
 fi
 echo ""
-
-APP_NAME_LOWERCASE=$(echo ${APP_NAME} | tr '[:upper:]' '[:lower:]')
-STAGE_UPPERCASE=$(echo $STAGE | tr '[:lower:]' '[:upper:]')
-
-SSL_KEY_PATH="./app.${APP_NAME_LOWERCASE}.local.key"
-SSL_CERT_PATH="./app.${APP_NAME_LOWERCASE}.local.chain.crt"
-SSL_CA_CERT_PATH="./ca.crt"
 
 PORT="8000"
 
@@ -93,9 +93,6 @@ echo "DB Name: ${APP_DB_NAME}"
 echo "App CORS Origin: ${APP_CORS_ORIGIN}"
 echo "Python version: $(python --version)"
 echo "Port: ${PORT}"
-echo "SSL key certificate path: ${SSL_KEY_PATH}"
-echo "SSL chain certificate path: ${SSL_CERT_PATH}"
-echo "SSL CA certificate path: ${SSL_CA_CERT_PATH}"
 echo ""
 
 echo ""
@@ -103,8 +100,8 @@ echo "Stating application..."
 
 if [ "${CURRENT_FRAMEWORK}" = "fastapi" ]; then
     # Start FastAPI application
-    echo "uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app --ssl-keyfile=${SSL_KEY_PATH} --ssl-certfile=${SSL_CERT_PATH} --reload --host 0.0.0.0 --port ${PORT}"
-    uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app --reload --host 0.0.0.0 --port ${PORT}  # --ca-certs=${SSL_CA_CERT_PATH}
+    echo "uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app --reload --host 0.0.0.0 --port ${PORT}"
+    uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app --reload --host 0.0.0.0 --port ${PORT}
 fi
 
 if [ "${CURRENT_FRAMEWORK}" = "flask" ]; then

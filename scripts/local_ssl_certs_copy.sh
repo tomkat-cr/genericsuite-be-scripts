@@ -26,6 +26,9 @@ fi
 domain="$1"
 destination_dir="$2"
 
+# Optional
+src_directory="$3"
+
 export APP_NAME_LOWERCASE=$(echo ${APP_NAME} | tr '[:upper:]' '[:lower:]')
 
 if [ "${domain}" = "" ]; then
@@ -46,7 +49,9 @@ if [ "${destination_dir}" = "" ]; then
 fi
 
 # Directories
-src_directory="."
+if [ "${src_directory}" = "" ]; then
+    src_directory="."
+fi
 
 echo ""
 echo "domain: ${domain}"
@@ -54,10 +59,37 @@ echo "src_directory: ${src_directory}"
 echo "destination_dir: ${destination_dir}"
 echo ""
 
-cp $src_directory/${domain}.key $destination_dir/${domain}.key
-cp $src_directory/${domain}.crt $destination_dir/${domain}.crt
-cp $src_directory/${domain}.chain.crt $destination_dir/${domain}.chain.crt
-cp $src_directory/ca.crt $destination_dir/ca.crt
+echo "cp -p $src_directory/${domain}.key $destination_dir/${domain}.key"
+if ! cp -p $src_directory/${domain}.key $destination_dir/${domain}.key
+then
+    echo ""
+    echo "Error copying ${domain}.key"
+    exit 1
+fi
+
+echo "cp -p $src_directory/${domain}.crt $destination_dir/${domain}.crt"
+if ! cp -p $src_directory/${domain}.crt $destination_dir/${domain}.crt
+then
+    echo ""
+    echo "Error copying ${domain}.crt"
+    exit 1
+fi
+
+echo "cp -p $src_directory/${domain}.chain.crt $destination_dir/${domain}.chain.crt"
+if ! cp -p $src_directory/${domain}.chain.crt $destination_dir/${domain}.chain.crt
+then
+    echo ""
+    echo "Error copying ${domain}.chain.crt"
+    exit 1
+fi
+
+echo "cp -p $src_directory/ca.crt $destination_dir/ca.crt"
+if ! cp -p $src_directory/ca.crt $destination_dir/ca.crt
+then
+    echo ""
+    echo "Error copying ca.crt"
+    exit 1
+fi
 
 echo ""
 echo "Done!"

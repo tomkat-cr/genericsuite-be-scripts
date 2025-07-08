@@ -2,6 +2,14 @@
 # scripts/aws/run_aws.sh
 # 2023-02-02 | CR
 #
+check_chalice_framework() {
+    if [[ "${CURRENT_FRAMEWORK}" != "chalice" && "${CURRENT_FRAMEWORK}" != "chalice_docker" ]]; then
+        echo "CURRENT_FRAMEWORK '${CURRENT_FRAMEWORK}' doesn't need 'set_chalice_cnf.sh' script to run [2]..."
+        exit 0
+    fi
+    echo "sh ${SCRIPTS_DIR}/set_chalice_cnf.sh ${STAGE}" http
+    sh ${SCRIPTS_DIR}/set_chalice_cnf.sh ${STAGE} http
+}
 
 REPO_BASEDIR="`pwd`"
 cd "`dirname "$0"`"
@@ -43,12 +51,9 @@ fi
 
 export APP_NAME_LOWERCASE=$(echo ${APP_NAME} | tr '[:upper:]' '[:lower:]')
 
-AWS_STACK_NAME='${APP_NAME_LOWERCASE}-be-stack'
+AWS_STACK_NAME="${APP_NAME_LOWERCASE}-be-stack"
 
-SSL_KEY_PATH="./app.${APP_NAME_LOWERCASE}.local.key"
-SSL_CERT_PATH="./app.${APP_NAME_LOWERCASE}.local.chain.crt"
-SSL_CA_CERT_PATH="./ca.crt"
-
+# Default RUN_METHOD:
 # RUN_METHOD="uvicorn"
 # RUN_METHOD="gunicorn"
 # RUN_METHOD="chalice"
@@ -86,6 +91,9 @@ if [ "$1" = "pipfile" ]; then
     pipenv --python ${PYTHON_VERSION}
     pipenv lock
     pipenv requirements > ${REPO_BASEDIR}/requirements.txt
+    # if ! grep -q "setuptools" ${REPO_BASEDIR}/requirements.txt; then
+    #     echo "setuptools>=75.5.0 # not directly required, pinned by Snyk to avoid a vulnerability" >> ${REPO_BASEDIR}/requirements.txt
+    # fi
 fi
 
 if [ "$1" = "clean" ]; then
@@ -116,35 +124,43 @@ if [ "$1" = "clean" ]; then
 fi
 
 if [[ "$1" = "test" ]]; then
-    # echo "Error: no test specified" && exit 1
     echo "Run test..."
     python -m pytest
     echo "Done..."
 fi
 
 if [[ "$1" = "run_local" || "$1" = "" ]]; then
+    # Run FastAPI, Flask or Chalice
     cd ${REPO_BASEDIR}
 
     echo ""
     echo "Stage: ${STAGE}"
     echo "Port: ${BACKEND_LOCAL_PORT}"
     echo "Run method (RUN_METHOD): ${RUN_METHOD}"
+    echo "Run protocol (RUN_PROTOCOL): ${RUN_PROTOCOL}"
     echo "Python entry point (APP_DIR.APP_MAIN_FILE): ${APP_DIR}.${APP_MAIN_FILE}"
     echo ""
 
     export IP_ADDRESS=$(sh ${SCRIPTS_DIR}/../get_localhost_ip.sh)
     export APP_VERSION=$(cat ${REPO_BASEDIR}/version.txt)
 
-    echo "Run over: 1) http, 2) https ?"
-    read RUN_PROTOCOL
-    while [[ ! ${RUN_PROTOCOL} =~ ^[12]$ ]]; do
-        echo "Please enter 1 or 2"
+    if [ "${RUN_PROTOCOL}" = "" ]; then
+        echo "Run over: 1) http, 2) https ?"
         read RUN_PROTOCOL
-    done
-    if [ "${RUN_PROTOCOL}" = "1" ]; then
-        export RUN_PROTOCOL="http"
-    else
-        export RUN_PROTOCOL="https"
+        while [[ ! ${RUN_PROTOCOL} =~ ^[12]$ ]]; do
+            echo "Please enter 1 or 2"
+            read RUN_PROTOCOL
+        done
+        if [ "${RUN_PROTOCOL}" = "1" ]; then
+            export RUN_PROTOCOL="http"
+        else
+            export RUN_PROTOCOL="https"
+        fi
+    elif [ "${RUN_PROTOCOL}" != "http" ]; then
+        if [ "${RUN_PROTOCOL}" != "https" ]; then
+            echo "ERROR: Invalid run protocol: ${RUN_PROTOCOL}"
+            exit 1
+        fi
     fi
 
     if [ "${STAGE}" = "dev" ];then
@@ -200,8 +216,7 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
     echo "USER_AGENT: ${USER_AGENT}"
 
     if [ "${RUN_METHOD}" = "chalice" ]; then
-        echo "sh ${SCRIPTS_DIR}/set_chalice_cnf.sh ${STAGE}" http
-        sh ${SCRIPTS_DIR}/set_chalice_cnf.sh ${STAGE} http
+        check_chalice_framework
         echo ""
         echo "pipenv run chalice local --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT} --stage ${STAGE}"
         echo ""
@@ -253,6 +268,8 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
 fi
 
 if [ "$1" = "run" ]; then
+    # Run Chalice
+    check_chalice_framework
     cd ${REPO_BASEDIR}
     echo ""
     echo "PRODUCCION RUNNING: pipenv run chalice local --port ${BACKEND_LOCAL_PORT} --stage PROD"
@@ -261,6 +278,7 @@ if [ "$1" = "run" ]; then
 fi
 
 if [ "$1" = "deploy" ]; then
+    check_chalice_framework
     # This must be run first (and it's run by "make"):
     #    pipenv requirements > ${REPO_BASEDIR}/requirements.txt
     # Check option "pipfile"
@@ -274,20 +292,28 @@ if [ "$1" = "deploy" ]; then
 fi
 
 if [ "$1" = "create_stack" ]; then
+    check_chalice_framework
+    echo "Running: aws cloudformation deploy --template-file \"${REPO_BASEDIR}/.chalice/dynamodb_cf_template.yaml\" --stack-name \"${AWS_STACK_NAME}\""
     aws cloudformation deploy --template-file "${REPO_BASEDIR}/.chalice/dynamodb_cf_template.yaml" --stack-name "${AWS_STACK_NAME}"
 fi
 
 if [ "$1" = "describe_stack" ]; then
+    check_chalice_framework
+    echo "Running: aws cloudformation describe-stack-events --stack-name \"${AWS_STACK_NAME}\""
     aws cloudformation describe-stack-events --stack-name "${AWS_STACK_NAME}"
 fi
 
 if [ "$1" = "delete_app" ]; then
     # Delete application
+    check_chalice_framework
     cd ${REPO_BASEDIR}
+    echo "Running: pipenv run chalice delete --stage ${STAGE}"
     pipenv run chalice delete --stage ${STAGE}
 fi
 
 if [ "$1" = "delete_stack" ]; then
     # Delete DynamoDb tables
+    check_chalice_framework
+    echo "Running: aws cloudformation delete-stack --stack-name \"${AWS_STACK_NAME}\""
     aws cloudformation delete-stack --stack-name "${AWS_STACK_NAME}"
 fi

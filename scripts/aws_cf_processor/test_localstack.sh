@@ -4,31 +4,26 @@
 # 2024-07-16 |} CR
 
 docker_dependencies() {
-  if ! docker ps > /dev/null 2>&1;
-  then
-      # To restart Docker app:
-      # $ killall Docker
-      echo ""
-      echo "Opening Docker Desktop..."
-      if ! open /Applications/Docker.app
-      then
-          echo ""
-          echo "Could not run Docker Desktop automatically"
-          echo ""
-          exit 1
-      else
-          sleep 20
-      fi
-  fi
+    if ! source "${SCRIPTS_DIR}/../container_engine_manager.sh" start "${CONTAINERS_ENGINE}" "${OPEN_CONTAINERS_ENGINE_APP}"
+    then
+        echo ""
+        echo "Could not run container engine '${CONTAINERS_ENGINE}' automatically"
+        echo ""
+        exit 1
+    fi
 
-  if ! docker ps > /dev/null 2>&1;
-  then
-      echo ""
-      echo "Docker is not running"
-      echo ""
-      exit 1
-  fi
+    if [ -z "${DOCKER_CMD}" ]; then
+        echo ""
+        echo "DOCKER_CMD is not set"
+        echo ""
+        exit 1
+    fi
 }
+
+BASE_DIR="$(pwd)"
+# Get the real script directory
+SCRIPTS_DIR="$( cd -- "$(dirname "$BASH_SOURCE")" >/dev/null 2>&1 ; pwd -P )"
+cd "${BASE_DIR}"
 
 echo ""
 echo "Checking .env file..."
@@ -104,8 +99,8 @@ echo ""
 echo "Cleaning previous localstack execution..."
 echo ""
 
-docker stop localstack-main
-docker rm localstack-main
+${DOCKER_CMD} stop localstack-main
+${DOCKER_CMD} rm localstack-main
 localstack stop
 # sleep 20
 

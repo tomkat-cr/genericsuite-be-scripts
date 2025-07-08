@@ -17,6 +17,39 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
+## 1.0.14 (2025-07-08)
+---
+
+### New
+Add the "link_gs_libs_for_dev.sh" script to link LOCAL GenericSuite libraries and trigger the uvicorn/gunicorn reload without need to run "pipenv update". Add to the Makefile and run with `make link_gs_libs` [FA-84].
+Add the BASE_DEVELOPMENT_PATH envvar to specify the GS base development path (parent directory of genericsuite-be* repos) to enable "make link_gs_libs_for_dev" [FA-84].
+Add the SAM_BUILD_CONTAINER envvar to force "sam build --use-container --debug" when "make deploy_run_local_qa" is executed [GS-87].
+Add the "mkcert" method to enhance the self-signed SSL certificates creation for the local development environment using "https" (previously it was using "office-addin-dev-certs" by default) [GS-198].
+Add the SSL_CERT_GEN_METHOD envvar to select the SSL certificate generation method [GS-198].
+Add restart option to "secure_local_server/run.sh", so the backend dev container should not be rebuilt if it's not necesaty [GS-198].
+Add error and access logs to the secure_local_server nginx [GS-198].
+Add GOOGLE_MAPS_API_KEY, ANTHROPIC_API_KEY, GROQ_API_KEY, AIMLAPI_API_KEY, NVIDIA_API_KEY, RHYMES_CHAT_API_KEY, RHYMES_VIDEO_API_KEY, IBM_WATSONX_API_KEY, IBM_WATSONX_PROJECT_ID, OPENROUTER_API_KEY, XAI_API_KEY, TOGETHER_API_KEY to the EXTENSION_SECRETS envvar in aws_secrets_manager.sh [GS-198].
+Implement RUN_PROTOCOL envvar to have the http/https protocol automatically on app local running, no user intervention, as part of the Turborepo initiative [GS-188].
+Implement Podman as an alternative to Docker [GS-215].
+Add CONTAINER_ENGINE and OPEN_CONTAINERS_ENGINE_APP envvars to GenericSuite BE Core [GS-215].
+Add configurable backend ports using the envvar BACKEND_LOCAL_PORT and BACKEND_DEBUG_LOCAL_PORT to the "sls" (secure local server) [GS-137].
+
+### Changes
+Remove "make lock_pip_file" and replace it with "make requirements". Add "make lock" and "make npm_lock" [FA-84] [GS-15].
+"run_aws.sh" validates that CURRENT_FRAMEWORK is Chalice for "run", "deploy", "create_stack", "describe_stack", "delete_app", "delete_stack" commands, and runs "set_chalice_cnf.sh" for all those commands when it's Chalice [GS-15].
+
+### Fixes
+Fix poetry 2.x "The option --no-update does not exist" error message [FA-84].
+Fix error with the "Bottleneck" dependency building https dev environment (sls-backend) due to missing "gcc" in the "python:3.11-slim" image [GS-197].
+Fix the GenericSuite dependencies verification in "big_lambdas_manager.sh" to abort the execution if there are local dependencies [FA-169].
+Fix missing "g++" running docker build in "big_lambdas_manager.sh", adding "RUN yum -y groupinstall 'Development Tools'" to the "Dockerfile-big-lambda-AL2" [FA-169].
+Fix the error "The image manifest, config or layer media type for the source image xx.dkr.ecr.us-east-1.amazonaws.com/xxx:version is not supported" running docker build in "big_lambdas_manager.sh", adding `--provenance=false` to stop BuiltKit from generating said manifest [FA-169].
+Fix the net:ERR_CERT_AUTHORITY_INVALID error in GenericSuite FE/BE using the https protocol [GS-198].
+Fix TMP_BUILD_DIR assignment in dynamodb deploy script.
+Fix "run_aws.sh" to assign the correct AWS Stack Name and avoid the error "An error occurred (ValidationError) when calling the DescribeStacks operation: 1 validation error detected: Value '${APP_NAME_LOWERCASE}-be-stack' at 'stackName' failed to satisfy constraint: Member must satisfy regular expression pattern: [a-zA-Z][-a-zA-Z0-9]*|arn:[-a-zA-Z0-9:/._+]*" [GS-137].
+Fix ".chalice/config_example.json" to remove the API_GATEWAY_STAGE_placeholder from the "api_gateway_stage" attribute and assign the correct value, and remove unused attributes in the QA stage [FA-248].
+
+
 ## 1.0.13 (2025-02-18)
 ---
 

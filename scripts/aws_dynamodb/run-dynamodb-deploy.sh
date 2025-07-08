@@ -50,7 +50,7 @@ if [ "${CICD_MODE}" = "" ]; then
     CICD_MODE="0"
 fi
 if [ "${TMP_BUILD_DIR}" = "" ]; then
-    TMP_BUILD_DIR="/tmp/${APP_NAME_LOWERCASE}_aws_secrets_tmp"
+    TMP_BUILD_DIR="/tmp/${APP_NAME_LOWERCASE}_aws_dynamodb_tmp"
 fi
 
 # Script parameters

@@ -2,6 +2,30 @@
 # run_local_dns.sh
 # 2023-11-27 | CR
 
+docker_dependencies() {
+    if ! source "${SCRIPTS_DIR}/../container_engine_manager.sh" start "${CONTAINERS_ENGINE}" "${OPEN_CONTAINERS_ENGINE_APP}"
+    then
+        echo ""
+        echo "Could not run container engine '${CONTAINERS_ENGINE}' automatically"
+        echo ""
+        exit 1
+    fi
+
+    if [ -z "${DOCKER_CMD}" ]; then
+        echo ""
+        echo "DOCKER_CMD is not set"
+        echo ""
+        exit 1
+    fi
+}
+
+prepare_podman() {
+    if [ "${CONTAINERS_ENGINE}" = "podman" ]; then
+        echo ">> Running: podman machine ssh \"sudo sysctl -w net.ipv4.ip_unprivileged_port_start=53\""
+        podman machine ssh "sudo sysctl -w net.ipv4.ip_unprivileged_port_start=53"
+    fi
+}
+
 REPO_BASEDIR="`pwd`"
 cd "`dirname "$0"`"
 CURRENT_SCRIPT_DIR="`pwd`"
@@ -11,6 +35,9 @@ echo "Local DNS server starting..."
 
 # Assumes it's run from the project root directory...
 set -o allexport; . .env ; set +o allexport ;
+
+docker_dependencies
+prepare_podman
 
 if [ "${APP_NAME}" = "" ]; then
     echo "APP_NAME environment variable must be defined"
@@ -50,23 +77,23 @@ if [ "${FRONTEND_LOCAL_PORT}" = "" ]; then
 fi
 
 if [ "${ACTION}" = "down" ]; then
-    docker-compose -f ${SCRIPTS_DIR}/dns/docker-compose.yml down
+    ${DOCKER_COMPOSE_CMD} -f ${SCRIPTS_DIR}/dns/docker-compose.yml down
 fi
 
 if [ "${ACTION}" = "rebuild" ]; then
-    docker-compose -f ${SCRIPTS_DIR}/dns/docker-compose.yml down
-    docker image rm dns-dns-server
+    ${DOCKER_COMPOSE_CMD} -f ${SCRIPTS_DIR}/dns/docker-compose.yml down
+    ${DOCKER_CMD} image rm dns-dns-server
     ACTION=""
 fi
 
 if [ "${ACTION}" = "restart" ]; then
-    docker-compose -f ${SCRIPTS_DIR}/dns/docker-compose.yml down
+    ${DOCKER_COMPOSE_CMD} -f ${SCRIPTS_DIR}/dns/docker-compose.yml down
     ACTION=""
 fi
 
 if [ "${ACTION}" = "enter" ]; then
     echo "Password: ${DNS_SERVER_PASSW}"
-    docker exec -ti dns-server bash
+    ${DOCKER_CMD} exec -ti dns-server bash
 fi
 
 if [ "${ACTION}" = "test" ]; then
@@ -141,37 +168,26 @@ EOF
     cp ${SCRIPTS_DIR}/dns/Dockerfile.template ${TMP_WORKING_DIR}/dns/Dockerfile
     perl -i -pe "s|APP_NAME_LOWERCASE_placeholder|${APP_NAME_LOWERCASE}|g" "${TMP_WORKING_DIR}/dns/Dockerfile"
 
-    if ! docker ps > /dev/null 2>&1;
-    then
-        # To restart Docker app:
-        # $ killall Docker
-        echo ""
-        echo "Opening Docker Desktop..."
-        if ! open /Applications/Docker.app
-        then
-            echo ""
-            echo "Could not run Docker Desktop automatically"
-            echo ""
-            exit 1
-        else
-            sleep 20
-        fi
-    fi
-
-    if ! docker ps > /dev/null 2>&1;
+    if ! source "${SCRIPTS_DIR}/container_engine_manager.sh" start "${CONTAINERS_ENGINE}" "${OPEN_CONTAINERS_ENGINE_APP}"
     then
         echo ""
-        echo "Docker is not running"
+        echo "Could not run container engine '${CONTAINERS_ENGINE}' automatically"
         echo ""
         exit 1
     fi
 
+    if [ -z "${DOCKER_CMD}" ]; then
+        echo "" 
+        echo "DOCKER_CMD is empty"
+        exit_abort
+    fi
+
     # Restart the DNS contaier to apply the new configuration
-    if docker ps | grep dns-server -q
+    if ${DOCKER_CMD} ps | grep dns-server -q
     then
-        docker restart dns-server
+        ${DOCKER_CMD} restart dns-server
     else
-        docker-compose -f ${TMP_WORKING_DIR}/dns/docker-compose.yml up -d
+        ${DOCKER_COMPOSE_CMD} -f ${TMP_WORKING_DIR}/dns/docker-compose.yml up -d
     fi
 
     # Refresh the forntend/backend ".env" files to reflect the new domain name
@@ -201,4 +217,4 @@ EOF
     echo ""
 fi
 
-docker ps
+${DOCKER_CMD} ps

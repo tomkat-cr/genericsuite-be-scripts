@@ -47,7 +47,7 @@ if [ "${STORAGE_URL_SEED}" = "" ]; then
 fi
 
 if [[ "${CURRENT_FRAMEWORK}" != "chalice" && "${CURRENT_FRAMEWORK}" != "chalice_docker" ]]; then
-    echo "CURRENT_FRAMEWORK '${CURRENT_FRAMEWORK}' doesn't need 'set_chalice_cnf.sh' script to run..."
+    echo "CURRENT_FRAMEWORK '${CURRENT_FRAMEWORK}' doesn't need 'set_chalice_cnf.sh' script to run [1]..."
     exit 0
 fi
 

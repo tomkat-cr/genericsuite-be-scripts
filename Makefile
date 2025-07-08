@@ -23,10 +23,14 @@ locked_dev:
 locked_install:
 	pipenv install --ignore-pipfile
 
-lock_pip_file:
-	sh node_modules/genericsuite-be-scripts/scripts/aws/run_aws.sh pipfile
+lock:
+	pipenv lock
 
-requirements: lock_pip_file
+# lock_pip_file:
+# 	sh node_modules/genericsuite-be-scripts/scripts/aws/run_aws.sh pipfile
+
+requirements:
+	sh node_modules/genericsuite-be-scripts/scripts/aws/run_aws.sh pipfile
 
 ## Cleaning
 
@@ -96,6 +100,9 @@ mongo_backup:
 mongo_restore:
 	# E.g. STAGE=qa RESTORE_DIR=/tmp/exampleapp make mongo_restore
 	sh node_modules/genericsuite-be-scripts/scripts/mongo/db_mongo_restore.sh ${STAGE} ${RESTORE_DIR}
+
+link_gs_libs:
+	sh node_modules/genericsuite-be-scripts/scripts/link_gs_libs_for_dev.sh
 
 ## Chalice Specific Commands
 
@@ -295,7 +302,8 @@ init_chalice:
 
 ## NPM scripts library
 
-lock:
+# lock:
+npm_lock:
 	npm install --package-lock-only
 
 pre-publish:
@@ -308,7 +316,8 @@ publish:
 
 pypi-build:
 	# Build 'dist' directory needed for the Pypi publish
-	poetry lock --no-update
+	poetry lock
+	# poetry lock --no-update
 	rm -rf dist
 	python3 -m build
 

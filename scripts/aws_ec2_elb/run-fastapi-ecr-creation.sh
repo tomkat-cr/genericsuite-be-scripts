@@ -8,6 +8,23 @@
 
 # ------------------
 
+docker_dependencies() {
+    if ! source "${SCRIPTS_DIR}/../container_engine_manager.sh" start "${CONTAINERS_ENGINE}" "${OPEN_CONTAINERS_ENGINE_APP}"
+    then
+        echo ""
+        echo "Could not run container engine '${CONTAINERS_ENGINE}' automatically"
+        echo ""
+        exit 1
+    fi
+
+    if [ -z "${DOCKER_CMD}" ]; then
+        echo ""
+        echo "DOCKER_CMD is not set"
+        echo ""
+        exit 1
+    fi
+}
+
 verify_and_remove_file() {
   if [ -f "${remove_file}" ];then
     echo "Removing ${remove_file}..."
@@ -412,8 +429,8 @@ docker_system_prune() {
     if [[ ${DOCKER_PRUNE} = "y" ]]; then
       # To handle the error "yum install ... Disk Requirements: ... At least ...MB more space needed on the / filesystem." during the "docker buildx build ..."
       echo ""
-      echo docker system prune -a
-      docker system prune -a
+      echo ${DOCKER_CMD} system prune -a
+      ${DOCKER_CMD} system prune -a
       echo ""
     fi
 }    
@@ -467,8 +484,8 @@ build_docker() {
     pwd
 
     echo ""
-    echo docker buildx build --platform linux/amd64 -t docker-image:${DOCKER_IMAGE_NAME} . 
-    docker buildx build --platform linux/amd64 -t docker-image:${DOCKER_IMAGE_NAME} . 
+    echo ${DOCKER_CMD} buildx build --platform linux/amd64 -t docker-image:${DOCKER_IMAGE_NAME} . 
+    ${DOCKER_CMD} buildx build --platform linux/amd64 -t docker-image:${DOCKER_IMAGE_NAME} . 
 
     # Deploy ECR image
 
@@ -503,14 +520,14 @@ build_docker() {
       echo ""
       echo "Tag docker image"
       echo ""
-      echo "docker tag docker-image:${DOCKER_IMAGE_NAME} ${AWS_DOCKER_IMAGE_URI}"
-      docker tag docker-image:${DOCKER_IMAGE_NAME} ${AWS_DOCKER_IMAGE_URI}
+      echo "${DOCKER_CMD} tag docker-image:${DOCKER_IMAGE_NAME} ${AWS_DOCKER_IMAGE_URI}"
+      ${DOCKER_CMD} tag docker-image:${DOCKER_IMAGE_NAME} ${AWS_DOCKER_IMAGE_URI}
       
       echo ""
       echo "Docker push"
       echo ""
-      echo docker push ${AWS_DOCKER_IMAGE_URI}
-      docker push ${AWS_DOCKER_IMAGE_URI}
+      echo ${DOCKER_CMD} push ${AWS_DOCKER_IMAGE_URI}
+      ${DOCKER_CMD} push ${AWS_DOCKER_IMAGE_URI}
     fi
     echo ""
     echo "Deploy ECR image - END"
@@ -544,15 +561,15 @@ push_docker_image_to_ecr() {
     # 5. Tag the Docker Image
     # Tag your Docker image to match your ECR repository URI.
     REPOSITORY_URI=$(aws ecr describe-repositories --repository-names ${DOCKER_IMAGE_NAME} --region ${AWS_REGION} --query "repositories[0].repositoryUri" --output text)
-    docker tag docker-image:${DOCKER_IMAGE_NAME} ${REPOSITORY_URI}:${ECR_IMAGE_TAG}
+    ${DOCKER_CMD} tag docker-image:${DOCKER_IMAGE_NAME} ${REPOSITORY_URI}:${ECR_IMAGE_TAG}
 
     # 6. Authenticate Docker to Your ECR Repository
     # Retrieve an authentication token and authenticate your Docker client to your ECR registry.
-    aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${REPOSITORY_URI}
+    aws ecr get-login-password --region ${AWS_REGION} | ${DOCKER_CMD} login --username AWS --password-stdin ${REPOSITORY_URI}
 
     # 7. Push the Docker Image to ECR
     # Push your Docker image to the Amazon ECR repository.
-    docker push ${REPOSITORY_URI}:${ECR_IMAGE_TAG}
+    ${DOCKER_CMD} push ${REPOSITORY_URI}:${ECR_IMAGE_TAG}
 }
 
 #############
@@ -572,6 +589,8 @@ echo ""
 SKIP_DOTENV_GENERATION="1"
 
 set -o allexport; . .env ; set +o allexport ;
+
+docker_dependencies
 
 # Validations
 if [ "${ECR_IMAGE_TAG}" = "" ]; then

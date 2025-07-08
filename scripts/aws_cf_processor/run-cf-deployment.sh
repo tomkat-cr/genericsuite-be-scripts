@@ -46,30 +46,27 @@ remove_temp_files() {
 }
 
 docker_dependencies() {
-  if ! docker ps > /dev/null 2>&1;
-  then
-      # To restart Docker app:
-      # $ killall Docker
-      echo ""
-      echo "Opening Docker Desktop..."
-      if ! open /Applications/Docker.app
-      then
-          echo ""
-          echo "Could not run Docker Desktop automatically"
-          echo ""
-          exit 1
-      else
-          sleep 20
-      fi
-  fi
+    if ! source "${SCRIPTS_DIR}/../container_engine_manager.sh" start "${CONTAINERS_ENGINE}" "${OPEN_CONTAINERS_ENGINE_APP}"
+    then
+        echo ""
+        echo "Could not run container engine '${CONTAINERS_ENGINE}' automatically"
+        echo ""
+        exit 1
+    fi
 
-  if ! docker ps > /dev/null 2>&1;
-  then
+    if [ -z "${DOCKER_CMD}" ]; then
+        echo "" 
+        echo "DOCKER_CMD is empty"
+        exit_abort
+    fi
+
+    if ! ${DOCKER_CMD} ps > /dev/null 2>&1;
+    then
       echo ""
       echo "Docker is not running"
       echo ""
       exit 1
-  fi
+    fi
 }
 
 localstack_venv() {
@@ -124,8 +121,8 @@ localstack_shell() {
 }
 
 localstack_stop() {
-    docker stop localstack-main
-    docker rm localstack-main
+    ${DOCKER_CMD} stop localstack-main
+    ${DOCKER_CMD} rm localstack-main
 }
 
 deactivate_localstack() {

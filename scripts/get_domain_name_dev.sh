@@ -6,7 +6,7 @@
 #
 exit_abort() {
   echo "Usage:"
-  echo "  source scripts/get_domain_name.sh STAGE APP_DOMAIN_NAME SELF_SCRIPTS_DIR"
+  echo "  source scripts/get_domain_name_dev.sh STAGE APP_DOMAIN_NAME SELF_SCRIPTS_DIR"
   echo "where..."
   echo "  STAGE: dev, qa, staging, demo, prod"
   echo "  APP_DOMAIN_NAME: domain name of the application. E.g. exampleapp.com"
@@ -17,11 +17,11 @@ exit_abort() {
 stop_local_ngnx() {
   # If the nginx docker container nginx-dev-mask-ext is running, stop it
   echo "Stopping nginx docker container 'nginx-dev-mask-ext'..."
-  docker stop nginx-dev-mask-ext
+  ${DOCKER_CMD} stop nginx-dev-mask-ext
 
   # If the nginx docker container nginx-dev-mask-ext is running, remove it  
   echo "Removing nginx docker container 'nginx-dev-mask-ext'..."
-  docker rm nginx-dev-mask-ext
+  ${DOCKER_CMD} rm nginx-dev-mask-ext
 }
 
 enable_bridge_proxy() {
@@ -180,7 +180,7 @@ END
 
   # Start the nginx docker container
   echo "Starting nginx docker container 'nginx-dev-mask-ext'..."
-  docker run -d \
+  ${DOCKER_CMD} run -d \
     --name nginx-dev-mask-ext \
     -p ${DEV_MASK_INT_PORT_443}:443 \
     -p ${DEV_MASK_INT_PORT_80}:80 \
@@ -197,7 +197,7 @@ END
   echo "You can access the domain name ${DOMAIN_NAME_ONLY} with the following URL:"
   echo "  ${DEV_MASK_EXT_HOSTNAME}"
   echo "Check the logs with:"
-  echo "  $ docker logs -f nginx-dev-mask-ext"
+  echo "  $ ${DOCKER_CMD} logs -f nginx-dev-mask-ext"
   echo ""
   echo "Configure the 'Virtual Servers / Port Forwarding' in your Internet Router"
   echo "For example:"
@@ -219,7 +219,7 @@ END
 
   # Check if the nginx docker container nginx-dev-mask-ext is running
   echo "Checking if nginx docker container 'nginx-dev-mask-ext' is running..."
-  if ! docker ps -a | grep nginx-dev-mask-ext
+  if ! ${DOCKER_CMD} ps -a | grep nginx-dev-mask-ext
   then
     echo "Error: nginx docker container 'nginx-dev-mask-ext' is not running."
     exit 1
@@ -290,21 +290,36 @@ STAGE="$1"
 APP_DOMAIN_NAME="$2"
 SELF_SCRIPTS_DIR="$3"
 
-if [ "${STAGE}" = "" ];then
-  echo "ERROR: missing STAGE."
-  exit_abort
-fi
-if [ "${APP_DOMAIN_NAME}" = "" ];then
-  echo "ERROR: missing APP_DOMAIN_NAME."
-  exit_abort
-fi
-if [ "${RUN_PROTOCOL}" = "" ];then
-  RUN_PROTOCOL="https"
-fi
 if [ "${SELF_SCRIPTS_DIR}" = "" ];then
   cd "`dirname "$0"`"
   SELF_SCRIPTS_DIR="`pwd`"
   cd "${REPO_BASEDIR}"
+fi
+
+if [ -z "${DOCKER_CMD}" ];then
+  if ! source ${SELF_SCRIPTS_DIR}/container_engine_manager.sh start "${CONTAINER_ENGINE}" "${OPEN_CONTAINERS_ENGINE_APP}"; then
+      echo "ERROR: Running ${SELF_SCRIPTS_DIR}/container_engine_manager.sh start \"${CONTAINER_ENGINE}\" \"${OPEN_CONTAINERS_ENGINE_APP}\""
+      exit_abort
+  fi
+fi
+
+if [ -z "${DOCKER_CMD}" ];then
+  echo "ERROR: missing DOCKER_CMD."
+  exit_abort
+fi
+
+if [ "${STAGE}" = "" ];then
+  echo "ERROR: missing STAGE."
+  exit_abort
+fi
+
+if [ "${APP_DOMAIN_NAME}" = "" ];then
+  echo "ERROR: missing APP_DOMAIN_NAME."
+  exit_abort
+fi
+
+if [ "${RUN_PROTOCOL}" = "" ];then
+  RUN_PROTOCOL="https"
 fi
 
 echo ""

@@ -23,8 +23,19 @@ MONGO_DOCKER_CONTAINER_NAME="mongo-db"
 CHALICE_ON=1
 PERFORM_TEST=1
 
+
+if ! source ${SCRIPTS_DIR}/container_engine_manager.sh start "${CONTAINER_ENGINE}" "${OPEN_CONTAINERS_ENGINE_APP}"; then
+    ERROR_MSG="Running ${SCRIPTS_DIR}/container_engine_manager.sh start \"${CONTAINER_ENGINE}\" \"${OPEN_CONTAINERS_ENGINE_APP}\""
+fi
+  
 if [ "$ERROR_MSG" = "" ]; then
-    if ! docker ps > /dev/null 2>&1;
+    if [ -z "${DOCKER_CMD}" ];then
+        ERROR_MSG="ERROR: missing DOCKER_CMD (test)."
+    fi
+fi
+
+if [ "$ERROR_MSG" = "" ]; then
+    if ! ${DOCKER_CMD} ps > /dev/null 2>&1;
     then
         ERROR_MSG="Docker is not running"
     fi
@@ -41,7 +52,7 @@ fi
 
 if [ "$ERROR_MSG" = "" ]; then
     echo "Verifying the MongoDb docker container running..."
-    if docker ps | grep ${MONGO_DOCKER_CONTAINER_NAME} -q
+    if ! ${DOCKER_CMD} ps | grep ${MONGO_DOCKER_CONTAINER_NAME} -q
     then
         echo "Active MongoDb docker container found..."
         MONGO_DOCKER_ACTIVE=1
@@ -54,7 +65,7 @@ if [ "$ERROR_MSG" = "" ]; then
         then
             ERROR_MSG="Running ${SCRIPTS_DIR}/mongo/run_mongo_docker.sh up '1'"
         fi
-        docker ps ;
+        ${DOCKER_CMD} ps ;
     fi
 fi
 

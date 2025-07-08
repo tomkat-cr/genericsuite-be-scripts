@@ -7,38 +7,30 @@
 #
 
 docker_dependencies() {
-  if ! docker ps > /dev/null 2>&1;
-  then
-      # To restart Docker app:
-      # $ killall Docker
-      echo ""
-      echo "Opening Docker Desktop..."
-      if ! open /Applications/Docker.app
-      then
-          echo ""
-          echo "Could not run Docker Desktop automatically"
-          echo ""
-          exit 1
-      else
-          sleep 20
-      fi
-  fi
+    echo ""
+    echo "Checking container engine '${CONTAINERS_ENGINE}'..."
+    if ! source "${SCRIPTS_DIR}/../container_engine_manager.sh" start "${CONTAINERS_ENGINE}" "${OPEN_CONTAINERS_ENGINE_APP}"
+    then
+        echo "" 
+        echo "Could not run container engine '${CONTAINERS_ENGINE}' automatically"
+        echo ""
+        exit 1
+    fi
 
-  if ! docker ps > /dev/null 2>&1;
-  then
-      echo ""
-      echo "Docker is not running"
-      echo ""
-      exit 1
-  fi
+    if [ -z "${DOCKER_CMD}" ]; then
+        echo ""
+        echo "DOCKER_CMD is not set"
+        echo ""
+        exit 1
+    fi
 
-  if ! docker ps | grep dns-server -q
-  then
-      echo ""
-      echo "0)" make local_dns
-      echo ""
-      make local_dns
-  fi
+    if ! ${DOCKER_CMD} ps | grep dns-server -q
+    then
+        echo ""
+        echo "0) make local_dns"
+        echo ""
+        make local_dns
+    fi
 }
 
 ssl_certificates_verification() {
@@ -82,7 +74,7 @@ generate_requirements() {
         echo "Re-generating requirements Finished."
         cd "${SCRIPTS_DIR}"
         echo "Stopping current Docker Containers..."
-        docker-compose down
+        ${DOCKER_COMPOSE_CMD} down
         echo "Stopping current Docker Containers finished."
     fi
     cd "${SCRIPTS_DIR}"
@@ -95,18 +87,23 @@ prepare_nginx_conf() {
     echo ""
     mkdir -p "${TMP_WORKING_DIR}"
     rm -rf "${TMP_WORKING_DIR}/nginx.conf.tmp"
-    if ! cp "${SCRIPTS_DIR}/nginx.conf.template" "${TMP_WORKING_DIR}/nginx.conf.tmp" ; then
-        echo "Could not copy nginx.conf.template to: ${TMP_WORKING_DIR}/nginx.conf.tmp"
+    # if ! cp "${SCRIPTS_DIR}/nginx.conf.template" "${TMP_WORKING_DIR}/nginx.conf.tmp" ; then
+    if ! mkdir -p "${TMP_WORKING_DIR}/conf.d/" ; then
+        echo "Could not create conf.d directory"
         exit 1
     fi
-    if ! perl -i -pe "s|APP_NAME_LOWERCASE_placeholder|${APP_NAME_LOWERCASE}|g" "${TMP_WORKING_DIR}/nginx.conf.tmp"
+    if ! cp "${SCRIPTS_DIR}/conf.d"/* "${TMP_WORKING_DIR}/conf.d"/ ; then
+        echo "Could not copy conf.d directory to: ${TMP_WORKING_DIR}/conf.d/"
+        exit 1
+    fi
+    if ! perl -i -pe "s|APP_NAME_LOWERCASE_placeholder|${APP_NAME_LOWERCASE}|g" "${TMP_WORKING_DIR}/conf.d/gs_app.conf"
     then
         echo "Could not replace APP_NAME_LOWERCASE_placeholder"
         exit 1
     fi
     echo ""
-    echo "Nginx.conf file path: ${TMP_WORKING_DIR}/nginx.conf.tmp"
-    if ! ls -lah "${TMP_WORKING_DIR}/nginx.conf.tmp" ; then
+    echo "Nginx.conf file path: ${TMP_WORKING_DIR}/conf.d/gs_app.conf"
+    if ! ls -lah "${TMP_WORKING_DIR}/conf.d/gs_app.conf" ; then
         echo "Could not prepare Nginx.conf file"
     fi
 }
@@ -160,15 +157,6 @@ prepare_docker_conf() {
     ls -lah ${TMP_WORKING_DIR}/docker-compose.yml
 }
 
-stop_sls_docker_containers() {
-    cd "${TMP_WORKING_DIR}"
-    docker-compose down
-    docker stop sls-backend
-    docker rm sls-backend
-    docker stop sls-nginx
-    docker rm sls-nginx
-}
-
 prepare_environment() {
     # Verify if SSL certificates exist... if not, generate it
     ssl_certificates_verification
@@ -180,25 +168,58 @@ prepare_environment() {
     prepare_docker_conf
 }
 
+stop_sls_docker_containers() {
+    cd "${TMP_WORKING_DIR}"
+    ${DOCKER_COMPOSE_CMD} down
+    ${DOCKER_CMD} stop sls-backend
+    ${DOCKER_CMD} rm sls-backend
+    ${DOCKER_CMD} stop sls-nginx
+    ${DOCKER_CMD} rm sls-nginx
+}
+
 start_sls_docker_containers() {
     # Prepare environment
     prepare_environment
     # Run the App in the docker container from the tmp dir.
     cd "${TMP_WORKING_DIR}"
-    if ! docker-compose up -d ; then
+    echo ""
+    echo "Running the local backend server over a secure connection..."
+    echo "BACKEND_LOCAL_PORT: ${BACKEND_LOCAL_PORT}"
+    echo "BACKEND_DEBUG_LOCAL_PORT: ${BACKEND_DEBUG_LOCAL_PORT}"
+    echo ""
+    if ! ${DOCKER_COMPOSE_CMD} up -d ; then
         echo ""
         echo "ERROR: Could not run the local backend server over a secure connection [1]."
         echo ""
         exit 1
     fi
-    docker ps
+    ${DOCKER_CMD} ps
     # Leave the logs view while the container is running
-    docker logs sls-backend -f
+    ${DOCKER_COMPOSE_CMD} logs -f
+}
+
+restart_sls_docker_containers() {
+    # Restart the App in the docker container from the tmp dir.
+    cd "${TMP_WORKING_DIR}"
+    if ! ${DOCKER_COMPOSE_CMD} restart; then
+        echo ""
+        echo "ERROR: Could not restart the local backend server over a secure connection [1]."
+        echo ""
+        exit 1
+    fi
+    ${DOCKER_CMD} ps
+    # Leave the logs view while the container is running
+    ${DOCKER_COMPOSE_CMD} logs -f
 }
 
 # ..................
 # Start process
 # ..................
+
+export REPO_BASEDIR="`pwd`"
+cd "`dirname "$0"`"
+export SCRIPTS_DIR="`pwd`"
+cd "${REPO_BASEDIR}"
 
 docker_dependencies
 
@@ -210,11 +231,6 @@ if [ "$#" -ne 2 ]; then
     echo "STAGE can be: dev, qa, staging, prod"
     exit 1
 fi
-
-export REPO_BASEDIR="`pwd`"
-cd "`dirname "$0"`"
-export SCRIPTS_DIR="`pwd`"
-cd "${REPO_BASEDIR}"
 
 export TMP_WORKING_DIR="/tmp/sls"
 
@@ -230,6 +246,14 @@ fi
 if [ "${APP_NAME}" = "" ]; then
     echo "APP_NAME environment variable must be defined"
     exit 1
+fi
+
+if [ "$BACKEND_LOCAL_PORT" = "" ]; then
+    export BACKEND_LOCAL_PORT="5001"
+fi
+
+if [ "$BACKEND_DEBUG_LOCAL_PORT" = "" ]; then
+    export BACKEND_DEBUG_LOCAL_PORT="5002"
 fi
 
 export APP_NAME_LOWERCASE=$(echo ${APP_NAME} | tr '[:upper:]' '[:lower:]')
@@ -253,9 +277,15 @@ echo ""
 echo "Scripts directory (SCRIPTS_DIR): ${SCRIPTS_DIR}"
 echo "Repository base directory (REPO_BASEDIR): ${REPO_BASEDIR}"
 echo ""
+echo "Ports:"
+echo "Backend local port (BACKEND_LOCAL_PORT): ${BACKEND_LOCAL_PORT}"
+echo "Backend debug local port (BACKEND_DEBUG_LOCAL_PORT): ${BACKEND_DEBUG_LOCAL_PORT}"
+echo ""
+echo "Docker command (DOCKER_CMD): ${DOCKER_CMD}"
+echo ""
 
 if [ "${ACTION}" = "" ] || [ "${ACTION}" = "run" ]; then
-    if ! docker ps | grep sls-backend
+    if ! ${DOCKER_CMD} ps | grep sls-backend
     then
         echo ""
         echo "Running the local backend server over a secure connection."
@@ -266,32 +296,36 @@ if [ "${ACTION}" = "" ] || [ "${ACTION}" = "run" ]; then
         # Attach to the container to see server activity
         echo ""
         echo "The local backend server is already running."
-        echo "Do you want to 1) Rebuild, 2) Attach or 3) View Logs (default) ? (1/2/3)"
+        echo "Do you want to 0) Restart, 1) Rebuild, 2) Attach or 3) View Logs (default) ? (0/1/2/3)"
         read ANSWER
-        if [ "${ANSWER}" = "1" ]; then
+        if [ "${ANSWER}" = "0" ]; then
+            # >> Restart:
+            restart_sls_docker_containers
+        elif [ "${ANSWER}" = "1" ]; then
+            # >> Rebuild:
             cd "${TMP_WORKING_DIR}"
             # Stop SLS docker containers
             stop_sls_docker_containers
             # Start SLS docker containers
             start_sls_docker_containers
+        elif [ "${ANSWER}" = "2" ]; then
+            # >> Attach:
+            # key sequence to detach from docker-compose up
+            # https://github.com/docker/compose/issues/4560
+            # CTRL-Z, then disown %1 to release the job
+            echo ""
+            echo "Attaching to the container to see server activity."
+            echo "To detach from the container, press Ctrl+Z and run:"
+            echo "disown %1"
+            echo ""
+            ${DOCKER_CMD} attach sls-backend
         else
-            if [ "${ANSWER}" = "2" ]; then
-                # key sequence to detach from docker-compose up
-                # https://github.com/docker/compose/issues/4560
-                # CTRL-Z, then disown %1 to release the job
-                echo ""
-                echo "Attaching to the container to see server activity."
-                echo "To detach from the container, press Ctrl+Z and run:"
-                echo "disown %1"
-                echo ""
-                docker attach sls-backend
-            else
-                echo ""
-                echo "Viewing the logs of the local backend server over a secure connection."
-                echo "To stop logs view, press Ctrl+C."
-                echo ""
-                docker logs sls-backend -f
-            fi
+            # >> View Logs:
+            echo ""
+            echo "Viewing the logs of the local backend server over a secure connection."
+            echo "To stop logs view, press Ctrl+C."
+            echo ""
+            ${DOCKER_COMPOSE_CMD} logs -f
         fi
     fi
 fi
@@ -306,29 +340,29 @@ fi
 if [ "${ACTION}" = "logs" ];then
     echo "Showing the logs of the local backend server over a secure connection."
     echo ""
-    docker logs secure_local_server-nginx-1
-    docker logs sls-backend
+    ${DOCKER_CMD} logs secure_local_server-nginx-1
+    ${DOCKER_CMD} logs sls-backend
 fi
 
 if [ "${ACTION}" = "logs_nginx" ];then
     echo "Showing the logs of the local backend server over a secure connection."
     echo ""
-    docker logs secure_local_server-nginx-1
-    docker logs sls-nginx
+    ${DOCKER_CMD} logs secure_local_server-nginx-1
+    ${DOCKER_CMD} logs sls-nginx
 fi
 
 if [ "${ACTION}" = "monitor" ];then
     echo "Monitoring the logs of local backend server over a secure connection."
     echo ""
-    docker ps
-    docker logs sls-backend -f
+    ${DOCKER_CMD} ps
+    ${DOCKER_CMD} logs sls-backend -f
 fi
 
 if [ "${ACTION}" = "monitor_nginx" ];then
     echo "Monitoring the logs of local backend server over a secure connection."
     echo ""
-    docker ps
-    docker logs sls-nginx -f
+    ${DOCKER_CMD} ps
+    ${DOCKER_CMD} logs sls-nginx -f
 fi
 
 echo ""
