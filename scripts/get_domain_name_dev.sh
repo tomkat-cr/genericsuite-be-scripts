@@ -296,14 +296,14 @@ if [ "${SELF_SCRIPTS_DIR}" = "" ];then
   cd "${REPO_BASEDIR}"
 fi
 
-if [ "${DOCKER_CMD}" = "" ];then
+if [ -z "${DOCKER_CMD}" ];then
   if ! source ${SELF_SCRIPTS_DIR}/container_engine_manager.sh start "${CONTAINER_ENGINE}" "${OPEN_CONTAINERS_ENGINE_APP}"; then
       echo "ERROR: Running ${SELF_SCRIPTS_DIR}/container_engine_manager.sh start \"${CONTAINER_ENGINE}\" \"${OPEN_CONTAINERS_ENGINE_APP}\""
       exit_abort
   fi
 fi
 
-if [ "${DOCKER_CMD}" = "" ];then
+if [ -z "${DOCKER_CMD}" ];then
   echo "ERROR: missing DOCKER_CMD."
   exit_abort
 fi
