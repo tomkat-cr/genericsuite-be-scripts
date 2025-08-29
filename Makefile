@@ -17,6 +17,14 @@ install_dev:
 	pipenv install --dev
 	npm install
 
+update:
+	pipenv update
+	npm update
+
+update_dev:
+	pipenv update --dev
+	npm update
+
 locked_dev:
 	pipenv install --dev --ignore-pipfile
 

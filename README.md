@@ -37,10 +37,10 @@ Check the [The GenericSuite backend development scripts](https://genericsuite.ca
 
 ## License
 
-GenericSuite is open-sourced software licensed under the ISC license.
+GenericSuite is open-sourced software licensed under the [ISC license](./LICENSE).
 
 ## Credits
 
-This project is developed and maintained by Carlos J. Ramirez. For more information or to contribute to the project, visit [The GenericSuite Scripts (backend version) on GitHub](https://github.com/tomkat-cr/genericsuite-be-scripts).
+This project is developed and maintained by [Carlos J. Ramirez](https://github.com/tomkat-cr). For more information or to contribute to the project, visit [The GenericSuite Scripts (backend version) on GitHub](https://github.com/tomkat-cr/genericsuite-be-scripts).
 
 Happy Coding!
