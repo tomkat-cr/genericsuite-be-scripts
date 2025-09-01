@@ -11,7 +11,7 @@ services:
   mongo:
     container_name: mongo-db
     image: mongo:latest
-    restart: always
+    restart: unless-stopped
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
@@ -23,7 +23,7 @@ services:
   mongo-express:
     container_name: mongo-express
     image: mongo-express
-    restart: always
+    restart: unless-stopped
     ports:
       - 8081:8081
     environment:

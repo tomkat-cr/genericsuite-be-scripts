@@ -25,6 +25,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Modify author email in package.json.
 - Enhance README for license and credits clarity.
 - Update CHANGELOG format to be more semantic.
+- Change: update MongoDB service restart policy from 'always' to 'unless-stopped' in the test stack configuration.
 
 
 ## [1.0.14] - 2025-07-08
