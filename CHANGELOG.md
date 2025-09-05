@@ -98,7 +98,8 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Add DynamoDB tables creation from the JSON configs using AWS CloudFormation [GS-84].
 - Add "scripts/aws_dynamodb/generate_dynamodb_cf/generate_dynamodb_cf.py" and its ".sh" to generate the "cf-template-dynamodb.yml" file in the project's scripts directory [GS-84]. 
 - Add "scripts/aws_dynamodb/run-dynamodb-deploy.sh" to deploy generated "cf-template-dynamodb.yml" [GS-84].
-- Add GET_SECRETS_CRITICAL and GET_SECRETS_CRITICAL envvars to fine-grained disabling of cloud secrets manager for critical secrets and plain envvars [GS-41].
+- Add GET_SECRETS_ENABLED to enable/disable cloud secrets manager [GS-41].
+- Add GET_SECRETS_CRITICAL and GET_SECRETS_ENVVARS envvars to fine-grained disabling of cloud secrets manager for critical secrets and plain envvars [GS-41].
 - Add aws_secrets to Makefile to deploy envvars to the AWS Secrets manager [GS-41].
 - Add depLoy_ec2 to Makefile [GS-96].
 - Add deploy_ecr_creation to Makefile to build the FastAPI docker image [GS-96].
