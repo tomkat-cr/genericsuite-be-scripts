@@ -9,6 +9,8 @@ ERROR_MSG=""
 # Detault app port for the test (can be changed in ".env")
 TEST_APP_URL="http://localhost:5001"
 
+PEM_TOOL="uv"
+
 REPO_BASEDIR="`pwd`"
 cd "`dirname "$0"`" ;
 SCRIPTS_DIR="`pwd`" ;
@@ -101,7 +103,7 @@ if [ "$ERROR_MSG" = "" ]; then
         echo ""
         echo "Press ENTER to begin the test..."
         read any_key
-        pipenv install --dev
+        sh ${SCRIPTS_DIR}/run_pem.sh install_dev
         if [ "$1" = "" ]; then
             pipenv run pytest tests --junitxml=report.xml
         else

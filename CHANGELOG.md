@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Changelog](http://keepachangelog.com/).
 
 
-## [Unreleased] - Date
+## [Unreleased]
 
 ### Added
 
@@ -15,9 +15,12 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Removed
 
 
-## [1.2.0] - 2025-09-04
+## [1.2.0] - 2025-11-15
 
 ### Added
+- Add "uv" and "poetry" Python package and dependency management tools [GS-77].
+- Add PEM_TOOL envvar to select the Python package and dependency management tool (uv, pipenv, and poetry), default to "uv" [GS-77].
+- Add AUTO_RELOAD envvar to fix some issues with the "--auto-reload" / "--reload" option running the app in "run_aws.sh", Turborepo and "uv", default to "1" [GS-77].
 - Add "make update" and "make update_dev" to update the dependencies.
 
 ### Changed
@@ -26,7 +29,10 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Enhance README for license and credits clarity.
 - Update CHANGELOG format to be more semantic.
 - Change: update MongoDB service restart policy from 'always' to 'unless-stopped' in the test stack configuration.
+- Change "make install" and "make install_dev" to call "sh node_modules/genericsuite-be-scripts/scripts/run_pem.sh install" and "sh node_modules/genericsuite-be-scripts/scripts/run_pem.sh install_dev" respectively
 
+### Fixed
+- Change "make install" and "make install_dev" so "npm install" is called before "sh node_modules/genericsuite-be-scripts/scripts/run_pem.sh" to install the GS BE Scripts and avoid the error "Error: Cannot find module 'genericsuite-be-scripts' [GS-77].
 
 ## [1.0.14] - 2025-07-08
 
