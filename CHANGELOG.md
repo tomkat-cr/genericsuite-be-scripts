@@ -21,6 +21,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Add "uv" and "poetry" Python package and dependency management tools [GS-77].
 - Add PEM_TOOL envvar to select the Python package and dependency management tool (uv, pipenv, and poetry), default to "uv" [GS-77].
 - Add AUTO_RELOAD envvar to fix some issues with the "--auto-reload" / "--reload" option running the app in "run_aws.sh", Turborepo and "uv", default to "1" [GS-77].
+- Add Linux compatibility: replace "sh" by "bash" in Makefile and package.json files to run on Linux [GS-230].
 - Add "make update" and "make update_dev" to update the dependencies.
 
 ### Changed

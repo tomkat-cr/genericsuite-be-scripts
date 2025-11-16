@@ -12,8 +12,8 @@
     "README.md"
   ],
   "scripts": {
-    "publish": "sh scripts/npm_publish.sh publish",
-    "pre-publish": "sh scripts/npm_publish.sh pre-publish"
+    "publish": "bash scripts/npm_publish.sh publish",
+    "pre-publish": "bash scripts/npm_publish.sh pre-publish"
   },
   "repository": {
     "type": "git",

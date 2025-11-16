@@ -7,8 +7,8 @@ check_chalice_framework() {
         echo "CURRENT_FRAMEWORK '${CURRENT_FRAMEWORK}' doesn't need 'set_chalice_cnf.sh' script to run [2]..."
         exit 0
     fi
-    echo "sh ${SCRIPTS_DIR}/set_chalice_cnf.sh ${STAGE}" http
-    sh ${SCRIPTS_DIR}/set_chalice_cnf.sh ${STAGE} http
+    echo "bash ${SCRIPTS_DIR}/set_chalice_cnf.sh ${STAGE}" http
+    bash ${SCRIPTS_DIR}/set_chalice_cnf.sh ${STAGE} http
 }
 
 set_chalice_autoreload_option() {
@@ -46,7 +46,7 @@ cd "`dirname "$0"`"
 SCRIPTS_DIR="`pwd`"
 cd "${REPO_BASEDIR}"
 
-# set -o allexport ; . .env ; set +o allexport ;
+set -o allexport ; . .env ; set +o allexport ;
 . ${SCRIPTS_DIR}/../set_app_dir_and_main_file.sh
 
 if [ "${APP_NAME}" = "" ]; then
@@ -112,15 +112,15 @@ fi
 STAGE_UPPERCASE=$(echo $STAGE | tr '[:lower:]' '[:upper:]')
 
 if [ "$1" = "shell" ]; then
-    sh ${SCRIPTS_DIR}/../run_pem.sh shell
+	bash ${SCRIPTS_DIR}/../run_pem.sh shell
 fi
 
 if [ "$1" = "pipfile" ]; then
-	sh ${SCRIPTS_DIR}/../run_pem.sh requirements
+	bash ${SCRIPTS_DIR}/../run_pem.sh requirements
 fi
 
 if [ "$1" = "requirements" ]; then
-	sh ${SCRIPTS_DIR}/../run_pem.sh requirements
+	bash ${SCRIPTS_DIR}/../run_pem.sh requirements
 fi
 
 if [ "$1" = "clean" ]; then
@@ -168,7 +168,7 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
     echo "Python entry point (APP_DIR.APP_MAIN_FILE): ${APP_DIR}.${APP_MAIN_FILE}"
     echo ""
 
-    export IP_ADDRESS=$(sh ${SCRIPTS_DIR}/../get_localhost_ip.sh)
+    export IP_ADDRESS=$(bash ${SCRIPTS_DIR}/../get_localhost_ip.sh)
     export APP_VERSION=$(cat ${REPO_BASEDIR}/version.txt)
 
     if [ "${RUN_PROTOCOL}" = "" ]; then
@@ -294,7 +294,7 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
 
     # Stop local NGINX
     if [ "${STAGE}" = "dev" ];then
-        sh ${SCRIPTS_DIR}/../get_domain_name_dev.sh "stop_local_ngnx" "${APP_DOMAIN_NAME}" "${SCRIPTS_DIR}/.."
+        bash ${SCRIPTS_DIR}/../get_domain_name_dev.sh "stop_local_ngnx" "${APP_DOMAIN_NAME}" "${SCRIPTS_DIR}/.."
     fi
 fi
 
