@@ -34,6 +34,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 
 ### Fixed
 - Change "make install" and "make install_dev" so "npm install" is called before "sh node_modules/genericsuite-be-scripts/scripts/run_pem.sh" to install the GS BE Scripts and avoid the error "Error: Cannot find module 'genericsuite-be-scripts' [GS-77].
+- Fix "change_local_ip_for_dev.sh" adding parameter $2 & $3 checks to avoid overwriting BACKEND_LOCAL_PORT and FRONTEND_LOCAL_PORT envvars [GS-230].
 
 
 ## [1.0.14] - 2025-07-08
