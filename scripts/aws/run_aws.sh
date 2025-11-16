@@ -22,7 +22,7 @@ set_chalice_autoreload_option() {
     export AUTO_RELOAD_OPTION
 }
 
-set_gunicorn_autoreload_option() {
+set_generic_autoreload_option() {
     if [ "${AUTO_RELOAD}" = "0" ]; then
         AUTO_RELOAD_OPTION=""
     else
@@ -31,13 +31,12 @@ set_gunicorn_autoreload_option() {
     export AUTO_RELOAD_OPTION
 }
 
+set_gunicorn_autoreload_option() {
+    set_generic_autoreload_option
+}
+
 set_uvicorn_autoreload_option() {
-    if [ "${AUTO_RELOAD}" = "0" ]; then
-        AUTO_RELOAD_OPTION=""
-    else
-        AUTO_RELOAD_OPTION="--reload"
-    fi
-    export AUTO_RELOAD_OPTION
+    set_generic_autoreload_option
 }
 
 PEM_TOOL="uv"
@@ -117,6 +116,10 @@ if [ "$1" = "shell" ]; then
 fi
 
 if [ "$1" = "pipfile" ]; then
+	sh ${SCRIPTS_DIR}/../run_pem.sh requirements
+fi
+
+if [ "$1" = "requirements" ]; then
 	sh ${SCRIPTS_DIR}/../run_pem.sh requirements
 fi
 

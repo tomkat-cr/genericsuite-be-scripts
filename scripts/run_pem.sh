@@ -110,9 +110,17 @@ shell() {
         pipenv shell
         pipenv --python ${PYTHON_VERSION}
     elif [ "${PEM_TOOL}" = "poetry" ]; then
-        poetry env use python
+        `poetry env activate`
     elif [ "${PEM_TOOL}" = "uv" ]; then
         uv venv
+        if ! source .venv/bin/activate
+        then
+            if ! . .venv/bin/activate
+            then
+                echo "ERROR: Could not activate virtual environment."
+                exit 1
+            fi
+        fi
     fi
 }
 

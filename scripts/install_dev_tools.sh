@@ -182,7 +182,7 @@ if [[ "${ERROR_MSG}" = "" && "${INSTALL_PYENV}" = "1" ]]; then
     fi
 fi
 
-if [[ "${ERROR_MSG}" = "" && "${INSTALL_PEM_TOOL}" = "1" ]]; 
+if [[ "${ERROR_MSG}" = "" && "${INSTALL_PEM_TOOL}" = "1" ]]; then
     if [ "${PEM_TOOL}" = "pipenv" ]; then
         if ! pipenv --version
         then
