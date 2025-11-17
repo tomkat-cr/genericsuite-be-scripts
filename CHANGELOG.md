@@ -52,6 +52,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Implement Podman as an alternative to Docker [GS-215].
 - Add CONTAINER_ENGINE and OPEN_CONTAINERS_ENGINE_APP envvars to GenericSuite BE Core [GS-215].
 - Add configurable backend ports using the envvar BACKEND_LOCAL_PORT and BACKEND_DEBUG_LOCAL_PORT to the "sls" (secure local server) [GS-137].
+- Add "check_if_engine_is_running" to container_engine_manager.sh, to check if docker/podman engine is running.
 
 ### Changed
 - Remove "make lock_pip_file" and replace it with "make requirements". Add "make lock" and "make npm_lock" [FA-84] [GS-15].
@@ -67,7 +68,9 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Fix TMP_BUILD_DIR assignment in dynamodb deploy script.
 - Fix "run_aws.sh" to assign the correct AWS Stack Name and avoid the error "An error occurred (ValidationError) when calling the DescribeStacks operation: 1 validation error detected: Value '${APP_NAME_LOWERCASE}-be-stack' at 'stackName' failed to satisfy constraint: Member must satisfy regular expression pattern: [a-zA-Z][-a-zA-Z0-9]*|arn:[-a-zA-Z0-9:/._+]*" [GS-137].
 - Fix ".chalice/config_example.json" to remove the API_GATEWAY_STAGE_placeholder from the "api_gateway_stage" attribute and assign the correct value, and remove unused attributes in the QA stage [FA-248].
-
+- Prevent stop containers on in secure_local_server/run.sh when docker is not running (using the new "check_if_engine_is_running" option).
+- Prevent loading docker on "down" action in secure_local_server/run.sh.
+- Replace "stop_local_ngnx" with "stop_local_nginx" in get_domain_name_dev.sh and run_aws.sh.
 
 ## [1.0.13] - 2025-02-18
 

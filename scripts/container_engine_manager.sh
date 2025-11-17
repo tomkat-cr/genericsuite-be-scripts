@@ -29,6 +29,15 @@ set_default_values() {
     fi
 }
 
+check_if_engine_is_running() {
+    if ${DOCKER_CMD} ps > /dev/null 2>&1;
+    then
+        export DOCKER_IS_RUNNING="1"
+    else
+        export DOCKER_IS_RUNNING="0"
+    fi
+}
+
 start_docker_engine() {
     if ! docker ps > /dev/null 2>&1;
     then
@@ -156,6 +165,8 @@ elif [ "${ACTION}" = "status" ]; then
     elif [ "${CONTAINERS_ENGINE}" = "podman" ]; then
         podman machine status
     fi
+elif [ "${ACTION}" = "engine_is_running" ]; then
+    check_if_engine_is_running
 else
     echo "Invalid action: ${ACTION} or invalid containers engine: ${CONTAINERS_ENGINE}"
     exit 1

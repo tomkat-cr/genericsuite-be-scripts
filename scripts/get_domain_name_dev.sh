@@ -14,7 +14,7 @@ exit_abort() {
   exit 1
 }
 
-stop_local_ngnx() {
+stop_local_nginx() {
   # If the nginx docker container nginx-dev-mask-ext is running, stop it
   echo "Stopping nginx docker container 'nginx-dev-mask-ext'..."
   ${DOCKER_CMD} stop nginx-dev-mask-ext
@@ -129,7 +129,7 @@ enable_bridge_proxy() {
   echo ""
 
   # If the nginx docker container nginx-dev-mask-ext is running, stop it
-  stop_local_ngnx
+  stop_local_nginx
 
   # Preparing the NGNX confing file
   echo "Preparing the NGNX confing file..."
@@ -330,9 +330,9 @@ echo "REPO_BASEDIR: ${REPO_BASEDIR}"
 echo ""
 
 # Prepare domain name
-if [ "${STAGE}" == "stop_local_ngnx" ];then
+if [ "${STAGE}" == "stop_local_nginx" ];then
   . "${SELF_SCRIPTS_DIR}/get_domain_name.sh" dev local
-  STAGE="stop_local_ngnx"
+  STAGE="stop_local_nginx"
 fi
 
 if [ "${STAGE}" = "dev" ];then
@@ -375,8 +375,8 @@ if [ "${STAGE}" = "dev" ];then
 fi
 
 echo ""
-if [ "${STAGE}" = "stop_local_ngnx" ];then
-  stop_local_ngnx
+if [ "${STAGE}" = "stop_local_nginx" ];then
+  stop_local_nginx
   DOMAIN_NAME="NGINX Server stopped for ${DOMAIN_NAME}."
 fi
 

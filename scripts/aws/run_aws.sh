@@ -294,7 +294,7 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
 
     # Stop local NGINX
     if [ "${STAGE}" = "dev" ];then
-        bash ${SCRIPTS_DIR}/../get_domain_name_dev.sh "stop_local_ngnx" "${APP_DOMAIN_NAME}" "${SCRIPTS_DIR}/.."
+        bash ${SCRIPTS_DIR}/../get_domain_name_dev.sh "stop_local_nginx" "${APP_DOMAIN_NAME}" "${SCRIPTS_DIR}/.."
     fi
 fi
 
