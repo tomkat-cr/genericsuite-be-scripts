@@ -1,12 +1,19 @@
 #!/bin/sh
 # scripts/link_gs_libs_for_dev.sh
-# Link GenericSuite libraries and trigger the uvicorn/gunicorn reload after pipenv update [FA-84].
+# Link GenericSuite libraries and trigger the uvicorn/gunicorn reload after pipenv/poetry/uv update [FA-84].
 # Since the new pipenv, version 2024.1.0, the changes made to files in a local installed repo won't trigger the uvicorn/gunicorn reload.
 # So this script will link the libraries in "~/.local/share/virtualenvs" to the source code.
 # References:
 #   "GS-15 - Generic Endpoint Builder for Flask" (check 2025-01-07 & 2025-01-08)
 #   "FA-84 - Separate BE Generic Suite and publish to PyPi" (check 2025-01-05)
 # 2025-01-08 | CR
+
+export REPO_BASEDIR="`pwd`"
+cd "`dirname "$0"`"
+export SCRIPTS_DIR="`pwd`"
+cd "${REPO_BASEDIR}"
+
+PEM_TOOL="uv"
 
 echo "Read .env file"
 set -o allexport ; . .env ; set +o allexport ;
@@ -29,9 +36,17 @@ link_gs_libs_for_dev() {
         exit 1
     fi
 
-    BASE_VIR_ENVS_PATH=$(pipenv --venv | head -1)
-    if [ "$BASE_VIR_ENVS_PATH" = "" ]; then
-        echo "ERROR: No virtual environment found. Please run 'pipenv shell' first."
+    if ! source "${SCRIPTS_DIR}/run_pem.sh" venv_path
+    then
+        if ! . "${SCRIPTS_DIR}/run_pem.sh" venv_path
+        then
+            echo "ERROR: Could not run '${SCRIPTS_DIR}/run_pem.sh venv_path'."
+            exit 1
+        fi
+    fi
+
+    if [ "${BASE_VIR_ENVS_PATH}" = "" ]; then
+        echo "ERROR: No virtual environment found. Please run '${PEM_TOOL} shell | venv | env | activate' first."
         exit 1
     fi
 

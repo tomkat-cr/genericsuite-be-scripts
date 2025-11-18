@@ -1,8 +1,8 @@
 {
   "name": "genericsuite-be-scripts",
-  "version": "1.0.14",
+  "version": "1.2.0",
   "description": "GenericSuite Scripts (backend version)",
-  "author": "Carlos J. Ramirez",
+  "author": "Carlos J. Ramirez <info@genericsuite.com>",
   "license": "ISC",
   "files": [
     ".chalice",
@@ -12,8 +12,8 @@
     "README.md"
   ],
   "scripts": {
-    "publish": "sh scripts/npm_publish.sh publish",
-    "pre-publish": "sh scripts/npm_publish.sh pre-publish"
+    "publish": "bash scripts/npm_publish.sh publish",
+    "pre-publish": "bash scripts/npm_publish.sh pre-publish"
   },
   "repository": {
     "type": "git",

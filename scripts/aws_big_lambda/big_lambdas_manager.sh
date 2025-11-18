@@ -8,6 +8,8 @@
 
 DEBUG="0"
 
+PEM_TOOL="uv"
+
 yes_or_no() {
   read choice
   while [[ ! $choice =~ ^[YyNn]$ ]]; do
@@ -754,13 +756,13 @@ verify_requirements_with_local_dependencies() {
     if [ "${local_ge_be_ai}" != "" ]; then
         echo ""
         echo "Local Genericsuite AI found in requirements.txt..."
-        echo "It was installed with e.g. pipenv install ../genericsuite-be-ai"
+        echo "It was installed with e.g. ${PEM_TOOL} install ../genericsuite-be-ai"
         LOCAL_DEPENDENCIES_ERROR="1"
     fi
     if [ "${local_ge_be_core}" != "" ]; then
         echo ""
         echo "Local Genericsuite Core found in requirements.txt..."
-        echo "It was installed with e.g. pipenv install ../genericsuite-be"
+        echo "It was installed with e.g. ${PEM_TOOL} install ../genericsuite-be"
         LOCAL_DEPENDENCIES_ERROR="1"
     fi
 
@@ -769,11 +771,11 @@ verify_requirements_with_local_dependencies() {
         echo ""
         echo "Please install these dependencies from Pypi or a Git repository."
         echo "If you are using Pipenv, you can install these dependencies with:"
-        echo "   pipenv install genericsuite-ai"
-        echo "   pipenv install genericsuite"
+        echo "   ${PEM_TOOL} install genericsuite-ai"
+        echo "   ${PEM_TOOL} install genericsuite"
         echo "   or"
-        echo "   pipenv install git+https://github.com/tomkat-cr/genericsuite-be-ai@branch_name"
-        echo "   pipenv install git+https://github.com/tomkat-cr/genericsuite-be@branch_name"
+        echo "   ${PEM_TOOL} install git+https://github.com/tomkat-cr/genericsuite-be-ai@branch_name"
+        echo "   ${PEM_TOOL} install git+https://github.com/tomkat-cr/genericsuite-be@branch_name"
         exit_abort
     fi
 

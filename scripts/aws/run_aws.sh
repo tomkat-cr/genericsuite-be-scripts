@@ -7,16 +7,46 @@ check_chalice_framework() {
         echo "CURRENT_FRAMEWORK '${CURRENT_FRAMEWORK}' doesn't need 'set_chalice_cnf.sh' script to run [2]..."
         exit 0
     fi
-    echo "sh ${SCRIPTS_DIR}/set_chalice_cnf.sh ${STAGE}" http
-    sh ${SCRIPTS_DIR}/set_chalice_cnf.sh ${STAGE} http
+    echo "bash ${SCRIPTS_DIR}/set_chalice_cnf.sh ${STAGE}" http
+    bash ${SCRIPTS_DIR}/set_chalice_cnf.sh ${STAGE} http
 }
+
+set_chalice_autoreload_option() {
+    if [ "${AUTO_RELOAD}" = "0" ]; then
+        AUTO_RELOAD_OPTION="--no-autoreload"
+    elif [ "${AUTO_RELOAD}" = "-" ]; then
+        AUTO_RELOAD_OPTION=""
+    else
+        AUTO_RELOAD_OPTION="--autoreload"
+    fi
+    export AUTO_RELOAD_OPTION
+}
+
+set_generic_autoreload_option() {
+    if [ "${AUTO_RELOAD}" = "0" ]; then
+        AUTO_RELOAD_OPTION=""
+    else
+        AUTO_RELOAD_OPTION="--reload"
+    fi
+    export AUTO_RELOAD_OPTION
+}
+
+set_gunicorn_autoreload_option() {
+    set_generic_autoreload_option
+}
+
+set_uvicorn_autoreload_option() {
+    set_generic_autoreload_option
+}
+
+PEM_TOOL="uv"
 
 REPO_BASEDIR="`pwd`"
 cd "`dirname "$0"`"
 SCRIPTS_DIR="`pwd`"
 cd "${REPO_BASEDIR}"
 
-# set -o allexport ; . .env ; set +o allexport ;
+set -o allexport ; . .env ; set +o allexport ;
 . ${SCRIPTS_DIR}/../set_app_dir_and_main_file.sh
 
 if [ "${APP_NAME}" = "" ]; then
@@ -82,18 +112,15 @@ fi
 STAGE_UPPERCASE=$(echo $STAGE | tr '[:lower:]' '[:upper:]')
 
 if [ "$1" = "shell" ]; then
-	pipenv shell
-    pipenv --python ${PYTHON_VERSION}
+	bash ${SCRIPTS_DIR}/../run_pem.sh shell
 fi
 
 if [ "$1" = "pipfile" ]; then
-	# pipenv shell
-    pipenv --python ${PYTHON_VERSION}
-    pipenv lock
-    pipenv requirements > ${REPO_BASEDIR}/requirements.txt
-    # if ! grep -q "setuptools" ${REPO_BASEDIR}/requirements.txt; then
-    #     echo "setuptools>=75.5.0 # not directly required, pinned by Snyk to avoid a vulnerability" >> ${REPO_BASEDIR}/requirements.txt
-    # fi
+	bash ${SCRIPTS_DIR}/../run_pem.sh requirements
+fi
+
+if [ "$1" = "requirements" ]; then
+	bash ${SCRIPTS_DIR}/../run_pem.sh requirements
 fi
 
 if [ "$1" = "clean" ]; then
@@ -141,7 +168,7 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
     echo "Python entry point (APP_DIR.APP_MAIN_FILE): ${APP_DIR}.${APP_MAIN_FILE}"
     echo ""
 
-    export IP_ADDRESS=$(sh ${SCRIPTS_DIR}/../get_localhost_ip.sh)
+    export IP_ADDRESS=$(bash ${SCRIPTS_DIR}/../get_localhost_ip.sh)
     export APP_VERSION=$(cat ${REPO_BASEDIR}/version.txt)
 
     if [ "${RUN_PROTOCOL}" = "" ]; then
@@ -216,28 +243,31 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
     echo "USER_AGENT: ${USER_AGENT}"
 
     if [ "${RUN_METHOD}" = "chalice" ]; then
+        set_chalice_autoreload_option
         check_chalice_framework
         echo ""
-        echo "pipenv run chalice local --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT} --stage ${STAGE}"
+        echo "${PEM_TOOL} run chalice local --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT} --stage ${STAGE} ${AUTO_RELOAD_OPTION}"
         echo ""
-        pipenv run chalice local --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT} --stage ${STAGE} --autoreload
+        ${PEM_TOOL} run chalice local --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT} --stage ${STAGE} ${AUTO_RELOAD_OPTION}
     fi
 
     if [ "${RUN_METHOD}" = "chalice_docker" ]; then
+        set_chalice_autoreload_option
         echo "${SCRIPTS_DIR}/../secure_local_server/run.sh"
         ${SCRIPTS_DIR}/../secure_local_server/run.sh "run" ${STAGE}
     fi
 
     if [ "${RUN_METHOD}" = "gunicorn" ]; then
+        set_gunicorn_autoreload_option
         if [ "${RUN_PROTOCOL}" = "https" ]; then
             echo "${SCRIPTS_DIR}/../secure_local_server/run.sh"
             ${SCRIPTS_DIR}/../secure_local_server/run.sh "run" ${STAGE}
         else
-            echo "pipenv run gunicorn --bind 0.0.0.0:${BACKEND_LOCAL_PORT} ${APP_DIR}.${APP_MAIN_FILE}:app --reload  --forwarded-allow-ips=${IP_ADDRESS}"
+            echo "${PEM_TOOL} run gunicorn --bind 0.0.0.0:${BACKEND_LOCAL_PORT} ${APP_DIR}.${APP_MAIN_FILE}:app ${AUTO_RELOAD_OPTION}  --forwarded-allow-ips=${IP_ADDRESS}"
             echo ""
-            pipenv run gunicorn ${APP_DIR}.${APP_MAIN_FILE}:app \
+            ${PEM_TOOL} run gunicorn ${APP_DIR}.${APP_MAIN_FILE}:app \
                 --bind 0.0.0.0:${BACKEND_LOCAL_PORT} \
-                --reload \
+                ${AUTO_RELOAD_OPTION} \
                 --workers=2 \
                 --proxy-protocol \
                 --limit-request-field_size=200000 \
@@ -251,19 +281,20 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
     fi
 
     if [ "${RUN_METHOD}" = "uvicorn" ]; then
+        set_uvicorn_autoreload_option
         if [ "${RUN_PROTOCOL}" = "https" ]; then
             echo "${SCRIPTS_DIR}/../secure_local_server/run.sh"
             ${SCRIPTS_DIR}/../secure_local_server/run.sh "run" ${STAGE}
         else
-            echo "pipenv run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app  --reload --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT}"
+            echo "${PEM_TOOL} run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app ${AUTO_RELOAD_OPTION} --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT}"
             echo ""
-            pipenv run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app --reload --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT}
+            ${PEM_TOOL} run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app ${AUTO_RELOAD_OPTION} --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT}
         fi
     fi
 
     # Stop local NGINX
     if [ "${STAGE}" = "dev" ];then
-        sh ${SCRIPTS_DIR}/../get_domain_name_dev.sh "stop_local_ngnx" "${APP_DOMAIN_NAME}" "${SCRIPTS_DIR}/.."
+        bash ${SCRIPTS_DIR}/../get_domain_name_dev.sh "stop_local_nginx" "${APP_DOMAIN_NAME}" "${SCRIPTS_DIR}/.."
     fi
 fi
 
@@ -272,20 +303,18 @@ if [ "$1" = "run" ]; then
     check_chalice_framework
     cd ${REPO_BASEDIR}
     echo ""
-    echo "PRODUCCION RUNNING: pipenv run chalice local --port ${BACKEND_LOCAL_PORT} --stage PROD"
+    echo "PRODUCCION RUNNING: ${PEM_TOOL} run chalice local --port ${BACKEND_LOCAL_PORT} --stage PROD"
     echo ""
-    pipenv run chalice local --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT} --stage prod
+    ${PEM_TOOL} run chalice local --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT} --stage prod
 fi
 
 if [ "$1" = "deploy" ]; then
     check_chalice_framework
     # This must be run first (and it's run by "make"):
-    #    pipenv requirements > ${REPO_BASEDIR}/requirements.txt
-    # Check option "pipfile"
-    # Change to your Chalice project directory
+    #    make requirements
     cd ${REPO_BASEDIR}
-    pipenv run chalice package .chalice/deployment
-    pipenv run chalice deploy --stage ${STAGE}
+    ${PEM_TOOL} run chalice package .chalice/deployment
+    ${PEM_TOOL} run chalice deploy --stage ${STAGE}
     if [ "${STAGE}" = "qa" ]; then
         perl -i -pe "s|APP_CORS_ORIGIN_QA=.*|APP_CORS_ORIGIN_QA=${APP_CORS_ORIGIN_QA_LOCAL}|g" "${ENV_FILESPEC}"
     fi
@@ -307,8 +336,8 @@ if [ "$1" = "delete_app" ]; then
     # Delete application
     check_chalice_framework
     cd ${REPO_BASEDIR}
-    echo "Running: pipenv run chalice delete --stage ${STAGE}"
-    pipenv run chalice delete --stage ${STAGE}
+    echo "Running: ${PEM_TOOL} run chalice delete --stage ${STAGE}"
+    ${PEM_TOOL} run chalice delete --stage ${STAGE}
 fi
 
 if [ "$1" = "delete_stack" ]; then

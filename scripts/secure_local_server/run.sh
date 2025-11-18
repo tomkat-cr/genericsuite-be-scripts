@@ -23,7 +23,9 @@ docker_dependencies() {
         echo ""
         exit 1
     fi
+}
 
+start_local_dns() {
     if ! ${DOCKER_CMD} ps | grep dns-server -q
     then
         echo ""
@@ -169,15 +171,26 @@ prepare_environment() {
 }
 
 stop_sls_docker_containers() {
-    cd "${TMP_WORKING_DIR}"
-    ${DOCKER_COMPOSE_CMD} down
-    ${DOCKER_CMD} stop sls-backend
-    ${DOCKER_CMD} rm sls-backend
-    ${DOCKER_CMD} stop sls-nginx
-    ${DOCKER_CMD} rm sls-nginx
+    local stop_containers="0"
+    if source "${SCRIPTS_DIR}/../container_engine_manager.sh" engine_is_running "${CONTAINERS_ENGINE}" "${OPEN_CONTAINERS_ENGINE_APP}"
+    then
+        if [ "${DOCKER_IS_RUNNING}" = "1" ]; then
+            echo "Docker is running... stopping containers..."
+            stop_containers="1"
+        fi
+    fi
+    if [ "${stop_containers}" = "1" ]; then
+        cd "${TMP_WORKING_DIR}"
+        ${DOCKER_COMPOSE_CMD} down
+        ${DOCKER_CMD} stop sls-backend
+        ${DOCKER_CMD} rm sls-backend
+        ${DOCKER_CMD} stop sls-nginx
+        ${DOCKER_CMD} rm sls-nginx
+    fi
 }
 
 start_sls_docker_containers() {
+    start_local_dns
     # Prepare environment
     prepare_environment
     # Run the App in the docker container from the tmp dir.
@@ -220,8 +233,6 @@ export REPO_BASEDIR="`pwd`"
 cd "`dirname "$0"`"
 export SCRIPTS_DIR="`pwd`"
 cd "${REPO_BASEDIR}"
-
-docker_dependencies
 
 if [ "$#" -ne 2 ]; then
     echo ""
@@ -285,6 +296,7 @@ echo "Docker command (DOCKER_CMD): ${DOCKER_CMD}"
 echo ""
 
 if [ "${ACTION}" = "" ] || [ "${ACTION}" = "run" ]; then
+    docker_dependencies
     if ! ${DOCKER_CMD} ps | grep sls-backend
     then
         echo ""
@@ -338,6 +350,7 @@ if [ "${ACTION}" = "down" ];then
 fi
 
 if [ "${ACTION}" = "logs" ];then
+    docker_dependencies
     echo "Showing the logs of the local backend server over a secure connection."
     echo ""
     ${DOCKER_CMD} logs secure_local_server-nginx-1
@@ -345,6 +358,7 @@ if [ "${ACTION}" = "logs" ];then
 fi
 
 if [ "${ACTION}" = "logs_nginx" ];then
+    docker_dependencies
     echo "Showing the logs of the local backend server over a secure connection."
     echo ""
     ${DOCKER_CMD} logs secure_local_server-nginx-1
@@ -352,6 +366,7 @@ if [ "${ACTION}" = "logs_nginx" ];then
 fi
 
 if [ "${ACTION}" = "monitor" ];then
+    docker_dependencies
     echo "Monitoring the logs of local backend server over a secure connection."
     echo ""
     ${DOCKER_CMD} ps
@@ -359,6 +374,7 @@ if [ "${ACTION}" = "monitor" ];then
 fi
 
 if [ "${ACTION}" = "monitor_nginx" ];then
+    docker_dependencies
     echo "Monitoring the logs of local backend server over a secure connection."
     echo ""
     ${DOCKER_CMD} ps

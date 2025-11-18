@@ -8,6 +8,8 @@
 
 # ------------------
 
+PEM_TOOL="uv"
+
 docker_dependencies() {
     if ! source "${SCRIPTS_DIR}/../container_engine_manager.sh" start "${CONTAINERS_ENGINE}" "${OPEN_CONTAINERS_ENGINE_APP}"
     then
@@ -374,12 +376,12 @@ verify_requirements_with_local_dependencies() {
     # Verify "Local" dependencies
     if grep -q "-e ..\/genericsuite-be-ai" "${REPO_BASEDIR}/requirements.txt"; then
         echo "Local Genericsuite-BE-AI found in requirements.txt..."
-        echo "It was installed with e.g. pipenv install ../genericsuite-be-ai"
+        echo "It was installed with e.g. ${PEM_TOOL} install ../genericsuite-be-ai"
         LOCAL_DEPENDENCIES_ERROR="1"
     fi
     if grep -q "-e ..\/genericsuite-be" "${REPO_BASEDIR}/requirements.txt"; then
         echo "Local Genericsuite-BE found in requirements.txt..."
-        echo "It was installed with e.g. pipenv install ../genericsuite-be"
+        echo "It was installed with e.g. ${PEM_TOOL} install ../genericsuite-be"
         LOCAL_DEPENDENCIES_ERROR="1"
     fi
     # Local dependecies are not allowed because it makes the docker image for deployment creation to fail
@@ -387,11 +389,11 @@ verify_requirements_with_local_dependencies() {
         echo ""
         echo "Please install these dependencies from Pypi or a Git repository."
         echo "If you are using Pipenv, you can install these dependencies with:"
-        echo "   pipenv install genericsuite-ai"
-        echo "   pipenv install genericsuite"
+        echo "   ${PEM_TOOL} install genericsuite-ai"
+        echo "   ${PEM_TOOL} install genericsuite"
         echo "   or"
-        echo "   pipenv install git+https://github.com/tomkat-cr/genericsuite-be-ai"
-        echo "   pipenv install git+https://github.com/tomkat-cr/genericsuite-be@branch_name"
+        echo "   ${PEM_TOOL} install git+https://github.com/tomkat-cr/genericsuite-be-ai"
+        echo "   ${PEM_TOOL} install git+https://github.com/tomkat-cr/genericsuite-be@branch_name"
         exit_abort
     fi
     # Verify "Git" dependencies

@@ -24,14 +24,22 @@ if [ ! -f "${FRONTEND_PATH}/.env" ]; then
     echo "'${FRONTEND_PATH}/.env' does not exist. Path must be defined in the FRONTEND_PATH environment variable in the .env file..."
     exit 1
 fi
+#
+# Get parameters
 IP_ADDRESS_or_DOMAIN=$1
-BACKEND_LOCAL_PORT=$2
-FRONTEND_LOCAL_PORT=$3
+if [ "$2" != "" ]; then
+    export BACKEND_LOCAL_PORT=$2
+fi
+if [ "$3" != "" ]; then
+    export FRONTEND_LOCAL_PORT=$3
+fi
+#
+# Assign defaults if not set
 if [ "${BACKEND_LOCAL_PORT}" = "" ]; then
-    BACKEND_LOCAL_PORT="5001"
+    export BACKEND_LOCAL_PORT="5001"
 fi
 if [ "${FRONTEND_LOCAL_PORT}" = "" ]; then
-    FRONTEND_LOCAL_PORT="3000"
+    export FRONTEND_LOCAL_PORT="3000"
 fi
 HTTP_HTTPS="https"
 #
