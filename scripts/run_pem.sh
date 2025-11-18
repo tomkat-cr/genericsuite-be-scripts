@@ -20,7 +20,7 @@ install_dev() {
     if [ "${PEM_TOOL}" = "pipenv" ]; then
         pipenv install --dev
     elif [ "${PEM_TOOL}" = "poetry" ]; then
-        poetry install --dev
+        poetry install --with dev
     elif [ "${PEM_TOOL}" = "uv" ]; then
         uv sync --dev
     fi
@@ -41,8 +41,9 @@ update_dev() {
     if [ "${PEM_TOOL}" = "pipenv" ]; then
         pipenv update --dev
     elif [ "${PEM_TOOL}" = "poetry" ]; then
-        poetry update --dev
+        poetry update --with dev
     elif [ "${PEM_TOOL}" = "uv" ]; then
+        uv lock --upgrade
         uv sync --dev
     fi
 }

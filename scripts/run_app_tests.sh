@@ -103,7 +103,7 @@ if [ "$ERROR_MSG" = "" ]; then
         echo ""
         echo "Press ENTER to begin the test..."
         read any_key
-        sh ${SCRIPTS_DIR}/run_pem.sh install_dev
+        bash ${SCRIPTS_DIR}/run_pem.sh install_dev
         if [ "$1" = "" ]; then
             pipenv run pytest tests --junitxml=report.xml
         else
