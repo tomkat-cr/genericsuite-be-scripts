@@ -5,8 +5,6 @@
 # Run the selected Python package and dependency management tool (uv, pipenv, and poetry)
 
 PEM_TOOL="uv"
-# PEM_TOOL="pipenv"
-# PEM_TOOL="poetry"
 
 install() {
     if [ "${PEM_TOOL}" = "pipenv" ]; then
@@ -79,7 +77,6 @@ clean_rm() {
     elif [ "${PEM_TOOL}" = "poetry" ]; then
         poetry env remove --all
     elif [ "${PEM_TOOL}" = "uv" ]; then
-        # uv venv --clear
         rm -rf .venv
     fi
 }
@@ -151,6 +148,10 @@ venv_path() {
     echo "Virtual environment path: ${BASE_VIR_ENVS_PATH}"
 }
 
+run_pycodestyle() {
+    ${PEM_TOOL} run pycodestyle .
+}
+
 export REPO_BASEDIR="`pwd`"
 cd "`dirname "$0"`"
 export SCRIPTS_DIR="`pwd`"
@@ -162,7 +163,6 @@ echo "Run_pem | ACTION: ${ACTION}"
 echo "Python package and dependencies manager tool: ${PEM_TOOL}"
 
 if [ ! -f "${REPO_BASEDIR}/.env" ]; then
-ls -lah "${REPO_BASEDIR}/.env"
     echo "ERROR: .env file not found"
     exit 1
 fi
@@ -216,6 +216,9 @@ case "${ACTION}" in
         ;;
     "venv_path")
         venv_path
+        ;;
+    "pycodestyle")
+        run_pycodestyle
         ;;
     *)
         echo "ERROR: Invalid ACTION: ${ACTION}"

@@ -21,7 +21,7 @@ cp ./tests/.env.for_test .env
 perl -i -pe"s/\+APP_SECRET_KEY\+/${APP_SECRET_KEY}/g" ".env" ;
 perl -i -pe"s/\+APP_SUPERADMIN_EMAIL\+/${APP_SUPERADMIN_EMAIL}/g" ".env" ;
 
-sh ${SCRIPTS_DIR}/../run_pem.sh install_dev
+bash ${SCRIPTS_DIR}/../run_pem.sh install_dev
 if [ "$1" = "" ]; then
     ${PEM_TOOL} run pytest tests --junitxml=report.xml
 else
