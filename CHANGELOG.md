@@ -15,6 +15,15 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Removed
 
 
+## [Unreleased]
+
+### Added
+- Add "scripts/run_mcp_server.sh" to standarize the MCP server bash script.
+
+### Fixed
+- Comment out cleanup commands in "run_aws.sh" to prevent accidental deletion of important files during the clean operation.
+
+
 ## [1.2.0] - 2025-11-17
 
 ### Added

@@ -136,17 +136,17 @@ if [ "$1" = "clean" ]; then
     rm -rf __pycache__ ;
     rm -rf ../__pycache__ ;
     rm -rf bin ;
-    rm -rf include ;
-    rm -rf instance ;
-    rm -rf lib ;
-    rm -rf src ;
+    # rm -rf include ;
+    # rm -rf instance ;
+    # rm -rf lib ;
+    # rm -rf src ;
     rm -rf pyvenv.cfg ;
     rm -rf .vercel/cache ;
     rm -rf ../.vercel/cache ;
     rm -rf ../node_modules ;
-    rm requirements.txt
-    rm ../requirements.txt
-    rm -rf var ;
+    # rm requirements.txt
+    # rm ../requirements.txt
+    # rm -rf var ;
     ls -lah
 fi
 
