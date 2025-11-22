@@ -1,0 +1,35 @@
+[tool.poetry]
+name = "complex-project"
+version = "1.0.0"
+description = "Complex project with various dependency types"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+# Caret constraints
+fastapi = "^0.104.1"
+pydantic = "^2.5.0"
+# Tilde constraints
+requests = "~2.31.0"
+httpx = "~0.25.0"
+# Exact versions
+click = "8.1.7"
+# Minimum versions
+numpy = ">=1.24.0"
+# Version ranges
+pandas = ">=1.5.0,<3.0.0"
+# Dependencies with extras
+uvicorn = {extras = ["standard"], version = "^0.24.0"}
+sqlalchemy = {extras = ["asyncio", "postgresql"], version = "^2.0.0"}
+# Wildcard versions
+pytest = "*"
+# Complex constraints
+django = ">=4.0.0,<5.0.0"
+# Optional dependencies
+redis = {version = "^5.0.0", optional = true}
+
+[tool.poetry.extras]
+redis = ["redis"]
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.0.0"
+mypy = "^1.0.0"

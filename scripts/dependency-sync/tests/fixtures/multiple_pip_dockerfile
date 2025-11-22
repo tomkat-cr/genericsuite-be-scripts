@@ -1,0 +1,16 @@
+FROM python:3.9
+
+# First pip install for system packages
+RUN pip install --upgrade pip
+
+# Main application dependencies
+RUN pip install --upgrade pip && pip install --no-cache-dir \
+    "fastapi>=0.68.0" \
+    "uvicorn[standard]>=0.15.0"
+
+# Additional pip install for dev tools
+RUN pip install pytest black
+
+COPY . /app
+WORKDIR /app
+CMD ["python", "main.py"]

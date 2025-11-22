@@ -11,31 +11,33 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 cd "$BASE_DIR"
 
+PEM_TOOL=uv
+
 # mcp-server ".env" file read
 if [ -f "$BASE_DIR/.env" ]; then
     echo "🔍 Reading .env file in $BASE_DIR..."
     set -o allexport; . "${BASE_DIR}/.env"; set +o allexport ;
 else
-    echo "❌ .env file not found in $APP_DIR. Please create one."
+    echo "❌ .env file not found in $MCP_APP_DIR. Please create one."
     exit 1
 fi
 
 # Set the application directory and main file
-if [ -z "$APP_DIR" ]; then
-    export APP_DIR="."
+if [ -z "$MCP_APP_DIR" ]; then
+    export MCP_APP_DIR="."
 fi
-if [ -z "$APP_MAIN_FILE" ]; then
-    export APP_MAIN_FILE="mcp_server"
+if [ -z "$MCP_APP_MAIN_FILE" ]; then
+    export MCP_APP_MAIN_FILE="mcp_server"
 fi
 
-echo "📂 Changing to MCP Server directory: $APP_DIR"
-cd "$APP_DIR"
+echo "📂 Changing to MCP Server directory: $MCP_APP_DIR"
+cd "$MCP_APP_DIR"
 
 echo "🥗 Starting MCP Server..."
 echo "📂 Current directory: `pwd`"
 echo "📂 Script directory: $SCRIPT_DIR"
-echo "📂 MCP Server directory: $APP_DIR"
-echo "📂 MCP Server main file: $APP_MAIN_FILE"
+echo "📂 MCP Server directory: $MCP_APP_DIR"
+echo "📂 MCP Server main file: $MCP_APP_MAIN_FILE"
 
 # Check if Python is available
 if ! command -v python3 &> /dev/null; then
@@ -66,12 +68,12 @@ fi
 echo "✅ Dependencies verified"
 
 # Read the .env file from the application directory if it is not the current directory
-if [ "$APP_DIR" != "." ]; then
+if [ "$MCP_APP_DIR" != "." ]; then
     if [ -f ".env" ]; then
         echo "🔍 Reading .env file in: `pwd`"
         set -o allexport; . ".env"; set +o allexport ;
     else
-        echo "❌ .env file not found in $APP_DIR. Please create one in `pwd`."
+        echo "❌ .env file not found in $MCP_APP_DIR. Please create one in `pwd`."
         exit 1
     fi
 fi
@@ -142,9 +144,9 @@ fi
 # Start the server
 
 if [ "$MCP_SERVER_RUN_AS_MODULE" = "true" ]; then
-    RUN_CMD="${PEM_TOOL} run env $PIPENV_ARGS $PYTHON_CMD -m $APP_MAIN_FILE"
+    RUN_CMD="${PEM_TOOL} run env $PIPENV_ARGS $PYTHON_CMD -m $MCP_APP_MAIN_FILE"
 else
-    RUN_CMD="${PEM_TOOL} run env $PIPENV_ARGS $PYTHON_CMD $APP_MAIN_FILE.py"
+    RUN_CMD="${PEM_TOOL} run env $PIPENV_ARGS $PYTHON_CMD $MCP_APP_MAIN_FILE.py"
 fi
 
 if [ "$MCP_DEBUG_MODE" = "1" ]; then

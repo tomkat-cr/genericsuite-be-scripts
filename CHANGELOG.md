@@ -18,7 +18,11 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ## [Unreleased]
 
 ### Added
-- Add "scripts/run_mcp_server.sh" to standarize the MCP server bash script.
+- Add Sync Dependencies module ("scripts/dependency-sync") to sync Dockerfile dependencies from GenericSuite monorepo backend directories ("./server" and "./mcp-server" with a "pyproject.toml" file) [GS-243].
+- Add "scripts/run_mcp_server.sh" to standardize the MCP server bash script [GS-243].
+
+### Changed
+- Allow merge ".env" files between GenericSuite monorepo backends ("./server" and "./mcp-server"), renaming APP_MAIN_FILE and APP_DIR envvars to MCP_APP_MAIN_FILE_DEV and MCP_APP_DIR_DEV in run_mcp_server.sh [GS-243].
 
 ### Fixed
 - Comment out cleanup commands in "run_aws.sh" to prevent accidental deletion of important files during the clean operation.

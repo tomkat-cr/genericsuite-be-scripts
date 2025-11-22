@@ -1,0 +1,8 @@
+[tool.poetry]
+name = "test-project"
+version = "0.1.0"
+description = "Malformed TOML file
+
+[tool.poetry.dependencies
+python = "^3.11"
+fastapi = "^0.104.1"
