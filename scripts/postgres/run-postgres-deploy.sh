@@ -1,14 +1,14 @@
 #!/bin/bash
-# run-dynamodb-deploy.sh
-# Create AWS DynamoDB tables using AWS CloudFormation templates.
-# 2024-07-14 | CR
+# run-postgres-deploy.sh
+# Create PostgreSQL tables using SQL scripts.
+# 2025-11-30 | CR
 # Usage:
-# scripts/aws_dynamodb/run-dynamodb-deploy.sh ACTION TARGET STAGE DEBUG
+# scripts/postgres/run-postgres-deploy.sh ACTION TARGET STAGE DEBUG
 
 clear
 echo ""
 echo "================"
-echo "DYNAMODB BUILDER"
+echo "POSTGRES BUILDER"
 echo "================"
 echo ""
 
@@ -42,7 +42,6 @@ cd "`dirname "$0"`"
 SCRIPTS_DIR="`pwd`"
 cd "${REPO_BASEDIR}"
 
-# ${SCRIPTS_DIR}/../aws_cf_processor/run-cf-deployment.sh ACTION STAGE CF_STACK_NAME CF_STACK_PARAMETERS CF_TEMPLATE_FILE ROUND
 AWS_CF_PROCESSOR_SCRIPT="${SCRIPTS_DIR}/../aws_cf_processor/run-cf-deployment.sh"
 
 # Default values

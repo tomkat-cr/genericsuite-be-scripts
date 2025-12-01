@@ -15,18 +15,24 @@ cd "`dirname "$0"`"
 SCRIPTS_DIR="`pwd`"
 cd "${REPO_BASEDIR}"
 
-STAGE="$1"
+if [ "${STAGE}" = "" ]; then
+    STAGE="$1"
+fi
 if [ "${STAGE}" != "dev" ]; then
     echo "Error: Invalid stage: ${STAGE}"
     exit 1
 fi
 
-PROTOCOL="$2"
+if [ "${PROTOCOL}" = "" ]; then
+    PROTOCOL="$2"
+fi
 if [ "${PROTOCOL}" = "" ]; then
     PROTOCOL="http"
 fi
 
-DOMAIN_NAME="$3"
+if [ "${DOMAIN_NAME}" = "" ]; then
+    DOMAIN_NAME="$3"
+fi
 if [ "${DOMAIN_NAME}" = "" ]; then
     set -o allexport ; . .env ; set +o allexport ;
     . "${SCRIPTS_DIR}/get_domain_name.sh" dev local
@@ -35,6 +41,10 @@ fi
 if [ -z "${DOMAIN_NAME}" ]; then
     echo "Error: Could not determine domain name."
     exit 1
+fi
+
+if [ "${API_VERSION}" = "" ]; then
+    API_VERSION="v1"
 fi
 
 if [ -z "$APP_SUPERADMIN_EMAIL" ] || [ -z "$APP_SECRET_KEY" ]; then
@@ -50,7 +60,7 @@ CREATE_USER="0"
 
 echo "Database engine: ${APP_DB_ENGINE_DEV}"
 
-if [ "${APP_DB_ENGINE_DEV}" == "DYNAMO_DB" ]; then
+if [ "${APP_DB_ENGINE_DEV}" == "DYNAMODB" ]; then
     if [ "${DYNAMDB_PREFIX}" = "" ]; then
         DYNAMDB_PREFIX=$(eval echo \$DYNAMDB_PREFIX_${STAGE_UPPERCASE})
         if [ "${DYNAMDB_PREFIX}" = "" ]; then
@@ -78,7 +88,7 @@ if [ "${APP_DB_ENGINE_DEV}" == "DYNAMO_DB" ]; then
     fi
 fi
 
-if [ "${APP_DB_ENGINE_DEV}" == "MONGO_DB" ]; then
+if [ "${APP_DB_ENGINE_DEV}" == "MONGODB" ]; then
     # Verify existence of the user $APP_SUPERADMIN_EMAIL in the Local MongoDB users table
     ENDPOINT_URL="${MONGODB_LOCAL_ENDPOINT_URL}"
     if [ "${ENDPOINT_URL}" = "" ]; then
@@ -89,9 +99,22 @@ if [ "${APP_DB_ENGINE_DEV}" == "MONGO_DB" ]; then
         echo "ERROR: please install mongosh"
         exit 1
     fi
-    if ! echo "use ${APP_DB_NAME_DEV} ; db.users.find()" | mongosh
+    if ! mongosh "${ENDPOINT_URL}" "${APP_DB_NAME_DEV}" "db.users.find()"
     then
         CREATE_USER="1"
+    fi
+fi
+
+if [ "${APP_DB_ENGINE_DEV}" == "POSTGRES" ]; then
+    # Verify existence of the user $APP_SUPERADMIN_EMAIL in the Local Postgres users table
+    # if db_response=$(docker exec postgres-local psql -tAq -U user -d pass -h localhost -p 5432 -d db -c "SELECT * FROM users WHERE email = '${APP_SUPERADMIN_EMAIL}';")
+    if db_response=$(docker exec postgres-local psql -q -U user -d pass -h localhost -p 5432 -d db -c "SELECT * FROM users WHERE email = '${APP_SUPERADMIN_EMAIL}';")
+    then
+        echo "db_response: ${db_response}"
+        # If db_response contains "(0 rows)", it means the user doesn't exist
+        if [[ "${db_response}" == *"(0 rows)"* ]]; then
+            CREATE_USER="1"
+        fi
     fi
 fi
 
@@ -108,19 +131,23 @@ echo ""
 CREDENTIALS="${APP_SUPERADMIN_EMAIL}:${APP_SECRET_KEY}"
 
 # Encode the credentials using base64
-BASIC_AUTH=$(echo -n "$CREDENTIALS" | base64)
+BASIC_AUTH=$(printf %s "$CREDENTIALS" | base64 -w 0)
 
+echo "Credentials: ${APP_SUPERADMIN_EMAIL}:*****"
+echo "Basic auth: ${BASIC_AUTH}"
+
+echo ""
 echo "Running the user creation..."
+echo ""
 
-if ! curl --location --request POST "${PROTOCOL}://${DOMAIN_NAME}/users/supad-create" \
---header 'Content-Type: application/json' \
---header "Authorization: Basic ${BASIC_AUTH}" \
---data ''
+if ! curl --location --request POST "${PROTOCOL}://${DOMAIN_NAME}/${API_VERSION}/users/supad-create" \
+    --header 'Content-Type: application/json' \
+    --header "Authorization: Basic ${BASIC_AUTH}" \
+    --data ''
 then
     echo "ERROR: initial user creation wasn't done"
     exit 1
 fi
 
-echo ""
 echo ""
 echo "Done!"

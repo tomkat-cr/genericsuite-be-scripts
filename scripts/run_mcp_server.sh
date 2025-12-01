@@ -78,8 +78,7 @@ if [ "$MCP_APP_DIR" != "." ]; then
     fi
 fi
 
-echo "🚀 Starting MCP server..."
-echo ""
+echo "🚀 Preparing environment..."
 
 # Enforce framework and method to enable running the MCP server from the API server directory
 export CURRENT_FRAMEWORK="mcp"
@@ -148,6 +147,11 @@ if [ "$MCP_SERVER_RUN_AS_MODULE" = "true" ]; then
 else
     RUN_CMD="${PEM_TOOL} run env $PIPENV_ARGS $PYTHON_CMD $MCP_APP_MAIN_FILE.py"
 fi
+
+echo "🚀 Starting MCP server..."
+echo ""
+echo "${RUN_CMD}"
+echo ""
 
 if [ "$MCP_DEBUG_MODE" = "1" ]; then
     CLIENT_PORT=6274 SERVER_PORT=6277 \

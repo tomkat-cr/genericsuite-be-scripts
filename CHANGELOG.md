@@ -14,18 +14,27 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 
 ### Removed
 
+### Security
+
 
 ## [Unreleased]
 
 ### Added
 - Add Sync Dependencies module ("scripts/dependency-sync") to sync Dockerfile dependencies from GenericSuite monorepo backend directories ("./server" and "./mcp-server" with a "pyproject.toml" file) [GS-243].
 - Add "scripts/run_mcp_server.sh" to standardize the MCP server bash script [GS-243].
+- Add Postgres database support [GS-194].
+- Add "make create-supad" to create the initial super admin user (supad) for local development environment [GS-125].
 
 ### Changed
 - Allow merge ".env" files between GenericSuite monorepo backends ("./server" and "./mcp-server"), renaming APP_MAIN_FILE and APP_DIR envvars to MCP_APP_MAIN_FILE_DEV and MCP_APP_DIR_DEV in run_mcp_server.sh [GS-243].
+- APP_DB_ENGINE values "MONGO_DB" and "DYNAMO_DB" were renamed to "MONGODB" and "DYNAMODB" [GS-194].
+- Profiles added to "mongodb_stack_for_test.yml" so only the selected APP_DB_ENGINE is enabled [GS-194].
 
 ### Fixed
 - Comment out cleanup commands in "run_aws.sh" to prevent accidental deletion of important files during the clean operation.
+
+### Security
+- All "requirements.txt" files are now ignored and recreated on demand to avoid vulnerability reposts and have the latest dependencies [GS-219].
 
 
 ## [1.2.0] - 2025-11-17

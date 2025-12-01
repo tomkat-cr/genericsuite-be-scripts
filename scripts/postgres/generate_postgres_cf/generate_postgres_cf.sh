@@ -1,10 +1,10 @@
 #!/bin/sh
-# generate_dynamodb_cf.sh
-# 2024-05-21 | CR
-# Generates the DynamoDB tables section for a SAM template.
+# generate_postgres_cf.sh
+# 2025-11-30 | CR
+# Generates the PostgreSQL tables SQL files.
 # Usage:
-# sh scripts/aws_dynamodb/generate_dynamodb_cf/generate_dynamodb_cf.sh
-# ACTION=create_tables STAGE=dev make generate_cf_dynamodb
+# sh scripts/postgres/generate_postgres_cf/generate_postgres_cf.sh
+# ACTION=generate STAGE=dev make generate_cf_postgres
 
 yes_or_no() {
   read choice
@@ -39,13 +39,20 @@ if [ "${STAGE}" = "" ]; then
 fi
 
 if [ "${ACTION}" = "" ]; then
-    # "generate": generate the CloudFormation yaml file.
-    # "create_tables": create the tables in the local Docker DynamoDB instance.
-    ACTION="generate"
+    # "generate": generate the PostgreSQL SQL files.
+    # "create_tables": create the tables in the local Docker PostgreSQL instance.
+    ACTION="create_tables"
 fi
 
 GT_ACTION=${ACTION}
 GT_STAGE=${STAGE}
+
+echo ""
+echo "Generating PostgreSQL tables"
+echo ""
+echo "GT_ACTION: ${GT_ACTION}"
+echo "GT_STAGE: ${GT_STAGE}"
+echo ""
 
 set -o allexport; . .env ; set +o allexport ;
 
@@ -53,7 +60,7 @@ REPO_BASEDIR="`pwd`"
 cd "`dirname "$0"`" ;
 SCRIPTS_DIR="`pwd`" ;
 
-WORKING_DIR="/tmp/generate_dynamodb_cf"
+WORKING_DIR="/tmp/generate_postgres_cf"
 mkdir -p "${WORKING_DIR}"
 
 docker_dependencies
@@ -62,7 +69,7 @@ python -m venv venv
 . venv/bin/activate
 
 if [ ! -f requirements.txt ]; then
-    pip install pyyaml boto3 botocore
+    pip install psycopg2-binary pyyaml
     pip freeze > requirements.txt
 else
     pip install -r requirements.txt
@@ -92,20 +99,20 @@ if [ "${GT_ACTION}" = "create_tables" ]; then
 fi
 
 APP_NAME_LOWERCASE=$(echo ${APP_NAME} | tr '[:upper:]' '[:lower:]')
-CF_TEMPLATE_NAME="cf-template-dynamodb.yml"
-FINAL_TARGET_DIR="${REPO_BASEDIR}/scripts/aws_dynamodb"
+CF_TEMPLATE_NAME="cf-template-postgres.yml"
+FINAL_TARGET_DIR="${REPO_BASEDIR}/scripts/postgres"
 
 STAGE_UPPERCASE=$(echo ${GT_STAGE} | tr '[:upper:]' '[:lower:]')
-DYNAMDB_PREFIX=$(eval echo \$DYNAMDB_PREFIX_${STAGE_UPPERCASE})
-if [ "${DYNAMDB_PREFIX}" = "" ]; then
-    DYNAMDB_PREFIX="${APP_NAME_LOWERCASE}_${GT_STAGE}_"
+POSTGRES_PREFIX=$(eval echo \$POSTGRES_PREFIX_${STAGE_UPPERCASE})
+if [ "${POSTGRES_PREFIX}" = "" ]; then
+    POSTGRES_PREFIX="${APP_NAME_LOWERCASE}_${GT_STAGE}_"
 fi
 
 ERROR="0"
 DONE="0"
 if [ "${GT_ACTION}" = "generate" ]; then
     # "generate": generate the CloudFormation yaml file.
-    if ! python -m generate_dynamodb_cf "${BASE_CONFIG_PATH}" "${WORKING_DIR}/${CF_TEMPLATE_NAME}" "" "0"
+    if ! python -m generate_postgres_cf "${BASE_CONFIG_PATH}" "${WORKING_DIR}/${CF_TEMPLATE_NAME}" "" "0"
     then
         # We need to postpone the error reporting to remove __pycache__ and venv every time the python code is executed.
         ERROR="1"
@@ -115,10 +122,10 @@ if [ "${GT_ACTION}" = "generate" ]; then
     fi
 fi
 if [ "${GT_ACTION}" = "create_tables" ]; then
-    # "create_tables": create the tables in the local Docker DynamoDB instance.
+    # "create_tables": create the tables in the local Docker postgres instance.
     
-    # Verify if DynamoDB local container is running to avoid cycling "make mongo_docker" call
-    if ! ${DOCKER_CMD} ps | grep dynamodb-local -q
+    # Verify if postgres local container is running to avoid cycling "make mongo_docker" call
+    if ! ${DOCKER_CMD} ps | grep postgres-local -q
     then
         cd "${REPO_BASEDIR}"
         if ! make mongo_docker
@@ -130,7 +137,7 @@ if [ "${GT_ACTION}" = "create_tables" ]; then
     fi
 
     cd "${SCRIPTS_DIR}"
-    if ! python -m generate_dynamodb_cf "${BASE_CONFIG_PATH}" "${WORKING_DIR}/${CF_TEMPLATE_NAME}" "${DYNAMDB_PREFIX}" "1"
+    if ! python -m generate_postgres_cf "${BASE_CONFIG_PATH}" "${WORKING_DIR}/${CF_TEMPLATE_NAME}" "${POSTGRES_PREFIX}" "1"
     then
         # We need to postpone the error reporting to remove __pycache__ and venv every time the python code is executed.
         ERROR="1"
@@ -211,16 +218,16 @@ fi
 if [ "${GT_ACTION}" = "create_tables" ]; then
     if [ "${ERROR}" = "1" ]; then
         echo ""
-        echo "ERROR: Failed to generate the DynamoDB tables in the local environment"
+        echo "ERROR: Failed to generate the Postgres tables in the local environment"
     else
         echo ""
-        echo "Generated DynamoDB tables in the local environment:"
+        echo "Generated Postgres tables in the local environment:"
         echo ""
-        ENDPOINT_URL="${DYNAMODB_LOCAL_ENDPOINT_URL}"
+        ENDPOINT_URL="${POSTGRES_URI}"
         if [ "${ENDPOINT_URL}" = "" ]; then
-            ENDPOINT_URL="http://127.0.0.1:8000"
+            ENDPOINT_URL="postgresql://user:pass@localhost:5432/db"
         fi
-        aws dynamodb list-tables --endpoint-url ${ENDPOINT_URL} --region ${AWS_REGION} | jq
+        docker exec -it postgres-local psql -U user -d pass -h localhost -p 5432 -d db -c "SELECT table_name FROM information_schema.tables WHERE table_schema='public'"
     fi
 fi
 

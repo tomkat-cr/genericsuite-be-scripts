@@ -1,5 +1,5 @@
 # .DEFAULT_GOAL := local
-.PHONY:  help install install_dev locked_dev locked_install lock_pip_file requirements clean clean_rm clean_temp_dir clean_logs fresh install_tools lsof test test_only lint types coverage format format_check qa mongo_docker mongo_docker_down mongo_backup mongo_restore config config_dev config_local config_qa config_qa_for_deployment config_staging build build_local build_check unbuild unbuild_qa unbuild_staging delete_stack create_s3_bucket_dev create_s3_bucket_qa create_s3_bucket_staging create_s3_bucket_prod create_s3_bucket_demo create_aws_config generate_sam_dynamodb deploy_qa deploy_run_local_qa deploy_validate_qa deploy_package_qa deploy_staging deploy_prod deploy_demo deploy run run_qa down_qa restart_qa run_local_docker run_prod add_submodules init_submodules local_dns local_dns_restart local_dns_rebuild local_dns_down local_dns_test copy_ssl_certs create_ssl_certs_only create_ssl_certs init_sam init_chalice generate_seed lock pre-publish publish pypi-build pypi-publish-test pypi-publish pycodestyle
+.PHONY:  help install install_dev locked_dev locked_install lock_pip_file requirements clean clean_rm clean_temp_dir clean_logs fresh install_tools lsof test test_only lint types coverage format format_check qa mongo_docker mongo_docker_down mongo_backup mongo_restore mongo_logs config config_dev config_local config_qa config_qa_for_deployment config_staging build build_local build_check unbuild unbuild_qa unbuild_staging delete_stack create_s3_bucket_dev create_s3_bucket_qa create_s3_bucket_staging create_s3_bucket_prod create_s3_bucket_demo create_aws_config generate_sam_dynamodb deploy_qa deploy_run_local_qa deploy_validate_qa deploy_package_qa deploy_staging deploy_prod deploy_demo deploy run run_qa down_qa restart_qa run_local_docker run_prod add_submodules init_submodules local_dns local_dns_restart local_dns_rebuild local_dns_down local_dns_test copy_ssl_certs create_ssl_certs_only create_ssl_certs init_sam init_chalice generate_seed lock pre-publish publish pypi-build pypi-publish-test pypi-publish pycodestyle generate_cf_dynamodb generate_cf_postgres create-supad
 SHELL := /bin/bash
 
 ## General Commands
@@ -109,8 +109,14 @@ mongo_restore:
 	# E.g. STAGE=qa RESTORE_DIR=/tmp/exampleapp make mongo_restore
 	bash node_modules/genericsuite-be-scripts/scripts/mongo/db_mongo_restore.sh ${STAGE} ${RESTORE_DIR}
 
+mongo_logs:
+	bash node_modules/genericsuite-be-scripts/scripts/mongo/run_mongo_docker.sh logs
+
 link_gs_libs:
 	bash node_modules/genericsuite-be-scripts/scripts/link_gs_libs_for_dev.sh
+
+create-supad:
+	bash node_modules/genericsuite-be-scripts/scripts/run_create_supad.sh
 
 ## Chalice Specific Commands
 
@@ -172,6 +178,8 @@ create_s3_bucket_demo:
 create_aws_config:
 	bash node_modules/genericsuite-be-scripts/scripts/aws/create_aws_config.sh
 
+## AWS DynamoDB
+
 generate_sam_dynamodb:
 	bash node_modules/genericsuite-be-scripts/scripts/aws_big_lambda/generate_sam_dynamodb/run_generate_sam_dynamodb.sh
 
@@ -179,6 +187,13 @@ generate_cf_dynamodb:
 	# make generate_cf_dynamodb
 	# ACTION=create_tables STAGE=dev make generate_cf_dynamodb
 	bash node_modules/genericsuite-be-scripts/scripts/aws_dynamodb/generate_dynamodb_cf/generate_dynamodb_cf.sh
+
+## Postgres
+
+generate_cf_postgres:
+	# make generate_cf_postgres
+	# ACTION=create_tables STAGE=dev make generate_cf_postgres
+	bash node_modules/genericsuite-be-scripts/scripts/postgres/generate_postgres_cf/generate_postgres_cf.sh
 
 ## Deployment
 
@@ -247,8 +262,7 @@ aws_secrets:
 ## Application Specific Commands
 
 run: config_local clean_logs
-	bash node_modules/genericsuite-be-scripts/scripts/mongo/run_mongo_docker.sh run "0" dev
-	bash node_modules/genericsuite-be-scripts/scripts/aws/run_aws.sh run_local
+	bash node_modules/genericsuite-be-scripts/scripts/mongo/run_mongo_docker.sh run "1" dev
 
 run_qa: config_qa clean_logs
 	bash node_modules/genericsuite-be-scripts/scripts/aws/run_aws.sh run_local qa
