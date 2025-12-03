@@ -29,9 +29,12 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Allow merge ".env" files between GenericSuite monorepo backends ("./server" and "./mcp-server"), renaming APP_MAIN_FILE and APP_DIR envvars to MCP_APP_MAIN_FILE_DEV and MCP_APP_DIR_DEV in run_mcp_server.sh [GS-243].
 - APP_DB_ENGINE values "MONGO_DB" and "DYNAMO_DB" were renamed to "MONGODB" and "DYNAMODB" [GS-194].
 - Profiles added to "mongodb_stack_for_test.yml" so only the selected APP_DB_ENGINE is enabled [GS-194].
+- Remove "link", "depends_on" and "healthcheck" sections in mongodb_stack_for_test.yml to make it compatible with podman [GS-215] [GS-194].
 
 ### Fixed
 - Comment out cleanup commands in "run_aws.sh" to prevent accidental deletion of important files during the clean operation.
+- Replace all occurrences of CONTAINER_ENGINE with CONTAINERS_ENGINE [GS-215].
+
 
 ### Security
 - All "requirements.txt" files are now ignored and recreated on demand to avoid vulnerability reposts and have the latest dependencies [GS-219].
@@ -72,7 +75,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Add GOOGLE_MAPS_API_KEY, ANTHROPIC_API_KEY, GROQ_API_KEY, AIMLAPI_API_KEY, NVIDIA_API_KEY, RHYMES_CHAT_API_KEY, RHYMES_VIDEO_API_KEY, IBM_WATSONX_API_KEY, IBM_WATSONX_PROJECT_ID, OPENROUTER_API_KEY, XAI_API_KEY, TOGETHER_API_KEY to the EXTENSION_SECRETS envvar in aws_secrets_manager.sh [GS-198].
 - Implement RUN_PROTOCOL envvar to have the http/https protocol automatically on app local running, no user intervention, as part of the Turborepo initiative [GS-188].
 - Implement Podman as an alternative to Docker [GS-215].
-- Add CONTAINER_ENGINE and OPEN_CONTAINERS_ENGINE_APP envvars to GenericSuite BE Core [GS-215].
+- Add CONTAINERS_ENGINE and OPEN_CONTAINERS_ENGINE_APP envvars to GenericSuite BE Core [GS-215].
 - Add configurable backend ports using the envvar BACKEND_LOCAL_PORT and BACKEND_DEBUG_LOCAL_PORT to the "sls" (secure local server) [GS-137].
 - Add "check_if_engine_is_running" to container_engine_manager.sh, to check if docker/podman engine is running.
 

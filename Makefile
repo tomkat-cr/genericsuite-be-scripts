@@ -116,6 +116,7 @@ link_gs_libs:
 	bash node_modules/genericsuite-be-scripts/scripts/link_gs_libs_for_dev.sh
 
 create-supad:
+	# E.g. CHECKING=1 STAGE=dev make create-supad
 	bash node_modules/genericsuite-be-scripts/scripts/run_create_supad.sh
 
 ## Chalice Specific Commands

@@ -297,8 +297,8 @@ if [ "${SELF_SCRIPTS_DIR}" = "" ];then
 fi
 
 if [ -z "${DOCKER_CMD}" ];then
-  if ! source ${SELF_SCRIPTS_DIR}/container_engine_manager.sh start "${CONTAINER_ENGINE}" "${OPEN_CONTAINERS_ENGINE_APP}"; then
-      echo "ERROR: Running ${SELF_SCRIPTS_DIR}/container_engine_manager.sh start \"${CONTAINER_ENGINE}\" \"${OPEN_CONTAINERS_ENGINE_APP}\""
+  if ! source ${SELF_SCRIPTS_DIR}/container_engine_manager.sh start "${CONTAINERS_ENGINE}" "${OPEN_CONTAINERS_ENGINE_APP}"; then
+      echo "ERROR: Running ${SELF_SCRIPTS_DIR}/container_engine_manager.sh start \"${CONTAINERS_ENGINE}\" \"${OPEN_CONTAINERS_ENGINE_APP}\""
       exit_abort
   fi
 fi

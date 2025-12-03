@@ -22,6 +22,10 @@ services:
       - mongodb
 
   mongo-express:
+    # http://localhost:8081
+    # Login:
+    #     Email: admin
+    #     Password: pass
     container_name: mongo-express
     image: mongo-express
     restart: unless-stopped
@@ -82,16 +86,36 @@ services:
       - 5432
     ports:
       - 5432:5432
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "user"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    # healthcheck:
+    #   test: ["CMD", "pg_isready", "-U", "user"]
+    #   interval: 10s
+    #   timeout: 5s
+    #   retries: 5
     profiles:
       - postgres
 
   pgadmin:
     # http://localhost:8080
+    # Login:
+    #     Email: admin@admin.com
+    #     Password: admin
+    # [Add new server]
+    #     [General]:
+    #         Name: Localhost
+    #     [Connection]:
+    #         Host name/address: postgres-local (localhost doesn't work)
+    #         Port: 5432
+    #         Maintenance database: postgres
+    #         Username: user
+    #         Password: pass
+    # Database explorer:
+    #     [Servers]:
+    #         [Localhost]:
+    #             [Databases]:
+    #                 [db]:
+    #                     [Schemas]:
+    #                         [public]:
+    #                             [Tables]
     container_name: pgadmin
     image: dpage/pgadmin4
     restart: unless-stopped
@@ -101,10 +125,10 @@ services:
     environment:
       - PGADMIN_DEFAULT_EMAIL=admin@admin.com
       - PGADMIN_DEFAULT_PASSWORD=admin
-    links:
-      - postgres-local
-    depends_on:
-      postgres-local:
-        condition: service_healthy
+    # links:
+    #   - postgres-local
+    # depends_on:
+    #   postgres-local:
+    #     condition: service_healthy
     profiles:
       - postgres

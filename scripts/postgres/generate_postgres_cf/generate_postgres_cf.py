@@ -85,7 +85,8 @@ class PostgresTableDefinition:
         self.table_defs = {}
         self.table_extra_cols = {}
 
-    def get_postgres_definition(self, config: dict, json_filename: str) -> dict:
+    def get_postgres_definition(self, config: dict, json_filename: str
+                                ) -> dict:
         """
         Returns Postgres table definition from config.
 
@@ -93,9 +94,9 @@ class PostgresTableDefinition:
             AWSTemplateFormatVersion: "2010-09-09"
 
             Description: 'AWS CloudFormation Sample Template
-                Postgres_Secondary_Indexes: Create a Postgres table with local and
-                global secondary indexes. **WARNING** This template creates an
-                Postgres table. You will be billed for the AWS resources
+                Postgres_Secondary_Indexes: Create a Postgres table with local
+                and global secondary indexes. **WARNING** This template creates
+                an Postgres table. You will be billed for the AWS resources
                 used if you create a stack from this template.'
 
             Metadata:
@@ -174,7 +175,8 @@ class PostgresTableDefinition:
         postgres_definition = {}
         definition_name = f"{convert_snake_to_pascal(table_name)}Table"
         postgres_table_name = (
-            f"{self.table_prefix}" + "${AppName}_${AppStage}_" + f"{table_name}"
+            f"{self.table_prefix}" + "${AppName}_${AppStage}_" +
+            f"{table_name}"
         )
 
         postgres_output = {
@@ -224,6 +226,38 @@ class PostgresTableDefinition:
         * suggestion_dropdown: generates a input field with a suggestion dropdown from the database or a API call. Check the Suggestion Dropdowns section for more details.
         * component: shows a value generated from a ReactJS component.
         """
+        mandatory_fields = {
+            'creation_date': {
+                'type': 'datetime',
+            },
+            'update_date': {
+                'type': 'datetime',
+            },
+        }
+
+        skip_types = ["label", "hr", "component"]
+
+        """
+        Postgres data types:
+        https://www.postgresql.org/docs/current/datatype.html
+        """
+
+        type_mapping = {
+            "array": "json",
+            "text": "character varying",
+            "textarea": "text",
+            "number": "numeric",
+            "integer": "bigint",
+            "date": "integer",
+            "datetime": "integer",
+            "datetime-local": "integer",
+            "email": "character varying",
+            "_id": "character varying",
+            "select": "character varying",
+            "select_table": "character varying",
+            "select_component": "character varying",
+            "suggestion_dropdown": "character varying",
+        }
 
         is_main_table = (
             json_filename.replace(".json", "") ==
@@ -241,39 +275,20 @@ class PostgresTableDefinition:
 
         if is_child_listing:
             _ = DEBUG and print(f"Child listing: {json_filename}")
-            definition_name = f"{convert_snake_to_pascal(parent_table_name)}Table"
+            definition_name = \
+                f"{convert_snake_to_pascal(parent_table_name)}Table"
             if not self.table_extra_cols.get(definition_name):
                 self.table_extra_cols[definition_name] = []
             if is_array_sub_type:
                 self.table_extra_cols[definition_name].append(
                     {
                         "AttributeName": array_name,
-                        "AttributeType": "json",
+                        "AttributeType": type_mapping.get(
+                            "array",
+                            "character varying"),
                     }
                 )
             return {}
-
-        skip_types = ["label", "hr", "component"]
-
-        """
-        Postgres data types:
-        https://www.postgresql.org/docs/current/datatype.html
-        """
-
-        type_mapping = {
-            "text": "character varying",
-            "textarea": "text",
-            "number": "numeric",
-            "integer": "bigint",
-            "date": "timestamp",
-            "datetime": "timestamp",
-            "email": "character varying",
-            "_id": "character varying",
-            "select": "character varying",
-            "select_table": "character varying",
-            "select_component": "character varying",
-            "suggestion_dropdown": "character varying",
-        }
 
         postgres_definition = {
             "Type": "AWS::Postgres::Table",
@@ -285,35 +300,59 @@ class PostgresTableDefinition:
         }
 
         for field in field_elements:
-            if field.get("type") in skip_types:
+            field_name = field.get("name", "")
+            field_type = field.get("type", "")
+
+            if field_type in skip_types:
                 continue
 
-            if field.get("name").endswith("_repeat") \
-               and field.get("name").replace("_repeat", "") in \
-               field.get("passwords", []):
+            if field_name in mandatory_fields:
+                del mandatory_fields[field_name]
+
+            _ = DEBUG and field_name.endswith("_repeat") and print(
+                f'Field name: {field_name}\n' +
+                f'field_name.endswith("_repeat") = {field_name.endswith("_repeat")}\n' +
+                f'field_name.replace("_repeat", "") = {field_name.replace("_repeat", "")}\n' +
+                f'config.get("passwords", []) = {config.get("passwords", [])}\n'
+            )
+
+            if field_name.endswith("_repeat") \
+               and field_name.replace("_repeat", "") in \
+               config.get("passwords", []):
                 continue
 
             pg_field_type = type_mapping.get(
-                field.get("type"), "character varying")
+                field_type, "character varying")
 
-            if field.get("type") == "_id":
+            if field_type == "_id":
                 if not partition_key:
-                    if field.get("name") == "id":
+                    if field_name == "id":
                         partition_key = "_id"
                     else:
-                        partition_key = field.get("name")
+                        partition_key = field_name
                     partition_key_type = pg_field_type
                 else:
-                    sort_key = field.get("name")
+                    sort_key = field_name
                     sort_key_type = pg_field_type
             else:
-                postgres_definition["Properties"]["AttributeDefinitions"].append(
-                    {
-                        "AttributeName": field.get("name"),
-                        "AttributeType": pg_field_type,
-                    }
+                postgres_definition["Properties"]["AttributeDefinitions"] \
+                    .append(
+                        {
+                            "AttributeName": field_name,
+                            "AttributeType": pg_field_type,
+                        }
                 )
 
+        if mandatory_fields:
+            for field_name, field_attrs in mandatory_fields.items():
+                postgres_definition["Properties"]["AttributeDefinitions"] \
+                    .append(
+                        {
+                            "AttributeName": field_name,
+                            "AttributeType": type_mapping.get(
+                                field_attrs['type'], "character varying"),
+                        }
+                )
         if partition_key:
             postgres_definition["Properties"]["AttributeDefinitions"].append(
                 {
@@ -367,7 +406,8 @@ class PostgresTableDefinition:
                 _ = DEBUG and print(f"File: {filename}")
                 if filename.endswith(".json"):
                     # Read frontend config file
-                    with open(os.path.join(root, filename), "r", encoding="utf-8") as f:
+                    with open(os.path.join(root, filename), "r",
+                              encoding="utf-8") as f:
                         config = json.load(f)
                         # if file exists in backend config, merge them
                         file_path = os.path.join(
@@ -388,8 +428,8 @@ class PostgresTableDefinition:
 
         for table_name, extra_cols in self.table_extra_cols.items():
             for col_dict in extra_cols:
-                postgres_definitions[table_name]["Properties"]["AttributeDefinitions"].append(
-                    col_dict)
+                postgres_definitions[table_name]["Properties"]["AttributeDefinitions"] \
+                    .append(col_dict)
 
         self.table_defs = {
             "ts": postgres_definitions,
@@ -444,7 +484,8 @@ class PostgresTableDefinition:
 
             sql = f"CREATE TABLE IF NOT EXISTS {table_name} ("
             for attribute in table_props["AttributeDefinitions"]:
-                sql += f"{attribute['AttributeName']} {attribute['AttributeType']}, "
+                sql += f"{attribute['AttributeName']} " + \
+                    f"{attribute['AttributeType']}, "
             sql = sql[:-2] + ")"
             if DEBUG:
                 print("Postgres Table SQL: " + sql)
@@ -495,10 +536,12 @@ class PostgresTableDefinition:
 
 def generate_postgres_cf():
     """
-    Generates Postgres table definitions for a SAM template.
+    Generates Postgres tables.
     """
     print("")
-    print("Generating Postgres table definitions for SAM template")
+    print("*****************************")
+    print("* Postgres Tables Generator *")
+    print("*****************************")
     print("")
 
     if len(sys.argv) < 5:
