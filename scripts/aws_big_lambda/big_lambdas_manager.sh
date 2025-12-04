@@ -1735,8 +1735,10 @@ if [ "${APP_DOMAIN_NAME}" = "" ]; then
 fi
 
 if [ "${STORAGE_URL_SEED}" = "" ]; then
-    echo "ERROR: STORAGE_URL_SEED not set"
-    exit 1
+    if [ "${STORAGE_URL_ENCRYPTION}" = "1" ]; then
+        echo "ERROR: STORAGE_URL_ENCRYPTION is set to 1 but STORAGE_URL_SEED is not set"
+        exit 1
+    fi
 fi
 
 TMP_BUILD_DIR="/tmp/${APP_NAME_LOWERCASE}_backend_aws_tmp"

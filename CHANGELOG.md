@@ -30,6 +30,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - APP_DB_ENGINE values "MONGO_DB" and "DYNAMO_DB" were renamed to "MONGODB" and "DYNAMODB" [GS-194].
 - Profiles added to "mongodb_stack_for_test.yml" so only the selected APP_DB_ENGINE is enabled [GS-194].
 - Remove "link", "depends_on" and "healthcheck" sections in mongodb_stack_for_test.yml to make it compatible with podman [GS-215] [GS-194].
+- STORAGE_URL_SEED envvar is only required when STORAGE_URL_ENCRYPTION is set to 1 in "run_aws.sh" and "set_chalice_cnf.sh" [GS-72].
 
 ### Fixed
 - Comment out cleanup commands in "run_aws.sh" to prevent accidental deletion of important files during the clean operation.
