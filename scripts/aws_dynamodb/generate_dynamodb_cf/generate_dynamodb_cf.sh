@@ -58,9 +58,15 @@ mkdir -p "${WORKING_DIR}"
 
 docker_dependencies
 
+echo ""
+echo "Creating virtual environment"
+echo ""
 python -m venv venv
 . venv/bin/activate
 
+echo ""
+echo "Installing dependencies"
+echo ""
 if [ ! -f requirements.txt ]; then
     pip install pyyaml boto3 botocore
     pip freeze > requirements.txt
@@ -117,11 +123,11 @@ fi
 if [ "${GT_ACTION}" = "create_tables" ]; then
     # "create_tables": create the tables in the local Docker DynamoDB instance.
     
-    # Verify if DynamoDB local container is running to avoid cycling "make mongo_docker" call
+    # Verify if DynamoDB local container is running to avoid cycling "make local-db-up" call
     if ! ${DOCKER_CMD} ps | grep dynamodb-local -q
     then
         cd "${REPO_BASEDIR}"
-        if ! make mongo_docker
+        if ! make local-db-up
         then
             echo ""
             echo "ERROR: Failed to start the local Docker databases container"
@@ -147,10 +153,10 @@ rm -rf venv
 if [ "${GT_ACTION}" = "generate" ]; then
     if [ "${ERROR}" = "1" ]; then
         echo ""
-        echo "ERROR: Failed to generate SAM template file"
+        echo "ERROR: Failed to generate CloudFormation template file"
     else
         echo ""
-        echo "Generated SAM template file in:"
+        echo "Generated CloudFormation template file in:"
         echo "${WORKING_DIR}/${CF_TEMPLATE_NAME}"
         echo ""
         echo "Do you want to edit it (y/n)?"

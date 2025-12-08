@@ -20,22 +20,50 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ## [Unreleased]
 
 ### Added
-- Add Sync Dependencies module ("scripts/dependency-sync") to sync Dockerfile dependencies from GenericSuite monorepo backend directories ("./server" and "./mcp-server" with a "pyproject.toml" file) [GS-243].
-- Add "scripts/run_mcp_server.sh" to standardize the MCP server bash script [GS-243].
-- Add Postgres database support [GS-194].
-- Add "make create-supad" to create the initial super admin user (supad) for local development environment [GS-125].
+- Add Sync Dependencies module ("scripts/dependency-sync") to sync python dependencies in a Dockerfile from GenericSuite monorepo backend directories ("./server" and "./mcp-server" with a "pyproject.toml" file) [GS-243].
+- "scripts/run_mcp_server.sh" to standardize the MCP server bash script [GS-243].
+- Postgres database support [GS-194].
+- Makes for Postgres:
+```
+make generate_postgres_dev_sql
+make create_postgres_dev_tables
+make generate_cf_postgres
+make deploy_postgres
+```
+- MySQL database support [GS-249].
+- Makes for MySQL:
+```
+make generate_mysql_dev_sql
+make create_mysql_dev_tables
+make generate_cf_mysql
+make deploy_mysql
+```
+- "make create-supad" to create the initial super admin user (supad) for local development environment [GS-125].
 
 ### Changed
 - Allow merge ".env" files between GenericSuite monorepo backends ("./server" and "./mcp-server"), renaming APP_MAIN_FILE and APP_DIR envvars to MCP_APP_MAIN_FILE_DEV and MCP_APP_DIR_DEV in run_mcp_server.sh [GS-243].
 - APP_DB_ENGINE values "MONGO_DB" and "DYNAMO_DB" were renamed to "MONGODB" and "DYNAMODB" [GS-194].
-- Profiles added to "mongodb_stack_for_test.yml" so only the selected APP_DB_ENGINE is enabled [GS-194].
-- Remove "link", "depends_on" and "healthcheck" sections in mongodb_stack_for_test.yml to make it compatible with podman [GS-215] [GS-194].
+- Profiles added to "local_db_stack.yml.yml" so only the selected APP_DB_ENGINE is enabled [GS-194].
+- Remove "link", "depends_on" and "healthcheck" sections in local_db_stack.yml.yml to make it compatible with podman [GS-215] [GS-194].
 - STORAGE_URL_SEED envvar is only required when STORAGE_URL_ENCRYPTION is set to 1 in "run_aws.sh" and "set_chalice_cnf.sh" [GS-72].
+- The "mongo" and "postgres" folders were renamed to more appropriate names, as they are now used for several databases: "mongo" is now "local_db", including local Docker containers for MongoDB, DynamoDB, Postgres, and MySQL. "postgres" is now "sql_db" because it works for Postgres and MySQL. [GS-249]:
+```
+/postgres -> /sql_db
+/postgres/generate_postgres_cf -> /sql_db/generate_sql_db_cf
+/postgres/generate_postgres_cf/run-postgres-deploy.sh -> /sql_db/generate_sql_db_cf/run_sql_db_deploy.sh
+
+/mongo/run_mongo_docker.sh -> /local_db/run_local_db_docker.sh
+/mongo/mongodb_stack_for_test.yml -> /local_db/local_db_stack.yml
+
+make mongo_docker -> make local-db-up
+make mongo_docker_down -> make local-db-down
+make mongo_logs -> make local-db-logs
+set_chalice_cnf.sh mongo_docker -> set_chalice_cnf.sh local_db_docker
+```
 
 ### Fixed
 - Comment out cleanup commands in "run_aws.sh" to prevent accidental deletion of important files during the clean operation.
 - Replace all occurrences of CONTAINER_ENGINE with CONTAINERS_ENGINE [GS-215].
-
 
 ### Security
 - All "requirements.txt" files are now ignored and recreated on demand to avoid vulnerability reposts and have the latest dependencies [GS-219].

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# bash scripts/mongo/run_mongo_docker.sh
+# bash scripts/local_db/run_local_db_docker.sh
 # 2023-05-21 | CR
 #
 
@@ -60,14 +60,14 @@ docker_dependencies() {
 }
 
 set_all_profiles() {
-    DOCKER_COMPOSE_PROFILE="--profile mongodb --profile dynamodb --profile postgres"
+    DOCKER_COMPOSE_PROFILE="--profile mongodb --profile dynamodb --profile postgres --profile mysql"
 }
 
 unmount_databases() {
     echo "Starting MongoDb local docker container unmount..."
     set_all_profiles
-    echo "${DOCKER_COMPOSE_CMD} ${DOCKER_COMPOSE_PROFILE} -f ${SCRIPTS_DIR}/mongodb_stack_for_test.yml down"
-    if ${DOCKER_COMPOSE_CMD} ${DOCKER_COMPOSE_PROFILE} -f "${SCRIPTS_DIR}/mongodb_stack_for_test.yml" down
+    echo "${DOCKER_COMPOSE_CMD} ${DOCKER_COMPOSE_PROFILE} -f ${SCRIPTS_DIR}/local_db_stack.yml down"
+    if ${DOCKER_COMPOSE_CMD} ${DOCKER_COMPOSE_PROFILE} -f "${SCRIPTS_DIR}/local_db_stack.yml" down
     then
         echo "Databases local docker containers UNMOUNTED successfully"
     else
@@ -86,7 +86,7 @@ database_docker_shut_down() {
 check_docker_compose_is_running() {
     DOCKER_COMPOSE_RUNNING="0"
     set_all_profiles
-    if ${DOCKER_COMPOSE_CMD} ${DOCKER_COMPOSE_PROFILE} -f ${SCRIPTS_DIR}/mongodb_stack_for_test.yml ps
+    if ${DOCKER_COMPOSE_CMD} ${DOCKER_COMPOSE_PROFILE} -f ${SCRIPTS_DIR}/local_db_stack.yml ps
     then
         DOCKER_COMPOSE_RUNNING="1"
     fi
@@ -96,23 +96,30 @@ check_database_container_is_running() {
     set_all_profiles
     RESTART_DOCKER_COMPOSE="0"
     if [ "${APP_DB_ENGINE_DEV}" == "MONGODB" ]; then
-        if ! ${DOCKER_COMPOSE_CMD} ${DOCKER_COMPOSE_PROFILE} -f ${SCRIPTS_DIR}/mongodb_stack_for_test.yml ps | grep mongo-db
+        if ! ${DOCKER_COMPOSE_CMD} ${DOCKER_COMPOSE_PROFILE} -f ${SCRIPTS_DIR}/local_db_stack.yml ps | grep mongo-db
         then
             echo "MongoDb docker container is not running..."
             RESTART_DOCKER_COMPOSE="1"
         fi
     fi
     if [ "${APP_DB_ENGINE_DEV}" == "DYNAMODB" ]; then
-        if ! ${DOCKER_COMPOSE_CMD} ${DOCKER_COMPOSE_PROFILE} -f ${SCRIPTS_DIR}/mongodb_stack_for_test.yml ps | grep dynamodb-local
+        if ! ${DOCKER_COMPOSE_CMD} ${DOCKER_COMPOSE_PROFILE} -f ${SCRIPTS_DIR}/local_db_stack.yml ps | grep dynamodb-local
         then
             echo "DynamoDB docker container is not running..."
             RESTART_DOCKER_COMPOSE="1"
         fi
     fi
     if [ "${APP_DB_ENGINE_DEV}" == "POSTGRES" ]; then
-        if ! ${DOCKER_COMPOSE_CMD} ${DOCKER_COMPOSE_PROFILE} -f ${SCRIPTS_DIR}/mongodb_stack_for_test.yml ps | grep postgres-local
+        if ! ${DOCKER_COMPOSE_CMD} ${DOCKER_COMPOSE_PROFILE} -f ${SCRIPTS_DIR}/local_db_stack.yml ps | grep postgres-local
         then
             echo "Posgres docker container is not running..."
+            RESTART_DOCKER_COMPOSE="1"
+        fi
+    fi
+    if [ "${APP_DB_ENGINE_DEV}" == "MYSQL" ]; then
+        if ! ${DOCKER_COMPOSE_CMD} ${DOCKER_COMPOSE_PROFILE} -f ${SCRIPTS_DIR}/local_db_stack.yml ps | grep mysql-local
+        then
+            echo "MySQL docker container is not running..."
             RESTART_DOCKER_COMPOSE="1"
         fi
     fi
@@ -126,8 +133,10 @@ set_profiles() {
         DOCKER_COMPOSE_PROFILE="--profile dynamodb"
     elif [ "${APP_DB_ENGINE_DEV}" == "POSTGRES" ]; then
         DOCKER_COMPOSE_PROFILE="--profile postgres"
+    elif [ "${APP_DB_ENGINE_DEV}" == "MYSQL" ]; then
+        DOCKER_COMPOSE_PROFILE="--profile mysql"
     else
-        echo "APP_DB_ENGINE_DEV environment variable must be set to 'MONGODB', 'DYNAMODB' or 'POSTGRES'. Now it is set to '${APP_DB_ENGINE_DEV}'"
+        echo "APP_DB_ENGINE_DEV environment variable must be set to 'MONGODB', 'DYNAMODB', 'POSTGRES' or 'MYSQL'. Now it is set to '${APP_DB_ENGINE_DEV}'"
         exit_abort
     fi
 }
@@ -137,7 +146,7 @@ run_docker_compose() {
     echo "Starting docker compose..."
     echo ""
     set_profiles
-    if ! ${DOCKER_COMPOSE_CMD} ${DOCKER_COMPOSE_PROFILE} -f ${SCRIPTS_DIR}/mongodb_stack_for_test.yml up -d
+    if ! ${DOCKER_COMPOSE_CMD} ${DOCKER_COMPOSE_PROFILE} -f ${SCRIPTS_DIR}/local_db_stack.yml up -d
     then
         echo "ERROR: could not start database docker compose"
         exit_abort
@@ -212,6 +221,20 @@ verify_docker_containers() {
             database_docker_restart
         fi
     fi
+
+    # Verify local MySQL container is started
+
+    if [ "${APP_DB_ENGINE_DEV}" == "MYSQL" ]; then
+        if ! ${DOCKER_CMD} ps | grep mysql-local -q
+        then
+            ERROR="ERROR: Failed to start the local Docker MySQL database container"
+            echo ""
+            echo "For some reason, the local Docker MySQL database container is not running."
+            echo "The logs are:"
+            ${DOCKER_CMD} logs mysql-local
+            database_docker_restart
+        fi
+    fi
 }
 
 create_tables() {
@@ -230,13 +253,13 @@ create_tables() {
             exit_abort
         fi
     fi
-    if [ "${APP_DB_ENGINE_DEV}" == "POSTGRES" ]; then
+    if [ "${APP_DB_ENGINE_DEV}" == "POSTGRES" ] || [ "${APP_DB_ENGINE_DEV}" == "MYSQL" ]; then
         echo ""
         echo "Creating Postgres tables on the Dev environment..."
         echo ""
-        if ! bash ${SCRIPTS_DIR}/../postgres/generate_postgres_cf/generate_postgres_cf.sh create_tables dev
+        if ! DB_TYPE=${APP_DB_ENGINE_DEV} bash ${SCRIPTS_DIR}/../sql_db/generate_sql_db_cf/generate_sql_db_cf.sh create_tables dev
         then
-            echo "ERROR: running 'bash ${SCRIPTS_DIR}/../postgres/generate_postgres_cf/generate_postgres_cf.sh create_tables dev'"
+            echo "ERROR: running 'DB_TYPE=${APP_DB_ENGINE_DEV} bash ${SCRIPTS_DIR}/../sql_db/generate_sql_db_cf/generate_sql_db_cf.sh create_tables dev'"
             exit_abort
         fi
     fi
@@ -244,8 +267,8 @@ create_tables() {
 
 show_docker_logs() {
     echo "Starting MongoDb local docker container logs..."
-    echo "${DOCKER_COMPOSE_CMD} -f ${SCRIPTS_DIR}/mongodb_stack_for_test.yml logs"
-    ${DOCKER_COMPOSE_CMD} -f "${SCRIPTS_DIR}/mongodb_stack_for_test.yml" logs -f
+    echo "${DOCKER_COMPOSE_CMD} -f ${SCRIPTS_DIR}/local_db_stack.yml logs"
+    ${DOCKER_COMPOSE_CMD} -f "${SCRIPTS_DIR}/local_db_stack.yml" logs -f
 }
 
 run_app() {
@@ -256,7 +279,7 @@ run_app() {
     echo ""
     echo "Starting Lambda configuration for local database on docker..."
     echo ""
-    if bash ${SCRIPTS_DIR}/../aws/set_chalice_cnf.sh mongo_docker
+    if bash ${SCRIPTS_DIR}/../aws/set_chalice_cnf.sh local_db_docker
     then
         echo ""
         echo "Lambda configuration for local database on docker ran successfully."

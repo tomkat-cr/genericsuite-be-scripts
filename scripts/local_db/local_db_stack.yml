@@ -1,4 +1,4 @@
-# File: "scripts/mongo/mongodb_stack_for_test.yml"
+# File: "scripts/local_db/local_db_stack.yml"
 # 2022-03-18 | CR
 
 # Use http://localhost:8081 to access the MongoDb Admin UI.
@@ -132,3 +132,37 @@ services:
     #     condition: service_healthy
     profiles:
       - postgres
+
+  mysql-local:
+    container_name: mysql-local
+    image: mysql:latest
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: pass
+      MYSQL_DATABASE: db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: pass
+    expose:
+      - 3306
+    ports:
+      - 3306:3306
+    profiles:
+      - mysql
+
+  phpmyadmin:
+    # http://localhost:8082
+    # Login:
+    #     Server: mysql-local
+    #     User: root
+    #     Password: pass
+    container_name: phpmyadmin
+    image: phpmyadmin/phpmyadmin
+    restart: unless-stopped
+    ports:
+      - 8082:80
+    environment:
+      - PMA_HOST=mysql-local
+      - PMA_PORT=3306
+      - PMA_ARBITRARY=1
+    profiles:
+      - mysql

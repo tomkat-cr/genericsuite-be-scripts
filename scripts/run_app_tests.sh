@@ -18,6 +18,14 @@ cd "${REPO_BASEDIR}"
 
 if [ -f "${REPO_BASEDIR}/.env" ]; then
     set -o allexport; . "${REPO_BASEDIR}/.env"; set +o allexport ;
+else
+    echo "The .env file doesn't exist"
+    exit 1
+fi
+
+if [ ! -f "${REPO_BASEDIR}/requirements.txt" ]; then
+    echo "The requirements.txt file doesn't exist"
+    exit 1
 fi
 
 export HTTP_SERVER_URL="${TEST_APP_URL}"
@@ -63,9 +71,9 @@ if [ "$ERROR_MSG" = "" ]; then
         MONGO_DOCKER_ACTIVE=0
     fi
     if [ "${MONGO_DOCKER_ACTIVE}" = "0" ]; then
-        if ! sh ${SCRIPTS_DIR}/mongo/run_mongo_docker.sh up '1'
+        if ! sh ${SCRIPTS_DIR}/local_db/run_local_db_docker.sh up '1'
         then
-            ERROR_MSG="Running ${SCRIPTS_DIR}/mongo/run_mongo_docker.sh up '1'"
+            ERROR_MSG="Running ${SCRIPTS_DIR}/local_db/run_local_db_docker.sh up '1'"
         fi
         ${DOCKER_CMD} ps ;
     fi
@@ -111,12 +119,21 @@ if [ "$ERROR_MSG" = "" ]; then
         fi
     else
         echo ""
-        echo "Running tests with python -m pytest..."
+        echo "Creating virtual environment..."
         echo ""
         python3 -m venv venv ;
         source venv/bin/activate ;
-        pip3 install -r requirements.txt ;
+        echo ""
+        echo "Installing requirements.txt..."
+        echo ""
+        pip3 install -r "${REPO_BASEDIR}/requirements.txt" ;
+        echo ""
+        echo "Installing pytest and coverage..."
+        echo ""
         pip install pytest coverage ;
+        echo ""
+        echo "Running tests with python -m pytest..."
+        echo ""
         python -m pytest ;
         deactivate ;
     fi
@@ -127,7 +144,7 @@ fi
 
 if [ "$ERROR_MSG" = "" ]; then
     if [ "${MONGO_DOCKER_ACTIVE}" = "0" ]; then
-        sh ${SCRIPTS_DIR}/mongo/run_mongo_docker.sh down ;
+        sh ${SCRIPTS_DIR}/local_db/run_local_db_docker.sh down ;
     fi
 fi
 

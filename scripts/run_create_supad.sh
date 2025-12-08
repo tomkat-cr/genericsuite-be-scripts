@@ -34,6 +34,15 @@ fi
 
 echo "Stage: ${STAGE}"
 
+if [ "${ENVIRONMENT}" = "" ]; then
+    ENVIRONMENT="$1"
+fi
+if [ "${ENVIRONMENT}" = "" ]; then
+    ENVIRONMENT="${STAGE}"
+fi
+
+echo "Environment: ${ENVIRONMENT}"
+
 if [ "${PROTOCOL}" = "" ]; then
     PROTOCOL="$2"
 fi
@@ -48,10 +57,10 @@ if [ "${DOMAIN_NAME}" = "" ]; then
 fi
 if [ "${DOMAIN_NAME}" = "" ]; then
     EXTRA_PARAMS=""
-    if [ "${STAGE}" = "dev" ]; then
+    if [ "${ENVIRONMENT}" = "dev" ]; then
         EXTRA_PARAMS="local"
     fi
-    . "${SCRIPTS_DIR}/get_domain_name.sh" "${STAGE}" "${EXTRA_PARAMS}"
+    . "${SCRIPTS_DIR}/get_domain_name.sh" "${ENVIRONMENT}" "${EXTRA_PARAMS}"
 fi
 
 if [ -z "${DOMAIN_NAME}" ]; then

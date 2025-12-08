@@ -4,7 +4,8 @@ Dockerfile Updater Module
 Locates and replaces pip install commands in Dockerfiles.
 """
 # pylint: disable=line-too-long
-# flake8: noqa: E501
+# flake8: E501
+# noqa: E501
 
 import os
 import shutil
@@ -134,7 +135,7 @@ class DockerfileUpdater:
         """
         # Find the start of the pip install command
         pip_start_pattern = re.compile(
-            r'RUN\s+pip\s+install\s+--upgrade\s+pip\s+&&\s+pip\s+install\s+--no-cache-dir\s*\\?\s*\n',
+            r'RUN\s+pip\s+install\s+--upgrade\s+pip\s+&&\s+pip\s+install\s+--no-cache-dir\s*\\?\s*\n',  # noqa: E501
             re.MULTILINE
         )
 
@@ -211,7 +212,7 @@ class DockerfileUpdater:
         # instruction
         if in_pip_block:
             next_instruction_pattern = re.compile(
-                r'^\s*(RUN|COPY|ADD|EXPOSE|CMD|ENTRYPOINT|WORKDIR|ENV|ARG|LABEL|USER|VOLUME|STOPSIGNAL|HEALTHCHECK|SHELL|FROM)\s+',
+                r'^\s*(RUN|COPY|ADD|EXPOSE|CMD|ENTRYPOINT|WORKDIR|ENV|ARG|LABEL|USER|VOLUME|STOPSIGNAL|HEALTHCHECK|SHELL|FROM)\s+',  # noqa: E501
                 re.MULTILINE
             )
 

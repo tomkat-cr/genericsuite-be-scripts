@@ -102,7 +102,7 @@ if [ "${TARGET_STAGE}" = "qa" ] && [ "${TARGET_ACTION}" = "http" ]; then
     echo "APP_CORS_ORIGIN_QA after: ${APP_CORS_ORIGIN_QA}"
 fi
 
-if [ "${TARGET_STAGE}" == "mongo_docker" ]; then
+if [ "${TARGET_STAGE}" == "local_db_docker" ]; then
     export APP_STAGE="dev"
     APP_DB_NAME_DEV="mongo"
     APP_DB_URI_DEV="mongodb://root:example@127.0.0.1:27017/"
