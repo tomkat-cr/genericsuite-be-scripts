@@ -20,7 +20,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ## [Unreleased]
 
 ### Added
-- Add Sync Dependencies module ("scripts/dependency-sync") to sync python dependencies in a Dockerfile from GenericSuite monorepo backend directories ("./server" and "./mcp-server" with a "pyproject.toml" file) [GS-243].
+- Sync Dependencies module ("scripts/dependency-sync") to sync python dependencies in a Dockerfile from GenericSuite monorepo backend directories ("./server" and "./mcp-server" with a "pyproject.toml" file) [GS-243].
 - "scripts/run_mcp_server.sh" to standardize the MCP server bash script [GS-243].
 - Postgres database support [GS-194].
 - Makes for Postgres:
@@ -39,12 +39,15 @@ make generate_cf_mysql
 make deploy_mysql
 ```
 - "make create-supad" to create the initial super admin user (supad) for local development environment [GS-125].
+- Field types h1 to h6 to JSON files [GS-250].
+- Validation for BACKEND_LOCAL_PORT and BACKEND_DEBUG_LOCAL_PORT to be different on the "secure_local_server/run.sh" script.
+- Ports and local database UI managers documentation in "scripts/local_db/local_db_stack.yml" [GS-249] [GS-194].
 
 ### Changed
 - Allow merge ".env" files between GenericSuite monorepo backends ("./server" and "./mcp-server"), renaming APP_MAIN_FILE and APP_DIR envvars to MCP_APP_MAIN_FILE_DEV and MCP_APP_DIR_DEV in run_mcp_server.sh [GS-243].
 - APP_DB_ENGINE values "MONGO_DB" and "DYNAMO_DB" were renamed to "MONGODB" and "DYNAMODB" [GS-194].
 - Profiles added to "local_db_stack.yml.yml" so only the selected APP_DB_ENGINE is enabled [GS-194].
-- Remove "link", "depends_on" and "healthcheck" sections in local_db_stack.yml.yml to make it compatible with podman [GS-215] [GS-194].
+- Remove all "link", "depends_on" and "healthcheck" sections in "local_db_stack.yml" to make it compatible with Podman [GS-215] [GS-194].
 - STORAGE_URL_SEED envvar is only required when STORAGE_URL_ENCRYPTION is set to 1 in "run_aws.sh" and "set_chalice_cnf.sh" [GS-72].
 - The "mongo" and "postgres" folders were renamed to more appropriate names, as they are now used for several databases: "mongo" is now "local_db", including local Docker containers for MongoDB, DynamoDB, Postgres, and MySQL. "postgres" is now "sql_db" because it works for Postgres and MySQL. [GS-249]:
 ```
@@ -64,6 +67,7 @@ set_chalice_cnf.sh mongo_docker -> set_chalice_cnf.sh local_db_docker
 ### Fixed
 - Comment out cleanup commands in "run_aws.sh" to prevent accidental deletion of important files during the clean operation.
 - Replace all occurrences of CONTAINER_ENGINE with CONTAINERS_ENGINE [GS-215].
+- Fix "secure_local_server/run.sh" to run secure local server with Podman by creating a named volume to mount configuration files in the nginx container "/etc/nginx/conf.d" directory which is read-only and Podman does not allow to mount read-only directories the same way Docker does. Now GS is compatible with Podman [GS-215].
 
 ### Security
 - All "requirements.txt" files are now ignored and recreated on demand to avoid vulnerability reposts and have the latest dependencies [GS-219].
@@ -106,7 +110,7 @@ set_chalice_cnf.sh mongo_docker -> set_chalice_cnf.sh local_db_docker
 - Implement Podman as an alternative to Docker [GS-215].
 - Add CONTAINERS_ENGINE and OPEN_CONTAINERS_ENGINE_APP envvars to GenericSuite BE Core [GS-215].
 - Add configurable backend ports using the envvar BACKEND_LOCAL_PORT and BACKEND_DEBUG_LOCAL_PORT to the "sls" (secure local server) [GS-137].
-- Add "check_if_engine_is_running" to container_engine_manager.sh, to check if docker/podman engine is running.
+- Add "check_if_engine_is_running" to container_engine_manager.sh, to check if Docker/Podman engine is running [GS-215].
 
 ### Changed
 - Remove "make lock_pip_file" and replace it with "make requirements". Add "make lock" and "make npm_lock" [FA-84] [GS-15].

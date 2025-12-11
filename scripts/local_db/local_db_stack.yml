@@ -1,9 +1,38 @@
 # File: "scripts/local_db/local_db_stack.yml"
 # 2022-03-18 | CR
 
+# Local MongoDB stack:
 # Use http://localhost:8081 to access the MongoDb Admin UI.
 # Use user: "admin" and password: "pass" as credentials to access the Admin UI.
 # Use "mongodb://root:example@mongo:27017/" as URL to connect to the local MongoDb database.
+
+# Local DynamoDB stack:
+# Use http://localhost:8095 to access the DynamoDB Manager UI.
+# Configure it to connect to the local DynamoDB:
+#   [Add connection]
+#     Alias: Local
+#     Endpoint: http://127.0.0.1:8000
+#     Region: us-east-1
+#     Access Key: test
+#     Secret Key: test
+# The database port is 8000.
+#   dynamodb.endpoint = 'http://127.0.0.1:8000'
+#   dynamodb.endpoint = 'http://dynamodb-local:8000'
+
+# Local Postgres stack:
+# Use http://localhost:8080 to access the pgAdmin UI.
+# Use user: "admin@admin.com" and password: "admin" as credentials to access the pgAdmin UI.
+# The database port is 5432.
+# Use "postgresql://user:pass@postgres-local:5432/db" as URL to connect to the local Postgres database.
+
+# Local MySQL stack:
+# Use http://localhost:8082 to access the phpMyAdmin UI.
+# Use user: "root" and password: "pass" as credentials to access the phpMyAdmin UI.
+# The database port is 3306.
+# Use "mysql://root:pass@mysql-local:3306/db" as URL to connect to the local MySQL database.
+
+# Local Supabase stack:
+# There's no local implementation for Supabase.
 
 services:
 

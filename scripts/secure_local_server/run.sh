@@ -83,6 +83,47 @@ generate_requirements() {
     echo ""
 }
 
+create_nginx_confd_vol() {
+    if ! ${DOCKER_CMD} container rm dummy_container
+    then
+        echo "Dummy container does not exist"
+    fi
+    if ! ${DOCKER_CMD} volume remove sls_nginx-confd-vol
+    then
+        echo "sls_nginx-confd-vol volume does not exist"
+    fi
+    if ! ${DOCKER_CMD} volume create sls_nginx-confd-vol
+    then
+        echo "Could not create sls_nginx-confd-vol volume running: ${DOCKER_CMD} volume create sls_nginx-confd-vol"
+        exit 1
+    fi 
+    if ! ${DOCKER_CMD} container create --name dummy_container -v sls_nginx-confd-vol:/appx nginx:latest
+    then
+        echo "Could not create dummy_container running: ${DOCKER_CMD} container create --name dummy_container -v sls_nginx-confd-vol:/appx nginx:latest"
+        exit 1
+    fi
+    if ! ${DOCKER_CMD} cp "${TMP_WORKING_DIR}/conf.d/default.conf" dummy_container:/appx/
+    then
+        echo "Could not copy: ${TMP_WORKING_DIR}/conf.d/default.conf to dummy_container"
+        exit 1
+    fi
+    if ! ${DOCKER_CMD} cp "${TMP_WORKING_DIR}/conf.d/gs_app.conf" dummy_container:/appx/
+    then
+        echo "Could not copy: ${TMP_WORKING_DIR}/conf.d/gs_app.conf to dummy_container"
+        exit 1
+    fi
+    if ! ${DOCKER_CMD} run --rm -v sls_nginx-confd-vol:/appx nginx:latest ls -lR /appx
+    then
+        echo "Could not run: ${DOCKER_CMD} run --rm -v sls_nginx-confd-vol:/appx nginx:latest ls -lR /appx"
+        exit 1
+    fi
+    if ! ${DOCKER_CMD} container rm dummy_container 
+    then
+        echo "Could not remove dummy_container running: ${DOCKER_CMD} container rm dummy_container"
+        exit 1
+    fi
+}
+
 prepare_nginx_conf() {
     echo ""
     echo "Preparing Nginx configuration..."
@@ -164,6 +205,8 @@ prepare_environment() {
     ssl_certificates_verification
     # Prepare Nginx configuration in tmp dir
     prepare_nginx_conf
+    # Create the volumne to make /etc/nginx/cont.d directory being mounted in both Docker and Podman
+    create_nginx_confd_vol
     # Generate requirements.txt if it's outdated
     generate_requirements
     # Prepare Docker configuration in tmp dir
@@ -294,6 +337,11 @@ echo "Backend debug local port (BACKEND_DEBUG_LOCAL_PORT): ${BACKEND_DEBUG_LOCAL
 echo ""
 echo "Docker command (DOCKER_CMD): ${DOCKER_CMD}"
 echo ""
+
+if [ "${BACKEND_LOCAL_PORT}" = "${BACKEND_DEBUG_LOCAL_PORT}" ]; then
+    echo "ERROR: Backend local port and debug local port are the same. Please change one of them."
+    exit 1
+fi
 
 if [ "${ACTION}" = "" ] || [ "${ACTION}" = "run" ]; then
     docker_dependencies

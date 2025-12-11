@@ -352,7 +352,8 @@ class PostgresTableDefinition:
             },
         }
 
-        skip_types = ["label", "hr", "component"]
+        skip_types = ["label", "h1", "h2", "h3",
+                      "h4", "h5", "h6", "hr", "component"]
 
         is_main_table = (
             json_filename.replace(".json", "") ==

@@ -41,11 +41,21 @@ services:
       - REPO_BASEDIR=${REPO_BASEDIR}
       - SCRIPTS_DIR=${SCRIPTS_DIR}
     volumes:
-      # - ${TMP_WORKING_DIR}/nginx.conf.tmp:/etc/nginx/nginx1.conf
-      - ${TMP_WORKING_DIR}/conf.d/:/etc/nginx/conf.d/:Z
+      # The following volume directory does not work in Podman, becasue it throws:
+      #   sts-nginx | info: /etc/nginx/conf.d/default.conf is not a file or does not exist
+      # The "/etc/nginx/conf.d" directory is read-only in the image, so it cannot be mounted as a volume
+      # - ${TMP_WORKING_DIR}/conf.d/:/etc/nginx/conf.d/:Z
+      
+      # To be compatible with both Podman and Docker, a named volume is used
+      - sls_nginx-confd-vol:/etc/nginx/conf.d:Z
+
       - ${REPO_BASEDIR}/app.${APP_NAME_LOWERCASE}.local.key:/etc/nginx/ssl/app.${APP_NAME_LOWERCASE}.local.key
       - ${REPO_BASEDIR}/app.${APP_NAME_LOWERCASE}.local.crt:/etc/nginx/ssl/app.${APP_NAME_LOWERCASE}.local.crt
       - ${REPO_BASEDIR}/app.${APP_NAME_LOWERCASE}.local.chain.crt:/etc/nginx/ssl/app.${APP_NAME_LOWERCASE}.local.chain.crt
       - ${REPO_BASEDIR}/ca.crt:/etc/nginx/ssl/ca.crt
     depends_on:
       - backend
+
+volumes:
+  sls_nginx-confd-vol:
+    external: true
