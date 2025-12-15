@@ -42,14 +42,18 @@ make deploy_mysql
 - Field types h1 to h6 to JSON files [GS-250].
 - Validation for BACKEND_LOCAL_PORT and BACKEND_DEBUG_LOCAL_PORT to be different on the "secure_local_server/run.sh" script.
 - Ports and local database UI managers documentation in "scripts/local_db/local_db_stack.yml" [GS-249] [GS-194].
+- Zip option to AWS lambda deployment [GS-248].
+- AWS_LAMBDA_DEPLOYMENT_TYPE envvar to select the deployment type for AWS Lambda functions ("zip" or "container", default "container"). If the project includes GS BE AI, it cannot be "zip" due to AWS Lambda zip file size limit of 250 MB max [GS-248].
+- CICD envvar to "big_lambdas_manager.sh" to avoid asking for confirmation on several steps and run it non-interactively [GS-248].
+- USE_EXISTING_ZIP envvar to "big_lambdas_manager.sh" to use an existing zip file instead of building a new one [GS-248].
 
 ### Changed
-- Allow merge ".env" files between GenericSuite monorepo backends ("./server" and "./mcp-server"), renaming APP_MAIN_FILE and APP_DIR envvars to MCP_APP_MAIN_FILE_DEV and MCP_APP_DIR_DEV in run_mcp_server.sh [GS-243].
-- APP_DB_ENGINE values "MONGO_DB" and "DYNAMO_DB" were renamed to "MONGODB" and "DYNAMODB" [GS-194].
-- Profiles added to "local_db_stack.yml.yml" so only the selected APP_DB_ENGINE is enabled [GS-194].
+- Allow merge ".env" files between GenericSuite monorepo backends ("./server" and "./mcp-server"), rename APP_MAIN_FILE and APP_DIR envvars to MCP_APP_MAIN_FILE_DEV and MCP_APP_DIR_DEV in run_mcp_server.sh [GS-243].
+- Rename APP_DB_ENGINE values "MONGO_DB" and "DYNAMO_DB" to "MONGODB" and "DYNAMODB" [GS-194].
+- Profiles added to "local_db_stack.yml" so only the selected APP_DB_ENGINE is enabled [GS-194].
 - Remove all "link", "depends_on" and "healthcheck" sections in "local_db_stack.yml" to make it compatible with Podman [GS-215] [GS-194].
 - STORAGE_URL_SEED envvar is only required when STORAGE_URL_ENCRYPTION is set to 1 in "run_aws.sh" and "set_chalice_cnf.sh" [GS-72].
-- The "mongo" and "postgres" folders were renamed to more appropriate names, as they are now used for several databases: "mongo" is now "local_db", including local Docker containers for MongoDB, DynamoDB, Postgres, and MySQL. "postgres" is now "sql_db" because it works for Postgres and MySQL. [GS-249]:
+- Rename "mongo" and "postgres" folders to more appropriate names, as they are now used for several databases: "mongo" is now "local_db", including local Docker containers for MongoDB, DynamoDB, Postgres, and MySQL. "postgres" is now "sql_db" because it works for Postgres and MySQL. [GS-249]:
 ```
 /postgres -> /sql_db
 /postgres/generate_postgres_cf -> /sql_db/generate_sql_db_cf
@@ -63,11 +67,18 @@ make mongo_docker_down -> make local-db-down
 make mongo_logs -> make local-db-logs
 set_chalice_cnf.sh mongo_docker -> set_chalice_cnf.sh local_db_docker
 ```
+- Rename HUGGINGFACE_TEXT_TO_IMAGE_ENDPOINT to HUGGINGFACE_DEFAULT_CHAT_MODEL [GS-59].
+- Pump up Python version to 3.12 on Big Lambdas Amazon Linux deployment, EC2 ELB deployment and local server Dockerfiles [GS-248].
+- Big Lambda python version 3.11 Dockerfile is on the "Dockerfile-big-lambda-AL2-python3.11" file [GS-248].
+- Add "v1" to endpoints defined in "aws_big_lambda/template-sam-endpoint-entry.yml" [GS-245].
+- Add additional debug to "run-cf-deployment.sh" and "aws_secrets_manager.sh" [GS-248].
+- Rename "dns/docker-compose.yml" to "dns/docker-compose-template.yml" [GS-215].
 
 ### Fixed
 - Comment out cleanup commands in "run_aws.sh" to prevent accidental deletion of important files during the clean operation.
-- Replace all occurrences of CONTAINER_ENGINE with CONTAINERS_ENGINE [GS-215].
+- Rename CONTAINER_ENGINE with CONTAINERS_ENGINE [GS-215].
 - Fix "secure_local_server/run.sh" to run secure local server with Podman by creating a named volume to mount configuration files in the nginx container "/etc/nginx/conf.d" directory which is read-only and Podman does not allow to mount read-only directories the same way Docker does. Now GS is compatible with Podman [GS-215].
+- Local_dns works with Podman [GS-215].
 
 ### Security
 - All "requirements.txt" files are now ignored and recreated on demand to avoid vulnerability reposts and have the latest dependencies [GS-219].
@@ -111,9 +122,10 @@ set_chalice_cnf.sh mongo_docker -> set_chalice_cnf.sh local_db_docker
 - Add CONTAINERS_ENGINE and OPEN_CONTAINERS_ENGINE_APP envvars to GenericSuite BE Core [GS-215].
 - Add configurable backend ports using the envvar BACKEND_LOCAL_PORT and BACKEND_DEBUG_LOCAL_PORT to the "sls" (secure local server) [GS-137].
 - Add "check_if_engine_is_running" to container_engine_manager.sh, to check if Docker/Podman engine is running [GS-215].
+- Add "make lock" and "make npm_lock" [FA-84] [GS-15].
 
 ### Changed
-- Remove "make lock_pip_file" and replace it with "make requirements". Add "make lock" and "make npm_lock" [FA-84] [GS-15].
+- Rename "make lock_pip_file" to "make requirements" [FA-84] [GS-15].
 - "run_aws.sh" validates that CURRENT_FRAMEWORK is Chalice for "run", "deploy", "create_stack", "describe_stack", "delete_app", "delete_stack" commands, and runs "set_chalice_cnf.sh" for all those commands when it's Chalice [GS-15].
 
 ### Fixed
@@ -122,7 +134,7 @@ set_chalice_cnf.sh mongo_docker -> set_chalice_cnf.sh local_db_docker
 - Fix the GenericSuite dependencies verification in "big_lambdas_manager.sh" to abort the execution if there are local dependencies [FA-169].
 - Fix missing "g++" running docker build in "big_lambdas_manager.sh", adding "RUN yum -y groupinstall 'Development Tools'" to the "Dockerfile-big-lambda-AL2" [FA-169].
 - Fix the error "The image manifest, config or layer media type for the source image xx.dkr.ecr.us-east-1.amazonaws.com/xxx:version is not supported" running docker build in "big_lambdas_manager.sh", adding `--provenance=false` to stop BuiltKit from generating said manifest [FA-169].
-- Fix the net:ERR_CERT_AUTHORITY_INVALID error in GenericSuite FE/BE using the https protocol [GS-198].
+- Fix the "net:ERR_CERT_AUTHORITY_INVALID" error in GenericSuite FE/BE using the https protocol [GS-198].
 - Fix TMP_BUILD_DIR assignment in dynamodb deploy script.
 - Fix "run_aws.sh" to assign the correct AWS Stack Name and avoid the error "An error occurred (ValidationError) when calling the DescribeStacks operation: 1 validation error detected: Value '${APP_NAME_LOWERCASE}-be-stack' at 'stackName' failed to satisfy constraint: Member must satisfy regular expression pattern: [a-zA-Z][-a-zA-Z0-9]*|arn:[-a-zA-Z0-9:/._+]*" [GS-137].
 - Fix ".chalice/config_example.json" to remove the API_GATEWAY_STAGE_placeholder from the "api_gateway_stage" attribute and assign the correct value, and remove unused attributes in the QA stage [FA-248].

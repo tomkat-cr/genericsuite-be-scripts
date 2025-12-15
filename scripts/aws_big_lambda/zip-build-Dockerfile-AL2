@@ -1,6 +1,6 @@
-# Dockerfile-big-lambda-AL2
-# 2023-12-10 | CR
-# Used by: scrips/aws_big_lambda/big_lambdas_manager.sh
+# Dockerfile-zip-build-AL2
+# 2025-12-14 | CR
+# Used by: "scrips/aws_big_lambda/big_lambdas_manager.sh" to build the deployment.zip file
 
 FROM public.ecr.aws/lambda/python:3.12
 
@@ -16,9 +16,3 @@ RUN dnf -y install \
     libxslt-devel libxml2-devel \
     redhat-rpm-config libffi-devel python3-devel openssl-devel cargo pkg-config \
     git
-
-COPY . ${LAMBDA_TASK_ROOT}
-
-RUN pip install -r requirements.txt
-
-CMD [ "app.app" ]

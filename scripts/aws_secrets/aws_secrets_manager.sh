@@ -36,59 +36,6 @@ exit_abort() {
     exit 1
 }
 
-# Basic Variables
-REPO_BASEDIR="`pwd`"
-cd "`dirname "$0"`"
-SCRIPTS_DIR="`pwd`"
-cd "${REPO_BASEDIR}"
-
-# ${SCRIPTS_DIR}/../aws_cf_processor/run-cf-deployment.sh ACTION STAGE CF_STACK_NAME CF_STACK_PARAMETERS CF_TEMPLATE_FILE ROUND
-AWS_CF_PROCESSOR_SCRIPT="${SCRIPTS_DIR}/../aws_cf_processor/run-cf-deployment.sh"
-
-# Default values
-if [ "${CICD_MODE}" = "" ]; then
-    CICD_MODE="0"
-fi
-if [ "${TMP_BUILD_DIR}" = "" ]; then
-    TMP_BUILD_DIR="/tmp/${APP_NAME_LOWERCASE}_aws_secrets_tmp"
-fi
-if [ "${AWS_DEPLOYMENT_TYPE}" = "" ]; then
-    AWS_DEPLOYMENT_TYPE="lambda"
-    # AWS_DEPLOYMENT_TYPE="fargate"
-    # AWS_DEPLOYMENT_TYPE="ec2"
-fi
-if [ "${KMS_KEY_ALIAS}" = "" ]; then
-    KMS_KEY_ALIAS="genericsuite-key"
-fi
-
-# Script parameters
-if [ "$1" != "" ]; then
-    ACTION="$1"
-fi
-if [ "$2" != "" ]; then
-    TARGET="$2"
-fi
-if [ "$3" != "" ]; then
-    STAGE="$3"
-fi
-if [ "$4" != "" ]; then
-    DEBUG="$4"
-fi
-
-# Script parameters validations
-if [ "${ACTION}" = "" ]; then
-    echo "ERROR: ACTION not set. Options: run, destroy, describe"
-    exit_abort
-fi
-if [ "${STAGE}" = "" ]; then
-    echo "ERROR: STAGE not set. Options: dev, qa, staging, demo, prod"
-    exit_abort
-fi
-if [ "${TARGET}" = "" ]; then
-    echo "ERROR: TARGET not set. Options: kms, secrets"
-    exit_abort
-fi
-
 prepare_working_environment() {
     # Get and validate environment variables
     set -o allexport ; . .env ; set +o allexport ;
@@ -150,7 +97,7 @@ get_secret_var_list() {
     # Core
     export CORE_ENVS="APP_NAME APP_VERSION FLASK_APP APP_DEBUG APP_STAGE APP_CORS_ORIGIN APP_DB_ENGINE APP_DB_NAME CURRENT_FRAMEWORK DEFAULT_LANG GIT_SUBMODULE_URL GIT_SUBMODULE_LOCAL_PATH SMTP_SERVER SMTP_PORT SMTP_DEFAULT_SENDER APP_HOST_NAME CLOUD_PROVIDER AWS_REGION DYNAMDB_PREFIX"
     # AI
-    export EXTENSION_ENVS="AI_ASSISTANT_NAME AWS_S3_CHATBOT_ATTACHMENTS_BUCKET OPENAI_MODEL OPENAI_TEMPERATURE LANGCHAIN_PROJECT USER_AGENT HUGGINGFACE_ENDPOINT_URL"
+    export EXTENSION_ENVS="AI_ASSISTANT_NAME AWS_S3_CHATBOT_ATTACHMENTS_BUCKET OPENAI_MODEL OPENAI_TEMPERATURE LANGCHAIN_PROJECT USER_AGENT HUGGINGFACE_TEXT_TO_IMAGE_ENDPOINT"
     # App specific
     export APP_ENVS=""
 
@@ -272,6 +219,9 @@ build_envvars() {
 
 run_cf_templates_creation() {
     if [ "${TARGET}" = "secrets" ]; then
+
+        echo "*** Run CF Templates Creation | Secrets ***"
+
         build_envvars
 
         local cf_template_file_p1_path="${SCRIPTS_DIR}/${CF_TEMPLATE_FILE_P1}"
@@ -284,13 +234,19 @@ run_cf_templates_creation() {
         # Secrets template parameters
         CF_STACK_PARAMETERS="ParameterKey=AppName,ParameterValue='${APP_NAME_LOWERCASE}' ParameterKey=AppStage,ParameterValue='${STAGE}' ParameterKey=KmsKeyAlias,ParameterValue='${KMS_KEY_ALIAS}' ParameterKey=EncryptedSecretName,ParameterValue='${EncryptedSecretName}' ParameterKey=EncryptedSecretDescription,ParameterValue='${EncryptedSecretDescription}' ParameterKey=EncryptedSecretSecretString,ParameterValue='${SECRET_STRING}' ParameterKey=UnEncryptedSecretName,ParameterValue='${UnEncryptedSecretName}' ParameterKey=UnEncryptedSecretDescription,ParameterValue='${UnEncryptedSecretDescription}' ParameterKey=UnEncryptedSecretSecretString,ParameterValue='${ENV_VARS_STRING}'"
 
-        # Validate the create Secrets template
+        echo "Validating the create Secrets template"
+        if [ "${DEBUG}" = "1" ]; then
+            echo "sh ${AWS_CF_PROCESSOR_SCRIPT} \"validate\" \"${STAGE}\" \"${CF_STACK_NAME_P1}\" \"${CF_STACK_PARAMETERS}\" \"${cf_template_file_p1_path}\" \"\""
+        fi
         if ! sh ${AWS_CF_PROCESSOR_SCRIPT} "validate" "${STAGE}" "${CF_STACK_NAME_P1}" "${CF_STACK_PARAMETERS}" "${cf_template_file_p1_path}" ""
         then
             exit_abort
         fi
 
-        # Run the create Secrets template
+        echo "Running the create Secrets template"
+        if [ "${DEBUG}" = "1" ]; then
+            echo "sh ${AWS_CF_PROCESSOR_SCRIPT} \"run\" \"${STAGE}\" \"${CF_STACK_NAME_P1}\" \"${CF_STACK_PARAMETERS}\" \"${cf_template_file_p1_path}\" \"\""
+        fi
         if ! sh ${AWS_CF_PROCESSOR_SCRIPT} "run" "${STAGE}" "${CF_STACK_NAME_P1}" "${CF_STACK_PARAMETERS}" "${cf_template_file_p1_path}" ""
         then
             exit_abort
@@ -298,18 +254,27 @@ run_cf_templates_creation() {
     fi
 
     if [ "${TARGET}" = "kms" ]; then
+
+        echo "*** Run CF Templates Creation | KMS ***"
+
         local cf_template_file_p2_path="${SCRIPTS_DIR}/${CF_TEMPLATE_FILE_P2}"
 
         # KMS and https-certificate template parameters
         CF_STACK_PARAMETERS="ParameterKey=AppName,ParameterValue=${APP_NAME_LOWERCASE} ParameterKey=AppStage,ParameterValue=${STAGE} ParameterKey=KmsKeyAlias,ParameterValue=${KMS_KEY_ALIAS}"
 
-        # KMS and https-certificate template parameters validation
+        echo "KMS and https-certificate template validation"
+        if [ "${DEBUG}" = "1" ]; then
+            echo "sh ${AWS_CF_PROCESSOR_SCRIPT} \"validate\" \"${STAGE}\" \"${CF_STACK_NAME_P2}\" \"${CF_STACK_PARAMETERS}\" \"${cf_template_file_p2_path}\" \"\""
+        fi
         if ! sh ${AWS_CF_PROCESSOR_SCRIPT} "validate" "${STAGE}" "${CF_STACK_NAME_P2}" "${CF_STACK_PARAMETERS}" "${cf_template_file_p2_path}" ""
         then
             exit_abort
         fi
 
-        # Run the create KMS and https-certificate template
+        echo "Running the create KMS and https-certificate template"
+        if [ "${DEBUG}" = "1" ]; then
+            echo "sh ${AWS_CF_PROCESSOR_SCRIPT} \"run\" \"${STAGE}\" \"${CF_STACK_NAME_P2}\" \"${CF_STACK_PARAMETERS}\" \"${cf_template_file_p2_path}\" \"\""
+        fi
         if ! sh ${AWS_CF_PROCESSOR_SCRIPT} "run" "${STAGE}" "${CF_STACK_NAME_P2}" "${CF_STACK_PARAMETERS}" "${cf_template_file_p2_path}" ""
         then
             exit_abort
@@ -351,6 +316,7 @@ show_summary() {
     echo "Action (ACTION): ${ACTION}"
     echo "Stage (STAGE): ${STAGE}"
     echo "Target (TARGET): ${TARGET}"
+    echo "Debug (DEBUG): ${DEBUG}"
     echo ""
     echo "* Parameters from the '.env' file:"
     echo ""
@@ -371,6 +337,63 @@ show_summary() {
 }
 
 # Main
+
+# Basic Variables
+REPO_BASEDIR="`pwd`"
+cd "`dirname "$0"`"
+SCRIPTS_DIR="`pwd`"
+cd "${REPO_BASEDIR}"
+
+# ${SCRIPTS_DIR}/../aws_cf_processor/run-cf-deployment.sh ACTION STAGE CF_STACK_NAME CF_STACK_PARAMETERS CF_TEMPLATE_FILE ROUND
+AWS_CF_PROCESSOR_SCRIPT="${SCRIPTS_DIR}/../aws_cf_processor/run-cf-deployment.sh"
+
+# Default values
+if [ "${CICD_MODE}" = "" ]; then
+    CICD_MODE="0"
+fi
+if [ "${TMP_BUILD_DIR}" = "" ]; then
+    TMP_BUILD_DIR="/tmp/${APP_NAME_LOWERCASE}_aws_secrets_tmp"
+fi
+if [ "${AWS_DEPLOYMENT_TYPE}" = "" ]; then
+    AWS_DEPLOYMENT_TYPE="lambda"
+    # AWS_DEPLOYMENT_TYPE="fargate"
+    # AWS_DEPLOYMENT_TYPE="ec2"
+fi
+if [ "${KMS_KEY_ALIAS}" = "" ]; then
+    KMS_KEY_ALIAS="genericsuite-key"
+fi
+
+# Script parameters
+if [ "$1" != "" ]; then
+    ACTION="$1"
+fi
+if [ "$2" != "" ]; then
+    TARGET="$2"
+fi
+if [ "$3" != "" ]; then
+    STAGE="$3"
+fi
+if [ "${DEBUG}" = "" ]; then
+    if [ "$4" != "" ]; then
+        DEBUG="$4"
+    else
+        DEBUG="0"
+    fi
+fi
+
+# Script parameters validations
+if [ "${ACTION}" = "" ]; then
+    echo "ERROR: ACTION not set. Options: run, destroy, describe"
+    exit_abort
+fi
+if [ "${STAGE}" = "" ]; then
+    echo "ERROR: STAGE not set. Options: dev, qa, staging, demo, prod"
+    exit_abort
+fi
+if [ "${TARGET}" = "" ]; then
+    echo "ERROR: TARGET not set. Options: kms, secrets"
+    exit_abort
+fi
 
 prepare_working_environment
 show_summary

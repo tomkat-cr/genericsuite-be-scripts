@@ -136,7 +136,7 @@ Resources:
           # LANGCHAIN_PROJECT: LANGCHAIN_PROJECT_placeholder
           # USER_AGENT: USER_AGENT_placeholder
           # # HUGGINGFACE_API_KEY: HUGGINGFACE_API_KEY_placeholder    # GsSecretParameter
-          # HUGGINGFACE_ENDPOINT_URL: HUGGINGFACE_ENDPOINT_URL_placeholder
+          # HUGGINGFACE_TEXT_TO_IMAGE_ENDPOINT: HUGGINGFACE_TEXT_TO_IMAGE_ENDPOINT_placeholder
           # # FDA_API_KEY: FDA_API_KEY_placeholder    # GsSecretParameter
 
           # # New 2024-05-30
@@ -226,7 +226,7 @@ Resources:
 
         paths:
 
-          /asset/{item_id}/{response_type}:
+          /v1/asset/{item_id}/{response_type}:
             get:
               parameters:
                 - name: item_id
@@ -300,7 +300,7 @@ Resources:
               summary: Get Asset endpoint.
               description: Get asset (image, audio, or any other file type) stored in S3.
 
-          /asset/{item_id}:
+          /v1/asset/{item_id}:
             get:
               parameters:
                 - name: item_id
@@ -363,7 +363,7 @@ Resources:
               description: Get asset (image, audio, or any other file type) stored in S3.
 
 
-          /asset/{item_id}/{response_type}:
+          /v1/asset/{item_id}/{response_type}:
             get:
               consumes:
               - application/json
@@ -413,7 +413,7 @@ Resources:
                   default:
                     statusCode: '200'
 
-          /menu_options:
+          /v1/menu_options:
             get:
               consumes:
               - application/json
@@ -475,7 +475,7 @@ Resources:
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
 
-          /menu_options/element:
+          /v1/menu_options/element:
             post:
               consumes:
               - application/json
@@ -537,7 +537,7 @@ Resources:
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
 
-          /users:
+          /v1/users:
             get:
               consumes:
               - application/json
@@ -662,7 +662,7 @@ Resources:
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
 
-          /users/test:
+          /v1/users/test:
             get:
               consumes:
               - application/json
@@ -724,7 +724,7 @@ Resources:
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
 
-          /users/login:
+          /v1/users/login:
             get:
               consumes:
               - application/json
@@ -807,7 +807,7 @@ Resources:
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
 
-          /users/supad-create:
+          /v1/users/supad-create:
             post:
               consumes:
               - application/json
@@ -869,7 +869,7 @@ Resources:
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
 
-          /ai/chatbot:
+          /v1/ai/chatbot:
             post:
               consumes:
               - application/json
@@ -943,7 +943,7 @@ Resources:
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
 
-          /ai/image_to_text:
+          /v1/ai/image_to_text:
             post:
               consumes:
               - multipart/form-data
@@ -1015,7 +1015,7 @@ Resources:
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
 
-          /ai/voice_to_text:
+          /v1/ai/voice_to_text:
             post:
               consumes:
               - multipart/form-data
@@ -1087,7 +1087,7 @@ Resources:
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
 
-          /ai_chatbot_conversations:
+          /v1/ai_chatbot_conversations:
             get:
               consumes:
               - application/json
@@ -1228,7 +1228,7 @@ Resources:
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
 
-          /general_config:
+          /v1/general_config:
             get:
               consumes:
               - application/json
@@ -1369,7 +1369,7 @@ Resources:
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
 
-          /users_config:
+          /v1/users_config:
             get:
               consumes:
               - application/json
@@ -1510,7 +1510,148 @@ Resources:
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
 
-          /users/current_user_d:
+          /v1/users_api_keys:
+            get:
+              consumes:
+              - application/json
+              produces:
+              - application/json
+              responses:
+                '200':
+                  description: 200 response
+                  schema:
+                    $ref: '#/definitions/Empty'
+              x-amazon-apigateway-integration:
+                responses:
+                  default:
+                    statusCode: '200'
+                uri:
+                  Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${APIHandler.Arn}/invocations
+                passthroughBehavior: when_no_match
+                httpMethod: POST
+                contentHandling: CONVERT_TO_TEXT
+                type: aws_proxy
+              summary: Handles generic route requests and delegates to the appropriate
+              description: "CRUD operation based on the request parameters.\n\nArgs:\n\
+                \    request (AuthorizedRequest): The authorized request object.\n\
+                \    kwargs (dict): Additional keyword arguments.\n\nReturns:\n  \
+                \  Response: The response from the CRUD operation."
+            post:
+              consumes:
+              - application/json
+              produces:
+              - application/json
+              responses:
+                '200':
+                  description: 200 response
+                  schema:
+                    $ref: '#/definitions/Empty'
+              x-amazon-apigateway-integration:
+                responses:
+                  default:
+                    statusCode: '200'
+                uri:
+                  Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${APIHandler.Arn}/invocations
+                passthroughBehavior: when_no_match
+                httpMethod: POST
+                contentHandling: CONVERT_TO_TEXT
+                type: aws_proxy
+              summary: Handles generic route requests and delegates to the appropriate
+              description: "CRUD operation based on the request parameters.\n\nArgs:\n\
+                \    request (AuthorizedRequest): The authorized request object.\n\
+                \    kwargs (dict): Additional keyword arguments.\n\nReturns:\n  \
+                \  Response: The response from the CRUD operation."
+            put:
+              consumes:
+              - application/json
+              produces:
+              - application/json
+              responses:
+                '200':
+                  description: 200 response
+                  schema:
+                    $ref: '#/definitions/Empty'
+              x-amazon-apigateway-integration:
+                responses:
+                  default:
+                    statusCode: '200'
+                uri:
+                  Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${APIHandler.Arn}/invocations
+                passthroughBehavior: when_no_match
+                httpMethod: POST
+                contentHandling: CONVERT_TO_TEXT
+                type: aws_proxy
+              summary: Handles generic route requests and delegates to the appropriate
+              description: "CRUD operation based on the request parameters.\n\nArgs:\n\
+                \    request (AuthorizedRequest): The authorized request object.\n\
+                \    kwargs (dict): Additional keyword arguments.\n\nReturns:\n  \
+                \  Response: The response from the CRUD operation."
+            delete:
+              consumes:
+              - application/json
+              produces:
+              - application/json
+              responses:
+                '200':
+                  description: 200 response
+                  schema:
+                    $ref: '#/definitions/Empty'
+              x-amazon-apigateway-integration:
+                responses:
+                  default:
+                    statusCode: '200'
+                uri:
+                  Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${APIHandler.Arn}/invocations
+                passthroughBehavior: when_no_match
+                httpMethod: POST
+                contentHandling: CONVERT_TO_TEXT
+                type: aws_proxy
+              summary: Handles generic route requests and delegates to the appropriate
+              description: "CRUD operation based on the request parameters.\n\nArgs:\n\
+                \    request (AuthorizedRequest): The authorized request object.\n\
+                \    kwargs (dict): Additional keyword arguments.\n\nReturns:\n  \
+                \  Response: The response from the CRUD operation."
+            options:
+              consumes:
+              - application/json
+              produces:
+              - application/json
+              responses:
+                '200':
+                  description: 200 response
+                  schema:
+                    $ref: '#/definitions/Empty'
+                  headers:
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Origin:
+                      type: string
+                    Access-Control-Allow-Headers:
+                      type: string
+                    Access-Control-Expose-Headers:
+                      type: string
+                    Access-Control-Max-Age:
+                      type: string
+                    Access-Control-Allow-Credentials:
+                      type: string
+              x-amazon-apigateway-integration:
+                responses:
+                  default:
+                    statusCode: '200'
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Methods: '''GET,POST,PUT,DELETE,OPTIONS'''
+                      method.response.header.Access-Control-Allow-Origin: '''http://localhost:3000'''
+                      method.response.header.Access-Control-Allow-Headers: '''Access-Control-Allow-Origin,Authorization,Content-Type,X-Amz-Date,X-Amz-Security-Token,X-Api-Key'''
+                      method.response.header.Access-Control-Expose-Headers: '''Authorization,Access-Control-Allow-Origin,Content-Type,Content-Disposition,Content-Length'''
+                      method.response.header.Access-Control-Max-Age: '''600'''
+                      method.response.header.Access-Control-Allow-Credentials: '''true'''
+                requestTemplates:
+                  application/json: '{"statusCode": 200}'
+                passthroughBehavior: when_no_match
+                type: mock
+                contentHandling: CONVERT_TO_TEXT
+
+          /v1/users/current_user_d:
             get:
               consumes:
               - application/json

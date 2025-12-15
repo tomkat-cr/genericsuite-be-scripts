@@ -1,0 +1,17 @@
+# zip-build-docker-compose.yml
+# 2025-12-14 | CR
+# Used by: "scrips/aws_big_lambda/big_lambdas_manager.sh" to build the deployment.zip file
+
+services:
+  zip-build-big-lambda:
+    container_name: zip-build-big-lambda
+    build:
+      context: .
+      dockerfile: zip-build-Dockerfile-AL2
+    volumes:
+      - ${TMP_BUILD_DIR}:/app:Z
+      - ${SCRIPTS_DIR}:/var/scripts:Z
+    environment:
+      - TMP_BUILD_DIR=${TMP_BUILD_DIR}
+      - SCRIPTS_DIR=${SCRIPTS_DIR}
+    entrypoint: /var/scripts/zip-build-entrypoint.sh
