@@ -284,13 +284,36 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
 
     if [ "${RUN_METHOD}" = "uvicorn" ]; then
         set_uvicorn_autoreload_option
-        if [ "${RUN_PROTOCOL}" = "https" ]; then
-            echo "${SCRIPTS_DIR}/../secure_local_server/run.sh"
-            ${SCRIPTS_DIR}/../secure_local_server/run.sh "run" ${STAGE}
-        else
-            echo "${PEM_TOOL} run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app ${AUTO_RELOAD_OPTION} --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT}"
+        if [ "${PATH_TO_SAVE_OPENAPI}" != "" ]; then
             echo ""
-            ${PEM_TOOL} run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app ${AUTO_RELOAD_OPTION} --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT}
+            echo "Generating the OpenAPI schema files..."
+            echo ""
+            # Run uvicorn in background and terminate it if it is already running
+            echo "Running: ${PEM_TOOL} run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app ${AUTO_RELOAD_OPTION} --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT}"
+            
+            # nohup ${PEM_TOOL} run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app ${AUTO_RELOAD_OPTION} --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT} > /dev/null 2>&1 &
+            ${PEM_TOOL} run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app ${AUTO_RELOAD_OPTION} --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT} &
+            
+            echo ""
+            echo "Waiting 15 seconds for the process to start and generate the OpenAPI schema files..."
+            echo ""
+            sleep 15
+            echo ""
+            echo "Find the process ID..."
+            PID=$(pgrep -f "uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app")
+            echo ""
+            echo "Stop the process: ${PID}"
+            kill ${PID}
+            echo ""
+        else
+            if [ "${RUN_PROTOCOL}" = "https" ]; then
+                echo "${SCRIPTS_DIR}/../secure_local_server/run.sh"
+                ${SCRIPTS_DIR}/../secure_local_server/run.sh "run" ${STAGE}
+            else
+                echo "${PEM_TOOL} run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app ${AUTO_RELOAD_OPTION} --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT}"
+                echo ""
+                ${PEM_TOOL} run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app ${AUTO_RELOAD_OPTION} --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT}
+            fi
         fi
     fi
 

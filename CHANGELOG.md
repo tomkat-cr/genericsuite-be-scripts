@@ -46,6 +46,7 @@ make deploy_mysql
 - AWS_LAMBDA_DEPLOYMENT_TYPE envvar to select the deployment type for AWS Lambda functions ("zip" or "container", default "container"). If the project includes GS BE AI, it cannot be "zip" due to AWS Lambda zip file size limit of 250 MB max [GS-248].
 - CICD envvar to "big_lambdas_manager.sh" to avoid asking for confirmation on several steps and run it non-interactively [GS-248].
 - USE_EXISTING_ZIP envvar to "big_lambdas_manager.sh" to use an existing zip file instead of building a new one [GS-248].
+- PATH_TO_SAVE_OPENAPI envvar to "run_aws.sh" to save the OpenAPI schema files [GS-245].
 
 ### Changed
 - Allow merge ".env" files between GenericSuite monorepo backends ("./server" and "./mcp-server"), rename APP_MAIN_FILE and APP_DIR envvars to MCP_APP_MAIN_FILE_DEV and MCP_APP_DIR_DEV in run_mcp_server.sh [GS-243].
@@ -73,6 +74,7 @@ set_chalice_cnf.sh mongo_docker -> set_chalice_cnf.sh local_db_docker
 - Add "v1" to endpoints defined in "aws_big_lambda/template-sam-endpoint-entry.yml" [GS-245].
 - Add additional debug to "run-cf-deployment.sh" and "aws_secrets_manager.sh" [GS-248].
 - Rename "dns/docker-compose.yml" to "dns/docker-compose-template.yml" [GS-215].
+- Due to the "fastmcp" and "mcp" dependencies removal, run_mcp_server.sh now verifies if both are installed [GS-248].
 
 ### Fixed
 - Comment out cleanup commands in "run_aws.sh" to prevent accidental deletion of important files during the clean operation.
