@@ -75,12 +75,14 @@ set_chalice_cnf.sh mongo_docker -> set_chalice_cnf.sh local_db_docker
 - Add additional debug to "run-cf-deployment.sh" and "aws_secrets_manager.sh" [GS-248].
 - Rename "dns/docker-compose.yml" to "dns/docker-compose-template.yml" [GS-215].
 - Due to the "fastmcp" and "mcp" dependencies removal, run_mcp_server.sh now verifies if both are installed [GS-248].
+- Upgrade Lambda runtime to Python 3.12, update API Gateway to OpenAPI 3.0.1 with CORS, and refactor endpoint definitions in "aws_big_lambda/template-sam.yml" [GS-245].
 
 ### Fixed
 - Comment out cleanup commands in "run_aws.sh" to prevent accidental deletion of important files during the clean operation.
 - Rename CONTAINER_ENGINE with CONTAINERS_ENGINE [GS-215].
 - Fix "secure_local_server/run.sh" to run secure local server with Podman by creating a named volume to mount configuration files in the nginx container "/etc/nginx/conf.d" directory which is read-only and Podman does not allow to mount read-only directories the same way Docker does. Now GS is compatible with Podman [GS-215].
 - Local_dns works with Podman [GS-215].
+- APP_VERSION removed from CORE_ENVS in "aws_secrets/aws_secrets_manager.sh" separated from the rest of the environment variables that are pushed to AWS Secrets Manager and included in the AWS Lambda Function CloudFormation template "aws_big_lambda/template-sam.yml".
 
 ### Security
 - All "requirements.txt" files are now ignored and recreated on demand to avoid vulnerability reposts and have the latest dependencies [GS-219].
