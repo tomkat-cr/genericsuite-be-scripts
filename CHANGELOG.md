@@ -47,6 +47,9 @@ make deploy_mysql
 - CICD envvar to "big_lambdas_manager.sh" to avoid asking for confirmation on several steps and run it non-interactively [GS-248].
 - USE_EXISTING_ZIP envvar to "big_lambdas_manager.sh" to use an existing zip file instead of building a new one [GS-248].
 - PATH_TO_SAVE_OPENAPI envvar to "run_aws.sh" to save the OpenAPI schema files [GS-245].
+- Implement Cloudflare Tunnel to allow https access to local development environment without Docker/local DNS and make localhost public for testing purposes, e.g. to access the PC camera (no port forwarding needed) [GS-257].
+- Add USE_CONTAINERS_ENGINE_APP envvar to turn on/off use containers engine app for local development environment when RUN_PROTOCOL="https" [GS-257].
+- Add RUN_PROTOCOL_AND_PORT_REPLACEMENT envvar to turn on/off automatic protocol and port replacement for local development environment variables APP_CORS_ORIGIN (assigned from APP_CORS_ORIGIN_{STAGE}), APP_FE_URL (assigned from APP_FE_URL_{STAGE}), and REACT_APP_API_URL (assigned from APP_API_URL_{STAGE}), depending on RUN_PROTOCOL value [GS-257].
 
 ### Changed
 - Allow merge ".env" files between GenericSuite monorepo backends ("./server" and "./mcp-server"), rename APP_MAIN_FILE and APP_DIR envvars to MCP_APP_MAIN_FILE_DEV and MCP_APP_DIR_DEV in run_mcp_server.sh [GS-243].

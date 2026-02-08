@@ -18,7 +18,7 @@ if [ -f "$BASE_DIR/.env" ]; then
     echo "🔍 Reading .env file in $BASE_DIR..."
     set -o allexport; . "${BASE_DIR}/.env"; set +o allexport ;
 else
-    echo "❌ .env file not found in $MCP_APP_DIR. Please create one."
+    echo "❌ .env file not found in $MCP_APP_DIR. Please create one in `pwd`."
     exit 1
 fi
 
@@ -67,16 +67,16 @@ fi
 
 echo "✅ Dependencies verified"
 
-# Read the .env file from the application directory if it is not the current directory
-if [ "$MCP_APP_DIR" != "." ]; then
-    if [ -f ".env" ]; then
-        echo "🔍 Reading .env file in: `pwd`"
-        set -o allexport; . ".env"; set +o allexport ;
-    else
-        echo "❌ .env file not found in $MCP_APP_DIR. Please create one in `pwd`."
-        exit 1
-    fi
-fi
+# # Read the .env file from the application directory if it is not the current directory
+# if [ "$MCP_APP_DIR" != "." ]; then
+#     if [ -f ".env" ]; then
+#         echo "🔍 Reading .env file in: `pwd`"
+#         set -o allexport; . ".env"; set +o allexport ;
+#     else
+#         echo "❌ .env file not found in $MCP_APP_DIR. Please create one in `pwd`."
+#         exit 1
+#     fi
+# fi
 
 echo "🚀 Preparing environment..."
 
@@ -98,7 +98,7 @@ fi
 
 # MCP server port
 if [ -z "$MCP_SERVER_PORT" ]; then
-    export MCP_SERVER_PORT=8000
+    export MCP_SERVER_PORT=8070
 fi
 
 # MCP server host

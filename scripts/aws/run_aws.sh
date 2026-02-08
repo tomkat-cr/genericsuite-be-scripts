@@ -91,6 +91,15 @@ AWS_STACK_NAME="${APP_NAME_LOWERCASE}-be-stack"
 # RUN_METHOD="chalice"
 RUN_METHOD="chalice_docker"
 
+# Run protocol and port replacement: automatic protocol and port replacement for
+# local development environment variables REACT_APP_API_URL and APP_API_URL
+# when RUN_PROTOCOL="https" can be turned off by assigning RUN_PROTOCOL_AND_PORT_REPLACEMENT=0.
+# Defaults to "1"
+RUN_PROTOCOL_AND_PORT_REPLACEMENT=1
+
+# Whether to use containers engine app for local development environment when RUN_PROTOCOL="https". Defaults to "1"
+USE_CONTAINERS_ENGINE_APP=1
+
 echo "SCRIPTS_DIR: ${SCRIPTS_DIR}"
 echo "REPO_BASEDIR: ${REPO_BASEDIR}"
 
@@ -167,6 +176,8 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
     echo "Port: ${BACKEND_LOCAL_PORT}"
     echo "Run method (RUN_METHOD): ${RUN_METHOD}"
     echo "Run protocol (RUN_PROTOCOL): ${RUN_PROTOCOL}"
+    echo "Run protocol and port replacement (RUN_PROTOCOL_AND_PORT_REPLACEMENT): ${RUN_PROTOCOL_AND_PORT_REPLACEMENT}"
+    echo "Use containers engine app (USE_CONTAINERS_ENGINE_APP): ${USE_CONTAINERS_ENGINE_APP}"
     echo "Python entry point (APP_DIR.APP_MAIN_FILE): ${APP_DIR}.${APP_MAIN_FILE}"
     echo ""
 
@@ -193,7 +204,7 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
     fi
 
     if [ "${STAGE}" = "dev" ];then
-        . ${SCRIPTS_DIR}/../get_domain_name_dev.sh "${STAGE}" "${APP_DOMAIN_NAME}" "${SCRIPTS_DIR}/.."
+        . ${SCRIPTS_DIR}/../get_domain_name_dev.sh "${STAGE}" "${APP_DOMAIN_NAME}" "${SCRIPTS_DIR}/.." "${USE_CONTAINERS_ENGINE_APP}"
         export GS_LOCAL_ENVIR="true"
     else
         . ${SCRIPTS_DIR}/../get_domain_name.sh "${STAGE}"
@@ -212,7 +223,7 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
     export AWS_S3_CHATBOT_ATTACHMENTS_BUCKET=$(eval echo \$AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_${STAGE_UPPERCASE})
 
     if [ "${CURRENT_FRAMEWORK}" = "chalice" ]; then
-        if [ "${RUN_PROTOCOL}" = "https" ]; then
+        if [ "${RUN_PROTOCOL}" = "https" ] && [ "${USE_CONTAINERS_ENGINE_APP}" = "1" ]; then
             export RUN_METHOD="chalice_docker"
         else
             export RUN_METHOD="chalice"
@@ -221,12 +232,17 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
     else
         if [ "${RUN_PROTOCOL}" = "http" ]; then
             make down_qa
-            echo "NOTE: The warning '-i used with no filenames on the command line, reading from STDIN.' is normal..."
-            echo ">> Old APP_CORS_ORIGIN: ${APP_CORS_ORIGIN}"
-            if [ "${APP_CORS_ORIGIN}" != "*" ]; then
-                export APP_CORS_ORIGIN="$(echo ${APP_CORS_ORIGIN} | perl -i -pe 's|https:\/\/|http:\/\/|')"
+
+            if [ "${RUN_PROTOCOL_AND_PORT_REPLACEMENT}" = "1" ]; then
+                echo "NOTE: The warning '-i used with no filenames on the command line, reading from STDIN.' is normal..."
+                echo ">> Old APP_CORS_ORIGIN: ${APP_CORS_ORIGIN}"
+                if [ "${APP_CORS_ORIGIN}" != "*" ]; then
+                    export APP_CORS_ORIGIN="$(echo ${APP_CORS_ORIGIN} | perl -i -pe 's|https:\/\/|http:\/\/|')"
+                fi
+                echo ">> New APP_CORS_ORIGIN: ${APP_CORS_ORIGIN}"
+            else
+                echo ">> APP_CORS_ORIGIN: ${APP_CORS_ORIGIN}"
             fi
-            echo ">> New APP_CORS_ORIGIN: ${APP_CORS_ORIGIN}"
         fi
     fi
 
@@ -261,7 +277,7 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
 
     if [ "${RUN_METHOD}" = "gunicorn" ]; then
         set_gunicorn_autoreload_option
-        if [ "${RUN_PROTOCOL}" = "https" ]; then
+        if [ "${RUN_PROTOCOL}" = "https" ] && [ "${USE_CONTAINERS_ENGINE_APP}" = "1" ]; then
             echo "${SCRIPTS_DIR}/../secure_local_server/run.sh"
             ${SCRIPTS_DIR}/../secure_local_server/run.sh "run" ${STAGE}
         else
@@ -306,7 +322,7 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
             kill ${PID}
             echo ""
         else
-            if [ "${RUN_PROTOCOL}" = "https" ]; then
+            if [ "${RUN_PROTOCOL}" = "https" ] && [ "${USE_CONTAINERS_ENGINE_APP}" = "1" ]; then
                 echo "${SCRIPTS_DIR}/../secure_local_server/run.sh"
                 ${SCRIPTS_DIR}/../secure_local_server/run.sh "run" ${STAGE}
             else
@@ -319,7 +335,7 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
 
     # Stop local NGINX
     if [ "${STAGE}" = "dev" ];then
-        bash ${SCRIPTS_DIR}/../get_domain_name_dev.sh "stop_local_nginx" "${APP_DOMAIN_NAME}" "${SCRIPTS_DIR}/.."
+        bash ${SCRIPTS_DIR}/../get_domain_name_dev.sh "stop_local_nginx" "${APP_DOMAIN_NAME}" "${SCRIPTS_DIR}/.." "${USE_CONTAINERS_ENGINE_APP}"
     fi
 fi
 

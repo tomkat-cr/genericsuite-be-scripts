@@ -393,3 +393,23 @@ pypi-publish-test: pypi-build
 pypi-publish: pypi-build
 	# Production Pypi publish
 	python3 -m twine upload dist/*
+
+# Cloudfared tunnel manager
+
+cf-tunnel-login:
+	ACTION=login bash node_modules/genericsuite-be-scripts/scripts/cloudfared-tunnel-manager.sh
+
+cf-tunnel-create:
+	ACTION=create bash node_modules/genericsuite-be-scripts/scripts/cloudfared-tunnel-manager.sh
+
+cf-tunnel-run:
+	ACTION=run bash node_modules/genericsuite-be-scripts/scripts/cloudfared-tunnel-manager.sh
+
+cf-tunnel-list:
+	ACTION=list bash node_modules/genericsuite-be-scripts/scripts/cloudfared-tunnel-manager.sh
+
+cf-tunnel-check:
+	ACTION=check bash node_modules/genericsuite-be-scripts/scripts/cloudfared-tunnel-manager.sh
+
+cf-tunnel-delete:
+	ACTION=delete bash node_modules/genericsuite-be-scripts/scripts/cloudfared-tunnel-manager.sh

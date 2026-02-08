@@ -47,7 +47,7 @@ fi
 if [ "$ERROR_MSG" = "" ]; then
     if ! ${DOCKER_CMD} ps > /dev/null 2>&1;
     then
-        ERROR_MSG="Docker is not running"
+        ERROR_MSG="${DOCKER_CMD} is not running"
     fi
 fi
 

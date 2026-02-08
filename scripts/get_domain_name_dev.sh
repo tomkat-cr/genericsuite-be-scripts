@@ -15,6 +15,13 @@ exit_abort() {
 }
 
 stop_local_nginx() {
+  if [ "${USE_CONTAINERS_ENGINE_APP}" != "1" ]; then
+    echo "NOTE: Container Engine is not enabled. Skipping stop_local_nginx()..."
+    # Send a beep to the terminal
+    printf "\a"
+    return
+  fi
+
   # If the nginx docker container nginx-dev-mask-ext is running, stop it
   echo "Stopping nginx docker container 'nginx-dev-mask-ext'..."
   ${DOCKER_CMD} stop nginx-dev-mask-ext
@@ -25,6 +32,13 @@ stop_local_nginx() {
 }
 
 enable_bridge_proxy() {
+  if [ "${USE_CONTAINERS_ENGINE_APP}" != "1" ]; then
+    echo "NOTE: Container Engine is not enabled. Skipping enable_bridge_proxy()..."
+    # Send a beep to the terminal
+    printf "\a"
+    return
+  fi
+
   echo "Enable bridge proxy..."
 
   echo "Get the IP address of the domain"
@@ -289,6 +303,7 @@ REPO_BASEDIR="`pwd`"
 STAGE="$1"
 APP_DOMAIN_NAME="$2"
 SELF_SCRIPTS_DIR="$3"
+USE_CONTAINERS_ENGINE_APP="$4"
 
 if [ "${SELF_SCRIPTS_DIR}" = "" ];then
   cd "`dirname "$0"`"
@@ -296,16 +311,18 @@ if [ "${SELF_SCRIPTS_DIR}" = "" ];then
   cd "${REPO_BASEDIR}"
 fi
 
-if [ -z "${DOCKER_CMD}" ];then
-  if ! source ${SELF_SCRIPTS_DIR}/container_engine_manager.sh start "${CONTAINERS_ENGINE}" "${OPEN_CONTAINERS_ENGINE_APP}"; then
-      echo "ERROR: Running ${SELF_SCRIPTS_DIR}/container_engine_manager.sh start \"${CONTAINERS_ENGINE}\" \"${OPEN_CONTAINERS_ENGINE_APP}\""
-      exit_abort
+if [ "${USE_CONTAINERS_ENGINE_APP}" = "1" ]; then
+  if [ -z "${DOCKER_CMD}" ];then
+    if ! source ${SELF_SCRIPTS_DIR}/container_engine_manager.sh start "${CONTAINERS_ENGINE}" "${OPEN_CONTAINERS_ENGINE_APP}"; then
+        echo "ERROR: Running ${SELF_SCRIPTS_DIR}/container_engine_manager.sh start \"${CONTAINERS_ENGINE}\" \"${OPEN_CONTAINERS_ENGINE_APP}\""
+        exit_abort
+    fi
   fi
-fi
 
-if [ -z "${DOCKER_CMD}" ];then
-  echo "ERROR: missing DOCKER_CMD."
-  exit_abort
+  if [ -z "${DOCKER_CMD}" ];then
+    echo "ERROR: missing DOCKER_CMD."
+    exit_abort
+  fi
 fi
 
 if [ "${STAGE}" = "" ];then

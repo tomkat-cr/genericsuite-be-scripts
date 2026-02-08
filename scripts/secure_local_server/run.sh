@@ -268,165 +268,175 @@ restart_sls_docker_containers() {
     ${DOCKER_COMPOSE_CMD} logs -f
 }
 
+start_process() {
+    export REPO_BASEDIR="`pwd`"
+    cd "`dirname "$0"`"
+    export SCRIPTS_DIR="`pwd`"
+    cd "${REPO_BASEDIR}"
+
+    if [ "$#" -ne 2 ]; then
+        echo ""
+        echo "Run the local backend server over a secure connection."
+        echo "Usage: $0 ACTION STAGE"
+        echo "ACTION can be: run, down, monitor, logs"
+        echo "STAGE can be: dev, qa, staging, prod"
+        exit 1
+    fi
+
+    export TMP_WORKING_DIR="/tmp/sls"
+
+    # Load environment variables from .env
+    # set -o allexport ; source .env ; set +o allexport
+    . ${SCRIPTS_DIR}/../set_app_dir_and_main_file.sh
+
+    if [ "${CURRENT_FRAMEWORK}" = "" ]; then
+        echo "CURRENT_FRAMEWORK environment variable must be defined"
+        exit 1
+    fi
+
+    if [ "${APP_NAME}" = "" ]; then
+        echo "APP_NAME environment variable must be defined"
+        exit 1
+    fi
+
+    if [ "$BACKEND_LOCAL_PORT" = "" ]; then
+        export BACKEND_LOCAL_PORT="5001"
+    fi
+
+    if [ "$BACKEND_DEBUG_LOCAL_PORT" = "" ]; then
+        export BACKEND_DEBUG_LOCAL_PORT="5002"
+    fi
+
+    export APP_NAME_LOWERCASE=$(echo ${APP_NAME} | tr '[:upper:]' '[:lower:]')
+    export STAGE="$2"
+    ACTION="$1"
+
+    export LOCAL_GE_BE_AI_REPO=""
+    export LOCAL_GE_BE_REPO=""
+
+    cd "${SCRIPTS_DIR}"
+
+    echo ""
+    echo "Local Backend Server over a secure connection"
+    echo "Action: ${ACTION}"
+    echo "Stage (STAGE): ${STAGE}"
+    echo ""
+    echo "App name (APP_NAME): ${APP_NAME} (${APP_NAME_LOWERCASE})"
+    echo "Current framework (CURRENT_FRAMEWORK): ${CURRENT_FRAMEWORK}"
+    echo "Python entry point (APP_DIR.APP_MAIN_FILE): ${APP_DIR}.${APP_MAIN_FILE}"
+    echo ""
+    echo "Scripts directory (SCRIPTS_DIR): ${SCRIPTS_DIR}"
+    echo "Repository base directory (REPO_BASEDIR): ${REPO_BASEDIR}"
+    echo ""
+    echo "Ports:"
+    echo "Backend local port (BACKEND_LOCAL_PORT): ${BACKEND_LOCAL_PORT}"
+    echo "Backend debug local port (BACKEND_DEBUG_LOCAL_PORT): ${BACKEND_DEBUG_LOCAL_PORT}"
+    echo ""
+    echo "Docker command (DOCKER_CMD): ${DOCKER_CMD}"
+    echo ""
+
+    if [ "${BACKEND_LOCAL_PORT}" = "${BACKEND_DEBUG_LOCAL_PORT}" ]; then
+        echo "ERROR: Backend local port and debug local port are the same. Please change one of them."
+        exit 1
+    fi
+
+    if [ "${ACTION}" = "" ] || [ "${ACTION}" = "run" ]; then
+        docker_dependencies
+        if ! ${DOCKER_CMD} ps | grep sls-backend
+        then
+            echo ""
+            echo "Running the local backend server over a secure connection."
+            echo ""
+            # Start SLS docker containers
+            start_sls_docker_containers
+        else
+            # Attach to the container to see server activity
+            echo ""
+            echo "The local backend server is already running."
+            echo "Do you want to 0) Restart, 1) Rebuild, 2) Attach or 3) View Logs (default) ? (0/1/2/3)"
+            read ANSWER
+            if [ "${ANSWER}" = "0" ]; then
+                # >> Restart:
+                restart_sls_docker_containers
+            elif [ "${ANSWER}" = "1" ]; then
+                # >> Rebuild:
+                cd "${TMP_WORKING_DIR}"
+                # Stop SLS docker containers
+                stop_sls_docker_containers
+                # Start SLS docker containers
+                start_sls_docker_containers
+            elif [ "${ANSWER}" = "2" ]; then
+                # >> Attach:
+                # key sequence to detach from docker-compose up
+                # https://github.com/docker/compose/issues/4560
+                # CTRL-Z, then disown %1 to release the job
+                echo ""
+                echo "Attaching to the container to see server activity."
+                echo "To detach from the container, press Ctrl+Z and run:"
+                echo "disown %1"
+                echo ""
+                ${DOCKER_CMD} attach sls-backend
+            else
+                # >> View Logs:
+                echo ""
+                echo "Viewing the logs of the local backend server over a secure connection."
+                echo "To stop logs view, press Ctrl+C."
+                echo ""
+                ${DOCKER_COMPOSE_CMD} logs -f
+            fi
+        fi
+    fi
+
+    if [ "${ACTION}" = "down" ];then
+        echo "Stopping the local backend server over a secure connection."
+        echo ""
+        # Stop SLS docker containers
+        stop_sls_docker_containers
+    fi
+
+    if [ "${ACTION}" = "logs" ];then
+        docker_dependencies
+        echo "Showing the logs of the local backend server over a secure connection."
+        echo ""
+        ${DOCKER_CMD} logs secure_local_server-nginx-1
+        ${DOCKER_CMD} logs sls-backend
+    fi
+
+    if [ "${ACTION}" = "logs_nginx" ];then
+        docker_dependencies
+        echo "Showing the logs of the local backend server over a secure connection."
+        echo ""
+        ${DOCKER_CMD} logs secure_local_server-nginx-1
+        ${DOCKER_CMD} logs sls-nginx
+    fi
+
+    if [ "${ACTION}" = "monitor" ];then
+        docker_dependencies
+        echo "Monitoring the logs of local backend server over a secure connection."
+        echo ""
+        ${DOCKER_CMD} ps
+        ${DOCKER_CMD} logs sls-backend -f
+    fi
+
+    if [ "${ACTION}" = "monitor_nginx" ];then
+        docker_dependencies
+        echo "Monitoring the logs of local backend server over a secure connection."
+        echo ""
+        ${DOCKER_CMD} ps
+        ${DOCKER_CMD} logs sls-nginx -f
+    fi
+
+    echo ""
+}
+
 # ..................
 # Start process
 # ..................
 
-export REPO_BASEDIR="`pwd`"
-cd "`dirname "$0"`"
-export SCRIPTS_DIR="`pwd`"
-cd "${REPO_BASEDIR}"
-
-if [ "$#" -ne 2 ]; then
+if [ "${USE_CONTAINERS_ENGINE_APP}" != "1" ]; then
     echo ""
-    echo "Run the local backend server over a secure connection."
-    echo "Usage: $0 ACTION STAGE"
-    echo "ACTION can be: run, down, monitor, logs"
-    echo "STAGE can be: dev, qa, staging, prod"
-    exit 1
-fi
-
-export TMP_WORKING_DIR="/tmp/sls"
-
-# Load environment variables from .env
-# set -o allexport ; source .env ; set +o allexport
-. ${SCRIPTS_DIR}/../set_app_dir_and_main_file.sh
-
-if [ "${CURRENT_FRAMEWORK}" = "" ]; then
-    echo "CURRENT_FRAMEWORK environment variable must be defined"
-    exit 1
-fi
-
-if [ "${APP_NAME}" = "" ]; then
-    echo "APP_NAME environment variable must be defined"
-    exit 1
-fi
-
-if [ "$BACKEND_LOCAL_PORT" = "" ]; then
-    export BACKEND_LOCAL_PORT="5001"
-fi
-
-if [ "$BACKEND_DEBUG_LOCAL_PORT" = "" ]; then
-    export BACKEND_DEBUG_LOCAL_PORT="5002"
-fi
-
-export APP_NAME_LOWERCASE=$(echo ${APP_NAME} | tr '[:upper:]' '[:lower:]')
-export STAGE="$2"
-ACTION="$1"
-
-export LOCAL_GE_BE_AI_REPO=""
-export LOCAL_GE_BE_REPO=""
-
-cd "${SCRIPTS_DIR}"
-
-echo ""
-echo "Local Backend Server over a secure connection"
-echo "Action: ${ACTION}"
-echo "Stage (STAGE): ${STAGE}"
-echo ""
-echo "App name (APP_NAME): ${APP_NAME} (${APP_NAME_LOWERCASE})"
-echo "Current framework (CURRENT_FRAMEWORK): ${CURRENT_FRAMEWORK}"
-echo "Python entry point (APP_DIR.APP_MAIN_FILE): ${APP_DIR}.${APP_MAIN_FILE}"
-echo ""
-echo "Scripts directory (SCRIPTS_DIR): ${SCRIPTS_DIR}"
-echo "Repository base directory (REPO_BASEDIR): ${REPO_BASEDIR}"
-echo ""
-echo "Ports:"
-echo "Backend local port (BACKEND_LOCAL_PORT): ${BACKEND_LOCAL_PORT}"
-echo "Backend debug local port (BACKEND_DEBUG_LOCAL_PORT): ${BACKEND_DEBUG_LOCAL_PORT}"
-echo ""
-echo "Docker command (DOCKER_CMD): ${DOCKER_CMD}"
-echo ""
-
-if [ "${BACKEND_LOCAL_PORT}" = "${BACKEND_DEBUG_LOCAL_PORT}" ]; then
-    echo "ERROR: Backend local port and debug local port are the same. Please change one of them."
-    exit 1
-fi
-
-if [ "${ACTION}" = "" ] || [ "${ACTION}" = "run" ]; then
-    docker_dependencies
-    if ! ${DOCKER_CMD} ps | grep sls-backend
-    then
-        echo ""
-        echo "Running the local backend server over a secure connection."
-        echo ""
-        # Start SLS docker containers
-        start_sls_docker_containers
-    else
-        # Attach to the container to see server activity
-        echo ""
-        echo "The local backend server is already running."
-        echo "Do you want to 0) Restart, 1) Rebuild, 2) Attach or 3) View Logs (default) ? (0/1/2/3)"
-        read ANSWER
-        if [ "${ANSWER}" = "0" ]; then
-            # >> Restart:
-            restart_sls_docker_containers
-        elif [ "${ANSWER}" = "1" ]; then
-            # >> Rebuild:
-            cd "${TMP_WORKING_DIR}"
-            # Stop SLS docker containers
-            stop_sls_docker_containers
-            # Start SLS docker containers
-            start_sls_docker_containers
-        elif [ "${ANSWER}" = "2" ]; then
-            # >> Attach:
-            # key sequence to detach from docker-compose up
-            # https://github.com/docker/compose/issues/4560
-            # CTRL-Z, then disown %1 to release the job
-            echo ""
-            echo "Attaching to the container to see server activity."
-            echo "To detach from the container, press Ctrl+Z and run:"
-            echo "disown %1"
-            echo ""
-            ${DOCKER_CMD} attach sls-backend
-        else
-            # >> View Logs:
-            echo ""
-            echo "Viewing the logs of the local backend server over a secure connection."
-            echo "To stop logs view, press Ctrl+C."
-            echo ""
-            ${DOCKER_COMPOSE_CMD} logs -f
-        fi
-    fi
-fi
-
-if [ "${ACTION}" = "down" ];then
-    echo "Stopping the local backend server over a secure connection."
+    echo "NOTE: Container Engine is not enabled. Skipping run the local backend server over a secure connection (USE_CONTAINERS_ENGINE_APP=${USE_CONTAINERS_ENGINE_APP})."
     echo ""
-    # Stop SLS docker containers
-    stop_sls_docker_containers
+else
+    start_process
 fi
-
-if [ "${ACTION}" = "logs" ];then
-    docker_dependencies
-    echo "Showing the logs of the local backend server over a secure connection."
-    echo ""
-    ${DOCKER_CMD} logs secure_local_server-nginx-1
-    ${DOCKER_CMD} logs sls-backend
-fi
-
-if [ "${ACTION}" = "logs_nginx" ];then
-    docker_dependencies
-    echo "Showing the logs of the local backend server over a secure connection."
-    echo ""
-    ${DOCKER_CMD} logs secure_local_server-nginx-1
-    ${DOCKER_CMD} logs sls-nginx
-fi
-
-if [ "${ACTION}" = "monitor" ];then
-    docker_dependencies
-    echo "Monitoring the logs of local backend server over a secure connection."
-    echo ""
-    ${DOCKER_CMD} ps
-    ${DOCKER_CMD} logs sls-backend -f
-fi
-
-if [ "${ACTION}" = "monitor_nginx" ];then
-    docker_dependencies
-    echo "Monitoring the logs of local backend server over a secure connection."
-    echo ""
-    ${DOCKER_CMD} ps
-    ${DOCKER_CMD} logs sls-nginx -f
-fi
-
-echo ""
