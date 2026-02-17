@@ -305,10 +305,10 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
             echo "Generating the OpenAPI schema files..."
             echo ""
             # Run uvicorn in background and terminate it if it is already running
-            echo "Running: ${PEM_TOOL} run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app ${AUTO_RELOAD_OPTION} --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT}"
+            echo "Running: ${PEM_TOOL} run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app ${AUTO_RELOAD_OPTION} --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT} --proxy-headers --forwarded-allow-ips=\"*\""
             
             # nohup ${PEM_TOOL} run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app ${AUTO_RELOAD_OPTION} --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT} > /dev/null 2>&1 &
-            ${PEM_TOOL} run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app ${AUTO_RELOAD_OPTION} --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT} &
+            ${PEM_TOOL} run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app ${AUTO_RELOAD_OPTION} --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT} --proxy-headers --forwarded-allow-ips="*" &
             
             echo ""
             echo "Waiting 15 seconds for the process to start and generate the OpenAPI schema files..."
@@ -326,9 +326,9 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
                 echo "${SCRIPTS_DIR}/../secure_local_server/run.sh"
                 ${SCRIPTS_DIR}/../secure_local_server/run.sh "run" ${STAGE}
             else
-                echo "${PEM_TOOL} run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app ${AUTO_RELOAD_OPTION} --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT}"
+                echo "${PEM_TOOL} run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app ${AUTO_RELOAD_OPTION} --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT} --proxy-headers --forwarded-allow-ips=\"*\""
                 echo ""
-                ${PEM_TOOL} run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app ${AUTO_RELOAD_OPTION} --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT}
+                ${PEM_TOOL} run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app ${AUTO_RELOAD_OPTION} --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT} --proxy-headers --forwarded-allow-ips="*"
             fi
         fi
     fi

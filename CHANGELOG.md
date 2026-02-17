@@ -17,7 +17,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Security
 
 
-## [Unreleased]
+## [1.3.0] - 2026-02-18
 
 ### Added
 - Sync Dependencies module ("scripts/dependency-sync") to sync python dependencies in a Dockerfile from GenericSuite monorepo backend directories ("./server" and "./mcp-server" with a "pyproject.toml" file) [GS-243].
@@ -50,6 +50,7 @@ make deploy_mysql
 - Implement Cloudflare Tunnel to allow https access to local development environment without Docker/local DNS and make localhost public for testing purposes, e.g. to access the PC camera (no port forwarding needed) [GS-257].
 - Add USE_CONTAINERS_ENGINE_APP envvar to turn on/off use containers engine app for local development environment when RUN_PROTOCOL="https" [GS-257].
 - Add RUN_PROTOCOL_AND_PORT_REPLACEMENT envvar to turn on/off automatic protocol and port replacement for local development environment variables APP_CORS_ORIGIN (assigned from APP_CORS_ORIGIN_{STAGE}), APP_FE_URL (assigned from APP_FE_URL_{STAGE}), and REACT_APP_API_URL (assigned from APP_API_URL_{STAGE}), depending on RUN_PROTOCOL value [GS-257].
+- Configure uvicorn to process proxy headers and forwarded IPs in the `run_aws.sh` script [GS-37].
 
 ### Changed
 - Allow merge ".env" files between GenericSuite monorepo backends ("./server" and "./mcp-server"), rename APP_MAIN_FILE and APP_DIR envvars to MCP_APP_MAIN_FILE_DEV and MCP_APP_DIR_DEV in run_mcp_server.sh [GS-243].
