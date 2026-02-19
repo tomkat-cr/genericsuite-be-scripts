@@ -362,27 +362,36 @@ class PostgresTableDefinition:
         is_child_listing = config.get("type", "") == "child_listing"
         is_array_sub_type = config.get("subType", "") == "array"
         array_name = config.get("array_name", "")
-        parent_table_name = config.get("parentKeyNames", [])[
-            0].get("parentUrl", "") if config.get("parentKeyNames") else ""
+        parent_table_name = config.get("parentUrl", "")
+        # parent_table_name = config.get("endpointKeyNames", [])[
+        #     0].get("parentUrl", "") if config.get("endpointKeyNames") else ""
 
         if not is_main_table and not is_child_listing:
             _ = DEBUG and print(f"Skipping {json_filename}")
             return {}
 
         if is_child_listing:
-            _ = DEBUG and print(f"Child listing: {json_filename}")
-            definition_name = \
-                f"{convert_snake_to_pascal(parent_table_name)}Table"
-            if not self.table_extra_cols.get(definition_name):
-                self.table_extra_cols[definition_name] = []
+            _ = DEBUG and print(
+                "Child listing:" +
+                f"\n  subType: {config.get('subType', '')}" +
+                f"\n  array_name: {array_name}" +
+                f"\n  parent_table_name: {parent_table_name}")
+
             if is_array_sub_type:
+                definition_name = \
+                    f"{convert_snake_to_pascal(parent_table_name)}Table"
+
+                if not self.table_extra_cols.get(definition_name):
+                    self.table_extra_cols[definition_name] = []
+
                 self.table_extra_cols[definition_name].append(
                     {
                         "AttributeName": array_name,
                         "AttributeType": type_mapping["array"],
                     }
                 )
-            return {}
+
+                return {}
 
         table_definition = {
             "Type": f"AWS::{self.db_type.capitalize()}::Table",
@@ -482,6 +491,8 @@ class PostgresTableDefinition:
         item_list = self.table_defs["ts"].keys()
         for item_name in item_list:
 
+            _ = DEBUG and print(f"\nItem name: {item_name}")
+
             table_props = self.table_defs["ts"][item_name]["Properties"]
             output_props = self.table_defs["output"][item_name]
             table_name = output_props["Description"]
@@ -530,7 +541,7 @@ class PostgresTableDefinition:
         # Read frontend and backend config files
         for root, _, files in os.walk(dir_path):
             for filename in files:
-                _ = DEBUG and print(f"File: {filename}")
+                _ = DEBUG and print(f"\nFile: {filename}")
                 if filename.endswith(".json"):
                     # Read frontend config file
                     with open(os.path.join(root, filename), "r",
@@ -550,15 +561,20 @@ class PostgresTableDefinition:
                             table_definitions.update(table_definition["ts"])
                             postgres_outputs.update(table_definition["output"])
 
-        # _ = DEBUG and print("table_definitions:", table_definitions)
-        # _ = DEBUG and print("self.table_extra_cols:", self.table_extra_cols)
+        # _ = DEBUG and print("\ntable_definitions:", table_definitions)
+        _ = DEBUG and print("\nself.table_extra_cols:", self.table_extra_cols)
 
         for table_name, extra_cols in self.table_extra_cols.items():
             for col_dict in extra_cols:
-                table_definitions.get(
-                    table_name
-                )["Properties"]["AttributeDefinitions"] \
-                    .append(col_dict)
+                try:
+                    table_definitions.get(
+                        table_name
+                    )["Properties"]["AttributeDefinitions"] \
+                        .append(col_dict)
+                except Exception as e:
+                    _ = DEBUG and print(
+                        f"Error adding column {col_dict} to table"
+                        f" {table_name}: {e}")
 
         self.table_defs = {
             "ts": table_definitions,

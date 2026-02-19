@@ -41,6 +41,7 @@ if [ "${ENVIRONMENT}" = "" ]; then
     ENVIRONMENT="${STAGE}"
 fi
 
+ENVIRONMENT=$(echo "${STAGE}" | tr '[:upper:]' '[:lower:]')
 echo "Environment: ${ENVIRONMENT}"
 
 if [ "${PROTOCOL}" = "" ]; then
@@ -66,6 +67,11 @@ fi
 if [ -z "${DOMAIN_NAME}" ]; then
     echo "Error: Could not determine domain name."
     exit 1
+fi
+
+BACKEND_LOCAL_PORT="${BACKEND_LOCAL_PORT}"
+if [ "${ENVIRONMENT}" = "dev" ] && [ -n "${BACKEND_LOCAL_PORT}" ]; then
+    DOMAIN_NAME="${DOMAIN_NAME}:${BACKEND_LOCAL_PORT}"
 fi
 
 echo "Domain name: ${DOMAIN_NAME}"
