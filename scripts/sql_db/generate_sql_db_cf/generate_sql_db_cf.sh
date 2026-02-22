@@ -88,10 +88,28 @@ echo ""
 echo "Installing dependencies"
 echo ""
 if [ ! -f requirements.txt ]; then
-    pip install pyyaml psycopg2-binary mysql-connector-python
-    pip freeze > requirements.txt
+    if ! pip install --upgrade pip
+    then
+        echo "Error running: pip install --upgrade pip"
+        exit 1
+    fi
+    if ! pip install pyyaml psycopg2-binary mysql-connector-python
+    then
+        echo "Error running: pip install pyyaml psycopg2-binary mysql-connector-python"
+        exit 1
+    fi
+
+    if ! pip freeze > requirements.txt
+    then
+        echo "Error running: pip freeze > requirements.txt"
+        exit 1
+    fi
 else
-    pip install -r requirements.txt
+    if ! pip install -r requirements.txt
+    then
+        echo "Error running: pip install -r requirements.txt"
+        exit 1
+    fi
 fi
 
 BASE_CONFIG_PATH="${GIT_SUBMODULE_LOCAL_PATH}"

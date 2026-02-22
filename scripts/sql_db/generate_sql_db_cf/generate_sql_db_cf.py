@@ -182,7 +182,7 @@ class PostgresTableDefinition:
             https://www.postgresql.org/docs/current/datatype.html
             """
             return {
-                "array": "json",
+                "array": "jsonb",
                 "text": "character varying",
                 "textarea": "text",
                 "number": "numeric",
@@ -196,6 +196,7 @@ class PostgresTableDefinition:
                 "select_table": "character varying",
                 "select_component": "character varying",
                 "suggestion_dropdown": "character varying",
+                "component": "character varying",
                 "default_type": "character varying",
             }
         if self.db_type == "mysql":
@@ -219,7 +220,49 @@ class PostgresTableDefinition:
                 "select_table": "VARCHAR(100)",
                 "select_component": "VARCHAR(100)",
                 "suggestion_dropdown": "VARCHAR(100)",
+                "component": "VARCHAR(255)",
                 "default_type": "VARCHAR(255)",
+            }
+        return None
+
+    def get_type_default_value(self) -> dict:
+        if self.db_type == "postgres":
+            return {
+                "array": "'[]'",
+                "text": "''",
+                "textarea": "''",
+                "number": "0",
+                "integer": "0",
+                "date": "0",
+                "datetime": "0",
+                "datetime-local": "0",
+                "email": "''",
+                "_id": "NULL",
+                "select": "''",
+                "select_table": "''",
+                "select_component": "''",
+                "suggestion_dropdown": "''",
+                "component": "''",
+                "default_type": "''",
+            }
+        if self.db_type == "mysql":
+            return {
+                "array": "(JSON_ARRAY())",
+                "text": "''",
+                "textarea": "''",
+                "number": "0",
+                "integer": "0",
+                "date": "0",
+                "datetime": "0",
+                "datetime-local": "0",
+                "email": "''",
+                "_id": "NULL",
+                "select": "''",
+                "select_table": "''",
+                "select_component": "''",
+                "suggestion_dropdown": "''",
+                "component": "''",
+                "default_type": "''",
             }
         return None
 
@@ -353,7 +396,7 @@ class PostgresTableDefinition:
         }
 
         skip_types = ["label", "h1", "h2", "h3",
-                      "h4", "h5", "h6", "hr", "component"]
+                      "h4", "h5", "h6", "hr"]
 
         is_main_table = (
             json_filename.replace(".json", "") ==
@@ -363,8 +406,6 @@ class PostgresTableDefinition:
         is_array_sub_type = config.get("subType", "") == "array"
         array_name = config.get("array_name", "")
         parent_table_name = config.get("parentUrl", "")
-        # parent_table_name = config.get("endpointKeyNames", [])[
-        #     0].get("parentUrl", "") if config.get("endpointKeyNames") else ""
 
         if not is_main_table and not is_child_listing:
             _ = DEBUG and print(f"Skipping {json_filename}")
@@ -378,6 +419,7 @@ class PostgresTableDefinition:
                 f"\n  parent_table_name: {parent_table_name}")
 
             if is_array_sub_type:
+                # It's an array inside the parent table
                 definition_name = \
                     f"{convert_snake_to_pascal(parent_table_name)}Table"
 
@@ -388,10 +430,24 @@ class PostgresTableDefinition:
                     {
                         "AttributeName": array_name,
                         "AttributeType": type_mapping["array"],
+                        "DefaultValue": self.get_type_default_value()["array"]
                     }
                 )
-
                 return {}
+
+            # It's a table related to the parent table ("subType" = "table"),
+            # so the elements in the endpointKeyNames list needs to be added
+            # as columns to the table
+
+            endpointKeyNames = config.get("endpointKeyNames", [])
+            if endpointKeyNames:
+                for keyPair in endpointKeyNames:
+                    field_elements.append(
+                        {
+                            "name": keyPair.get("parameterName", ""),
+                            "type": "text",
+                        }
+                    )
 
         table_definition = {
             "Type": f"AWS::{self.db_type.capitalize()}::Table",
@@ -405,12 +461,14 @@ class PostgresTableDefinition:
         for field in field_elements:
             field_name = field.get("name", "")
             field_type = field.get("type", "")
+            required_field = field.get("required", False) is True
 
             if field_type in skip_types:
                 continue
 
             if field_name in mandatory_fields:
                 del mandatory_fields[field_name]
+                required_field = True
 
             if field_name.endswith("_repeat") \
                and field_name.replace("_repeat", "") in \
@@ -436,6 +494,7 @@ class PostgresTableDefinition:
                         {
                             "AttributeName": field_name,
                             "AttributeType": pg_field_type,
+                            "Nullable": not required_field,
                         }
                 )
 
@@ -447,6 +506,7 @@ class PostgresTableDefinition:
                             "AttributeName": field_name,
                             "AttributeType": type_mapping.get(
                                 field_attrs['type'], default_col_type),
+                            "Nullable": False,
                         }
                 )
         if partition_key:
@@ -454,6 +514,7 @@ class PostgresTableDefinition:
                 {
                     "AttributeName": partition_key,
                     "AttributeType": partition_key_type,
+                    "Nullable": False,
                 }
             )
             table_definition["Properties"]["KeySchema"].append(
@@ -468,6 +529,7 @@ class PostgresTableDefinition:
                 {
                     "AttributeName": sort_key,
                     "AttributeType": sort_key_type,
+                    "Nullable": not required_field,
                 }
             )
             table_definition["Properties"]["KeySchema"].append(
@@ -503,8 +565,13 @@ class PostgresTableDefinition:
 
             sql = f"CREATE TABLE IF NOT EXISTS {table_name} ("
             for attribute in table_props["AttributeDefinitions"]:
-                sql += f"{attribute['AttributeName']} " + \
-                    f"{attribute['AttributeType']}, "
+                sql += f"{attribute['AttributeName']}" + \
+                    " " + \
+                    f"{attribute['AttributeType']}" + \
+                    ("" if attribute.get('Nullable') else " NOT NULL") + \
+                    ("" if not attribute.get('DefaultValue') else
+                     f" DEFAULT {attribute.get('DefaultValue')} ") + \
+                    ", "
             sql = sql[:-2] + ")"
             sql_statements.append(sql)
 
