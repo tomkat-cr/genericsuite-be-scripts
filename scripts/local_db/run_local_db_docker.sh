@@ -253,9 +253,9 @@ create_tables() {
             exit_abort
         fi
     fi
-    if [ "${APP_DB_ENGINE_DEV}" == "POSTGRES" ] || [ "${APP_DB_ENGINE_DEV}" == "MYSQL" ]; then
+    if [ "${APP_DB_ENGINE_DEV}" = "POSTGRES" ] || [ "${APP_DB_ENGINE_DEV}" = "MYSQL" ]; then
         echo ""
-        echo "Creating Postgres tables on the Dev environment..."
+        echo "Creating ${APP_DB_ENGINE_DEV} tables on the Dev environment..."
         echo ""
         if ! DB_TYPE=${APP_DB_ENGINE_DEV} bash ${SCRIPTS_DIR}/../sql_db/generate_sql_db_cf/generate_sql_db_cf.sh create_tables dev
         then

@@ -18,20 +18,28 @@ yes_or_no() {
   done
 }
 
+exit_abort() {
+    echo ""
+    echo "Fix the error and try again by running:"
+    echo "  STAGE=${STAGE} ACTION=create_tables make generate_cf_${DB_TYPE}"
+    echo ""
+    exit 1
+}
+
 docker_dependencies() {
     if ! source "${SCRIPTS_DIR}/../../container_engine_manager.sh" start "${CONTAINERS_ENGINE}" "${OPEN_CONTAINERS_ENGINE_APP}"
     then
         echo ""
         echo "Could not run container engine '${CONTAINERS_ENGINE}' automatically"
         echo ""
-        exit 1
+        exit_abort
     fi
 
     if [ -z "${DOCKER_CMD}" ]; then
         echo ""
         echo "DOCKER_CMD is not set"
         echo ""
-        exit 1
+        exit_abort
     fi
 }
 
@@ -45,29 +53,46 @@ if [ "$3" != "" ]; then
     DB_TYPE="$3"
 fi
 
-if [ "${ACTION}" = "" ]; then
+if [ "${ACTION}" = "" ] || [ "${ACTION}" = "start" ]; then
     # "generate": generate the PostgreSQL SQL files.
     # "create_tables": create the tables in the local Docker PostgreSQL instance.
     ACTION="create_tables"
 fi
 
 if [ "${DB_TYPE}" = "" ]; then
-    echo "ERROR: DB_TYPE not set. Options: postgres, mysql"
+    echo "ERROR: DB_TYPE not set. Options: POSTGRES, MYSQL"
+    exit_abort
+fi
+DB_TYPE=$(echo "${DB_TYPE}" | tr '[:upper:]' '[:lower:]')
+if [ "${DB_TYPE}" != "postgres" ] && [ "${DB_TYPE}" != "mysql" ]; then
+    echo "ERROR: DB_TYPE '${DB_TYPE}' is not valid. Options: postgres, mysql"
     exit_abort
 fi
 
 GT_ACTION=${ACTION}
 GT_STAGE=${STAGE}
+GT_DB_TYPE=${DB_TYPE}
 
 echo ""
 echo "Generating PostgreSQL tables"
 echo ""
 echo "GT_ACTION: ${GT_ACTION}"
 echo "GT_STAGE: ${GT_STAGE}"
-echo "DB_TYPE: ${DB_TYPE}"
+echo "GT_DB_TYPE: ${DB_TYPE}"
 echo ""
 
 set -o allexport; . .env ; set +o allexport ;
+
+STAGE_UPPERCASE=$(echo ${STAGE} | tr '[:lower:]' '[:upper:]')
+APP_DB_ENGINE=$(eval echo \$APP_DB_ENGINE_${STAGE_UPPERCASE})
+if [ "${APP_DB_ENGINE}" = "" ]; then
+    echo "ERROR: APP_DB_ENGINE_${STAGE_UPPERCASE} not set"
+    exit_abort
+fi
+if [ "${APP_DB_ENGINE}" != $(echo ${DB_TYPE} | tr '[:lower:]' '[:upper:]') ]; then
+    echo "ERROR: APP_DB_ENGINE_${STAGE_UPPERCASE} (${APP_DB_ENGINE}) is not equal to DB_TYPE ($(echo ${DB_TYPE} | tr '[:lower:]' '[:upper:]'))"
+    exit_abort
+fi
 
 REPO_BASEDIR="`pwd`"
 cd "`dirname "$0"`" ;
@@ -91,31 +116,31 @@ if [ ! -f requirements.txt ]; then
     if ! pip install --upgrade pip
     then
         echo "Error running: pip install --upgrade pip"
-        exit 1
+        exit_abort
     fi
     if ! pip install pyyaml psycopg2-binary mysql-connector-python
     then
         echo "Error running: pip install pyyaml psycopg2-binary mysql-connector-python"
-        exit 1
+        exit_abort
     fi
 
     if ! pip freeze > requirements.txt
     then
         echo "Error running: pip freeze > requirements.txt"
-        exit 1
+        exit_abort
     fi
 else
     if ! pip install -r requirements.txt
     then
         echo "Error running: pip install -r requirements.txt"
-        exit 1
+        exit_abort
     fi
 fi
 
 BASE_CONFIG_PATH="${GIT_SUBMODULE_LOCAL_PATH}"
 if [ "${BASE_CONFIG_PATH}" = "" ]; then
     echo 'GIT_SUBMODULE_LOCAL_PATH environment variable not set'
-    exit 1
+    exit_abort
 fi
 BASE_CONFIG_PATH="${REPO_BASEDIR}/${BASE_CONFIG_PATH}"
 
@@ -125,17 +150,17 @@ echo ""
 
 if [ "${APP_NAME}" = "" ]; then
     echo 'ERROR: 'APP_NAME' environment variable not set'
-    exit 1
+    exit_abort
 fi
 
 if [ "${GT_ACTION}" = "create_tables" ]; then
     if [ "${GT_STAGE}" = "" ]; then
         echo 'ERROR: 'STAGE' environment variable must be set to run the '${GT_ACTION}' action (dev, qa, staging, demo, prod)'
-        exit 1
+        exit_abort
     fi
     if [ "${AWS_REGION}" = "" ]; then
         echo 'ERROR: 'AWS_REGION' environment variable must be set to run the '${GT_ACTION}' action'
-        exit 1
+        exit_abort
     fi
 fi
 
@@ -143,7 +168,6 @@ APP_NAME_LOWERCASE=$(echo ${APP_NAME} | tr '[:upper:]' '[:lower:]')
 CF_TEMPLATE_NAME="cf-template-postgres.yml"
 FINAL_TARGET_DIR="${REPO_BASEDIR}/scripts/sql_db"
 
-STAGE_UPPERCASE=$(echo ${GT_STAGE} | tr '[:upper:]' '[:lower:]')
 POSTGRES_PREFIX=$(eval echo \$POSTGRES_PREFIX_${STAGE_UPPERCASE})
 if [ "${POSTGRES_PREFIX}" = "" ]; then
     POSTGRES_PREFIX="${APP_NAME_LOWERCASE}_${GT_STAGE}_"
@@ -153,7 +177,7 @@ ERROR="0"
 DONE="0"
 if [ "${GT_ACTION}" = "generate" ]; then
     # "generate": generate the CloudFormation yaml file.
-    if ! python -m generate_sql_db_cf "${BASE_CONFIG_PATH}" "${WORKING_DIR}/${CF_TEMPLATE_NAME}" "" "0" "${DB_TYPE}"
+    if ! python -m generate_sql_db_cf "${BASE_CONFIG_PATH}" "${WORKING_DIR}/${CF_TEMPLATE_NAME}" "" "0" "${DB_TYPE}" "${STAGE_UPPERCASE}"
     then
         # We need to postpone the error reporting to remove __pycache__ and venv every time the python code is executed.
         ERROR="1"
@@ -173,12 +197,18 @@ if [ "${GT_ACTION}" = "create_tables" ]; then
         then
             echo ""
             echo "ERROR: Failed to start the local Docker databases container"
-            exit 1
+            exit_abort
+        fi
+        # Wait for the database to be ready
+        if [ "${DB_TYPE}" = "postgres" ]; then
+            ${DOCKER_CMD} exec -it postgres-local psql -U user -d pass -h localhost -p 5432 -d db -c "SELECT 1;"
+        elif [ "${DB_TYPE}" = "mysql" ]; then
+            ${DOCKER_CMD} exec -i mysql-local mysql -uroot -ppass -h localhost -P 3306 db -e "SELECT 1;"
         fi
     fi
 
     cd "${SCRIPTS_DIR}"
-    if ! python -m generate_sql_db_cf "${BASE_CONFIG_PATH}" "${WORKING_DIR}/${CF_TEMPLATE_NAME}" "${POSTGRES_PREFIX}" "1" "${DB_TYPE}"
+    if ! python -m generate_sql_db_cf "${BASE_CONFIG_PATH}" "${WORKING_DIR}/${CF_TEMPLATE_NAME}" "${POSTGRES_PREFIX}" "1" "${DB_TYPE}" "${STAGE_UPPERCASE}"
     then
         # We need to postpone the error reporting to remove __pycache__ and venv every time the python code is executed.
         ERROR="1"
@@ -260,15 +290,19 @@ if [ "${GT_ACTION}" = "create_tables" ]; then
     if [ "${ERROR}" = "1" ]; then
         echo ""
         echo "ERROR: Failed to generate the Database tables in the local environment (${DB_TYPE})"
+        exit_abort
     else
         echo ""
         echo "Generated Database tables in the local environment (${DB_TYPE})"
         echo ""
-        ENDPOINT_URL="${POSTGRES_URI}"
-        if [ "${ENDPOINT_URL}" = "" ]; then
-            ENDPOINT_URL="postgresql://user:pass@localhost:5432/db"
+        if [ "${DB_TYPE}" = "postgres" ]; then
+            ${DOCKER_CMD} exec -it postgres-local psql -U user -d pass -h localhost -p 5432 -d db -c "SELECT table_name FROM information_schema.tables WHERE table_schema='public'"
+        elif [ "${DB_TYPE}" = "mysql" ]; then
+            ${DOCKER_CMD} exec -i mysql-local sh -c "echo \"SHOW TABLES;\" > /tmp/show_tables.sql && mysql -uroot -ppass -h localhost -P 3306 db < /tmp/show_tables.sql && rm /tmp/show_tables.sql"
+        else
+            echo "ERROR: DB_TYPE '${DB_TYPE}' not registered"
+            exit_abort
         fi
-        docker exec -it postgres-local psql -U user -d pass -h localhost -p 5432 -d db -c "SELECT table_name FROM information_schema.tables WHERE table_schema='public'"
     fi
 fi
 
@@ -278,6 +312,7 @@ if [ "${ERROR}" = "0" ]; then
         echo "Done!"
     else
         echo "ERROR: Invalid ACTION '${GT_ACTION}'"
+        exit_abort
     fi
 fi
 echo ""

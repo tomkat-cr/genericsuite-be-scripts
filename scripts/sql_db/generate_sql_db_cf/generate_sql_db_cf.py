@@ -132,6 +132,7 @@ class PostgresTableDefinition:
         db_type: str,
         db_endpoint_url: str,
         db_name: str,
+        db_stage: str,
         target_template_path: str,
     ):
         self.basedir = basedir
@@ -139,9 +140,12 @@ class PostgresTableDefinition:
         self.db_type = db_type
         self.db_endpoint_url = db_endpoint_url
         self.db_name = db_name
+        self.db_stage = db_stage
         self.target_template_path = target_template_path
         self.table_defs = {}
         self.table_extra_cols = {}
+        self.had_errors = False
+        self.had_warnings = False
 
     def get_postgres_client(self) -> Any:
         import psycopg2
@@ -207,7 +211,7 @@ class PostgresTableDefinition:
             """
             return {
                 "array": "JSON",
-                "text": "LONGTEXT",
+                "text": "TEXT",
                 "textarea": "LONGTEXT",
                 "number": "DOUBLE(53, 10)",
                 "integer": "BIGINT(100)",
@@ -266,6 +270,56 @@ class PostgresTableDefinition:
             }
         return None
 
+    def quote_value(self, field_type: str, field_value: str) -> str:
+        if str(field_value) == "current_timestamp":
+            return 0
+
+        if field_type in [
+            "array",
+        ]:
+            if self.db_type == "postgres":
+                return f"'{field_value}'"
+            else:
+                return f"(JSON_ARRAY('{field_value}'))"
+
+        if field_type in [
+            "text",
+            "textarea",
+        ]:
+            if self.db_type == "postgres":
+                return f"'{field_value}'"
+            else:
+                return f"('{field_value}')"
+
+        if field_type in [
+            "email",
+            "_id",
+            "select",
+            "select_table",
+            "select_component",
+            "suggestion_dropdown",
+            "component",
+        ]:
+            if self.db_type == "postgres":
+                return f"'{field_value}'"
+            else:
+                return f'"{field_value}"'
+
+        if field_type in [
+            "number",
+            "date",
+            "datetime",
+            "datetime-local",
+        ]:
+            return float(field_value)
+
+        if field_type in [
+            "integer",
+        ]:
+            return int(field_value)
+
+        return None
+
     def get_table_definition(self, config: dict, json_filename: str
                              ) -> dict:
         """
@@ -322,6 +376,7 @@ class PostgresTableDefinition:
 
         table_name = config.get("table_name")
         if not table_name:
+            _ = DEBUG and print("\nSkipping - No table_name found")
             return {}
 
         type_mapping = self.get_type_mapping()
@@ -350,7 +405,10 @@ class PostgresTableDefinition:
             }
         }
 
-        _ = DEBUG and print(f"Table: {table_name}")
+        _ = DEBUG and print(
+            f"\nTable: {table_name}"
+            + f"\nDefinition name: {definition_name}"
+            + f"\nDB table name: {db_table_name}")
         # _ = DEBUG and print(config)
 
         field_elements = config.get("fieldElements", [])
@@ -388,12 +446,13 @@ class PostgresTableDefinition:
         """
         mandatory_fields = {
             'creation_date': {
-                'type': type_mapping['datetime-local'],
+                'type': 'datetime-local',
             },
             'update_date': {
-                'type': type_mapping['datetime-local'],
+                'type': 'datetime-local',
             },
         }
+        table_mandatory_fields = config.get("mandatory_fields", [])
 
         skip_types = ["label", "h1", "h2", "h3",
                       "h4", "h5", "h6", "hr"]
@@ -405,23 +464,23 @@ class PostgresTableDefinition:
         is_child_listing = config.get("type", "") == "child_listing"
         is_array_sub_type = config.get("subType", "") == "array"
         array_name = config.get("array_name", "")
-        parent_table_name = config.get("parentUrl", "")
+        parent_table_url = config.get("parentUrl", "")
 
         if not is_main_table and not is_child_listing:
-            _ = DEBUG and print(f"Skipping {json_filename}")
+            _ = DEBUG and print(f"\nSkipping {json_filename}")
             return {}
 
         if is_child_listing:
             _ = DEBUG and print(
-                "Child listing:" +
+                "\nChild listing:" +
                 f"\n  subType: {config.get('subType', '')}" +
                 f"\n  array_name: {array_name}" +
-                f"\n  parent_table_name: {parent_table_name}")
+                f"\n  parent_table_url: {parent_table_url}")
 
             if is_array_sub_type:
                 # It's an array inside the parent table
                 definition_name = \
-                    f"{convert_snake_to_pascal(parent_table_name)}Table"
+                    f"{convert_snake_to_pascal(table_name)}Table"
 
                 if not self.table_extra_cols.get(definition_name):
                     self.table_extra_cols[definition_name] = []
@@ -470,6 +529,10 @@ class PostgresTableDefinition:
                 del mandatory_fields[field_name]
                 required_field = True
 
+            if field_name in table_mandatory_fields:
+                table_mandatory_fields.remove(field_name)
+                required_field = True
+
             if field_name.endswith("_repeat") \
                and field_name.replace("_repeat", "") in \
                config.get("passwords", []):
@@ -489,14 +552,20 @@ class PostgresTableDefinition:
                     sort_key = field_name
                     sort_key_type = pg_field_type
             else:
+                field_props = {
+                    "AttributeName": field_name,
+                    "AttributeType": pg_field_type,
+                    "Nullable": not required_field,
+                }
+                def_val = field.get("default_value")
+                if def_val is not None or \
+                   (isinstance(def_val, int) and def_val == 0) or \
+                   (isinstance(def_val, float) and def_val == 0.0):
+                    field_props["DefaultValue"] = \
+                        self.quote_value(
+                            field_type, def_val)
                 table_definition["Properties"]["AttributeDefinitions"] \
-                    .append(
-                        {
-                            "AttributeName": field_name,
-                            "AttributeType": pg_field_type,
-                            "Nullable": not required_field,
-                        }
-                )
+                    .append(field_props)
 
         if mandatory_fields:
             for field_name, field_attrs in mandatory_fields.items():
@@ -509,6 +578,12 @@ class PostgresTableDefinition:
                             "Nullable": False,
                         }
                 )
+        if table_mandatory_fields:
+            print("\nWARNING: Mandatory fields not added to table: "
+                  + table_name)
+            print(table_mandatory_fields)
+            self.had_warnings = True
+
         if partition_key:
             table_definition["Properties"]["AttributeDefinitions"].append(
                 {
@@ -559,9 +634,7 @@ class PostgresTableDefinition:
             output_props = self.table_defs["output"][item_name]
             table_name = output_props["Description"]
 
-            sql_statements.append(
-                "# -- Table: " + table_name
-            )
+            sql_statements.append("-- Table: " + table_name)
 
             sql = f"CREATE TABLE IF NOT EXISTS {table_name} ("
             for attribute in table_props["AttributeDefinitions"]:
@@ -569,8 +642,8 @@ class PostgresTableDefinition:
                     " " + \
                     f"{attribute['AttributeType']}" + \
                     ("" if attribute.get('Nullable') else " NOT NULL") + \
-                    ("" if not attribute.get('DefaultValue') else
-                     f" DEFAULT {attribute.get('DefaultValue')} ") + \
+                    ("" if 'DefaultValue' not in attribute else
+                     f" DEFAULT {attribute['DefaultValue']} ") + \
                     ", "
             sql = sql[:-2] + ")"
             sql_statements.append(sql)
@@ -608,7 +681,7 @@ class PostgresTableDefinition:
         # Read frontend and backend config files
         for root, _, files in os.walk(dir_path):
             for filename in files:
-                _ = DEBUG and print(f"\nFile: {filename}")
+                _ = DEBUG and print(f"\n*** File: {filename}")
                 if filename.endswith(".json"):
                     # Read frontend config file
                     with open(os.path.join(root, filename), "r",
@@ -628,9 +701,7 @@ class PostgresTableDefinition:
                             table_definitions.update(table_definition["ts"])
                             postgres_outputs.update(table_definition["output"])
 
-        # _ = DEBUG and print("\ntable_definitions:", table_definitions)
-        _ = DEBUG and print("\nself.table_extra_cols:", self.table_extra_cols)
-
+        show_debug_info = False
         for table_name, extra_cols in self.table_extra_cols.items():
             for col_dict in extra_cols:
                 try:
@@ -639,9 +710,13 @@ class PostgresTableDefinition:
                     )["Properties"]["AttributeDefinitions"] \
                         .append(col_dict)
                 except Exception as e:
-                    _ = DEBUG and print(
-                        f"Error adding column {col_dict} to table"
-                        f" {table_name}: {e}")
+                    if not show_debug_info:
+                        print("\n\nTable_definitions:", table_definitions)
+                        print("\n\nTable_extra_cols:", self.table_extra_cols)
+                        show_debug_info = True
+                    print(
+                        f"\nError adding column {col_dict} to table"
+                        f" {table_name}: \n{e}\n")
 
         self.table_defs = {
             "ts": table_definitions,
@@ -706,6 +781,8 @@ class PostgresTableDefinition:
         """
         Create the tables in the Postgres database.
         """
+        debug_print = True
+
         if self.db_type == "postgres":
             client = self.get_postgres_client()
             cursor = self.get_postgres_cursor(client)
@@ -717,21 +794,38 @@ class PostgresTableDefinition:
                 f"Unknown database type: {self.db_type} [CDT-010]")
 
         item_list = self.table_defs["ts"].keys()
-        _ = DEBUG and print("item_list:", item_list)
+
+        _ = debug_print and print(
+            f"\n\nTables Creation SQL for {self.db_type} in {self.db_stage}:")
+        _ = debug_print and print("\n\nitem_list:", item_list)
 
         sql_statements = self.get_sql_statements()
         for sql_statement in sql_statements:
-            if sql_statement.startswith("#"):
-                print(sql_statement)
+            if sql_statement.startswith("--"):
+                print(f"\n{sql_statement}")
                 continue
             try:
-                if DEBUG:
-                    print("\nPostgres SQL:\n" + sql_statement)
+                if debug_print:
+                    print(f"\n{sql_statement}")
                 cursor.execute(sql_statement)
             except Exception as e:
-                print("\nPostgres SQL Error:\n" + str(e))
+                print(f"\n{self.db_type} SQL Error:\n" + str(e))
+                self.had_errors = True
                 continue
             client.commit()
+
+        if self.had_errors or self.had_warnings:
+            print("\n")
+            if self.had_errors:
+                print("There were ERRORS creating tables.")
+            if self.had_warnings:
+                print("There were WARNINGS creating tables.")
+            print("Fix them and try again by running:")
+            print(
+                "  STAGE=" + self.db_stage +
+                " ACTION=create_tables"
+                " make generate_cf_" + self.db_type)
+            print("\n")
 
 
 def get_db_config(db_type: str) -> dict:
@@ -770,7 +864,7 @@ def generate_sql_db_cf():
         print(
             "Usage: python generate_sql_db_cf.py "
             + "<base_config_path> <target_template_path> <table_prefix>"
-            + " <create_local_tables> <db_type>"
+            + " <create_local_tables> <db_type> <db_stage>"
         )
         sys.exit(1)
 
@@ -779,12 +873,14 @@ def generate_sql_db_cf():
     table_prefix = sys.argv[3]
     create_local_tables = sys.argv[4]
     db_type = sys.argv[5].lower()
+    db_stage = sys.argv[6].lower()
 
     print(f"base_config_path: {base_config_path}")
     print(f"target_template_path: {target_template_path}")
     print(f"table_prefix: {table_prefix}")
     print(f"create_local_tables: {create_local_tables}")
     print(f"db_type: {db_type}")
+    print(f"db_stage: {db_stage}")
     print("")
 
     db_config = get_db_config(db_type)
@@ -796,6 +892,7 @@ def generate_sql_db_cf():
         db_type=db_type,
         db_endpoint_url=db_config["APP_DB_URI"],
         db_name=db_config["APP_DB_NAME"],
+        db_stage=db_stage,
         target_template_path=target_template_path,
     )
 
