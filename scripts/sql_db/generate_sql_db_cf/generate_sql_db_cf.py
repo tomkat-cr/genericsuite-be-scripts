@@ -1,5 +1,5 @@
 """
-Generates a Postgres/MySQL tables, SQL and CloudFormation template
+Generates a Postgres/MySQL tables or SQL script
 from GenericSuite configuration JSON files.
 
 2025-11-30 | CR
@@ -13,84 +13,6 @@ import yaml
 from urllib.parse import urlparse
 
 DEBUG = True
-
-# AWS CloudFormation > Template Reference > AWS::RDS::DBInstance
-#   Creating a DB instance with Enhanced Monitoring enabled
-# https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-resource-rds-dbinstance.html
-
-START_STRING = """
-AWSTemplateFormatVersion: 2010-09-09
-Description: >-
-  Description": "AWS CloudFormation Sample Template for creating an Amazon RDS DB instance:
-  Sample template showing how to create a DB instance with Enhanced Monitoring enabled.
-  **WARNING** This template creates an RDS DB instance. You will be billed for the AWS
-  resources used if you create a stack from this template.
-Parameters:
-  DBInstanceID:
-    Default: mydbinstance
-    Description: My database instance
-    Type: String
-    MinLength: '1'
-    MaxLength: '63'
-    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
-    ConstraintDescription: >-
-      Must begin with a letter and must not end with a hyphen or contain two
-      consecutive hyphens.
-  DBName:
-    Default: mydb
-    Description: My database
-    Type: String
-    MinLength: '1'
-    MaxLength: '64'
-    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
-    ConstraintDescription: Must begin with a letter and contain only alphanumeric characters.
-  DBInstanceClass:
-    Default: db.m5.large
-    Description: DB instance class
-    Type: String
-    ConstraintDescription: Must select a valid DB instance type.
-  DBAllocatedStorage:
-    Default: '50'
-    Description: The size of the database (GiB)
-    Type: Number
-    MinValue: '20'
-    MaxValue: '65536'
-    ConstraintDescription: must be between 20 and 65536 GiB.
-  DBUsername:
-    NoEcho: 'true'
-    Description: Username for MySQL database access
-    Type: String
-    MinLength: '1'
-    MaxLength: '16'
-    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
-    ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
-  DBPassword:
-    NoEcho: 'true'
-    Description: Password MySQL database access
-    Type: String
-    MinLength: '8'
-    MaxLength: '41'
-    AllowedPattern: '[a-zA-Z0-9]*'
-    ConstraintDescription: must contain only alphanumeric characters.
-Resources:
-  MyDB:
-    Type: 'AWS::RDS::DBInstance'
-    Properties:
-      DBInstanceIdentifier: !Ref DBInstanceID
-      DBName: !Ref DBName
-      DBInstanceClass: !Ref DBInstanceClass
-      AllocatedStorage: !Ref DBAllocatedStorage
-      Engine: MySQL
-      EngineVersion: "8.0.33"
-      MasterUsername: !Ref DBUsername
-      MasterUserPassword: !Ref DBPassword
-      MonitoringInterval: 60
-      MonitoringRoleArn: 'arn:aws:iam::123456789012:role/rds-monitoring-role'
-
-"""  # noqa: E501
-
-END_STRING = """
-"""
 
 
 class SubRep(tuple):
@@ -728,20 +650,12 @@ class PostgresTableDefinition:
 
         # Open the target template file to write the Postgres table definition
         with open(self.target_template_path, "w", encoding="utf-8") as f:
-            f.write(START_STRING)
-            f.write("\n")
             for sql_statement in sql_statements:
-                if sql_statement.startswith("#"):
-                    f.write("\n")
-                    f.write(sql_statement + "\n")
-                else:
-                    f.write("\n# " + sql_statement + ";\n")
-            f.write("\n")
-            f.write(END_STRING)
+                f.write(f"\n{sql_statement};\n")
 
         print("")
         print(
-            f"Postgres table definitions saved to {self.target_template_path}")
+            f"SQL table definitions saved to {self.target_template_path}")
 
     def get_postgres_table_list(self):
         """

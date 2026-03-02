@@ -5,63 +5,26 @@
 -- Create tables --
 -------------------
 
--- Table: users
+-- Table: users_api_keys;
 
-CREATE TABLE IF NOT EXISTS users (firstname character varying, lastname character varying, email character varying, status character varying, plan character varying, superuser character varying, birthday numeric, gender character varying, language character varying, openai_api_key character varying, openai_model character varying, creation_date numeric, update_date numeric, passcode character varying, _id character(30), users_config json);
+CREATE TABLE IF NOT EXISTS users_api_keys (access_token character varying NOT NULL, active character varying NOT NULL DEFAULT '1' , user_id character varying, creation_date numeric NOT NULL, update_date numeric NOT NULL, _id character(30) NOT NULL);
+
+ALTER TABLE users_api_keys ADD PRIMARY KEY (_id);
+
+-- Table: users;
+
+CREATE TABLE IF NOT EXISTS users (firstname character varying NOT NULL, lastname character varying NOT NULL, email character varying NOT NULL, status character varying NOT NULL DEFAULT '1' , plan character varying NOT NULL DEFAULT 'free' , superuser character varying NOT NULL DEFAULT '0' , birthday numeric NOT NULL, gender character varying NOT NULL, openai_api_key character varying, openai_model character varying, creation_date numeric NOT NULL DEFAULT 0 , update_date numeric NOT NULL DEFAULT 0 , passcode character varying, _id character(30) NOT NULL, users_config jsonb NOT NULL DEFAULT '[]', user_history jsonb NOT NULL DEFAULT '[]');
 
 ALTER TABLE users ADD PRIMARY KEY (_id);
 
--- Table: ai_chatbot_conversations
+-- Table: ai_chatbot_conversations;
 
-CREATE TABLE IF NOT EXISTS ai_chatbot_conversations (user_id character varying, title character varying, creation_date numeric, update_date numeric, messages json, _id character varying);
+CREATE TABLE IF NOT EXISTS ai_chatbot_conversations (user_id character varying NOT NULL, title character varying NOT NULL, creation_date numeric NOT NULL DEFAULT 0 , update_date numeric NOT NULL DEFAULT 0 , messages jsonb NOT NULL, _id character(30) NOT NULL);
 
 ALTER TABLE ai_chatbot_conversations ADD PRIMARY KEY (_id);
 
--- Table: general_config
+-- Table: general_config;
 
-CREATE TABLE IF NOT EXISTS general_config (config_name character varying, active character varying, config_value character varying, notes character varying, creation_date numeric, update_date numeric, _id character varying);
+CREATE TABLE IF NOT EXISTS general_config (config_name character varying NOT NULL, active character varying NOT NULL DEFAULT '1' , config_value character varying NOT NULL, notes character varying NOT NULL, creation_date numeric NOT NULL, update_date numeric NOT NULL, _id character(30) NOT NULL);
 
 ALTER TABLE general_config ADD PRIMARY KEY (_id);
-
------------------------
--- For Supabase only --
------------------------
-
--- DROP FUNCTION IF EXISTS get_tables();
-CREATE OR REPLACE FUNCTION get_tables()
-RETURNS text[] AS $$
-BEGIN
-    RETURN (
-        SELECT array_agg(t.table_name::text)
-        FROM information_schema.tables AS t
-        WHERE t.table_schema = 'public'
-    );
-END;
-$$ LANGUAGE plpgsql; 
-
--- DROP FUNCTION IF EXISTS get_columns(text);
-CREATE OR REPLACE FUNCTION get_columns( in tablename text, out column_names text[], out data_types text[], out character_maximum_lengths text[] )
-RETURNS SETOF record AS $$
-BEGIN
-    RETURN QUERY (
-        SELECT
-            array_agg(t.column_name::text),
-            array_agg(t.data_type::text),
-            array_agg(t.character_maximum_length::text)
-        FROM information_schema.columns AS t
-        WHERE t.table_schema = 'public'
-        AND t.table_name = tablename
-    );
-END;
-$$ LANGUAGE plpgsql; 
-
--- Optionally:
-
--- CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
-
--- GRANT USAGE ON SCHEMA information_schema TO postgres, anon, authenticated, service_role;
--- GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated;
--- GRANT SELECT ON ALL TABLES IN SCHEMA information_schema TO postgres, anon, authenticated;
--- GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA "public" TO postgres, authenticated, anon, service_role;
-
--- NOTIFY pgrst, 'reload schema';
