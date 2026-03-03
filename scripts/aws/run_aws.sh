@@ -310,16 +310,24 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
             # nohup ${PEM_TOOL} run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app ${AUTO_RELOAD_OPTION} --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT} > /dev/null 2>&1 &
             ${PEM_TOOL} run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app ${AUTO_RELOAD_OPTION} --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT} --proxy-headers --forwarded-allow-ips="*" &
             
-            echo ""
-            echo "Waiting 15 seconds for the process to start and generate the OpenAPI schema files..."
-            echo ""
-            sleep 15
-            echo ""
-            echo "Find the process ID..."
+            echo "Waiting for the server (PID: ${PID}) to start..."
+            for i in {1..30}; do
+                # Assuming /docs is your OpenAPI UI endpoint, which is common for FastAPI.
+                # Adjust if your health check endpoint is different.
+                if curl -s --head "http://localhost:${BACKEND_LOCAL_PORT}/docs" | head -n 1 | grep "HTTP/1.[1-9] [23].." > /dev/null; then
+                    echo "Server is up!"
+                    # Here you would have the logic to fetch and save the OpenAPI schema.
+                    # For example: curl http://localhost:${BACKEND_LOCAL_PORT}/openapi.json > ${PATH_TO_SAVE_OPENAPI}/openapi.json
+                    break
+                fi
+                echo "Waiting for server... attempt $i"
+                sleep 1
+            done
+
             PID=$(pgrep -f "uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app")
-            echo ""
-            echo "Stop the process: ${PID}"
+            echo "Stopping the process: ${PID}"
             kill ${PID}
+            wait ${PID} 2>/dev/null # Wait for the process to terminate
             echo ""
         else
             if [ "${RUN_PROTOCOL}" = "https" ] && [ "${USE_CONTAINERS_ENGINE_APP}" = "1" ]; then
