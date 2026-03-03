@@ -176,7 +176,7 @@ perl -i -pe"s|GOOGLE_CSE_ID_placeholder|${GOOGLE_CSE_ID}|g" "${CONFIG_FILE}"
 perl -i -pe"s|LANGCHAIN_API_KEY_placeholder|${LANGCHAIN_API_KEY}|g" "${CONFIG_FILE}"
 perl -i -pe"s|LANGCHAIN_PROJECT_placeholder|${LANGCHAIN_PROJECT}|g" "${CONFIG_FILE}"
 perl -i -pe"s|HUGGINGFACE_API_KEY_placeholder|${HUGGINGFACE_API_KEY}|g" "${CONFIG_FILE}"
-perl -i -pe"s|HUGGINGFACE_TEXT_TO_IMAGE_ENDPOINT_placeholder|${HUGGINGFACE_TEXT_TO_IMAGE_ENDPOINT}|g" "${CONFIG_FILE}"
+perl -i -pe"s|HUGGINGFACE_DEFAULT_CHAT_MODEL_placeholder|${HUGGINGFACE_DEFAULT_CHAT_MODEL}|g" "${CONFIG_FILE}"
 
 perl -i -pe"s|SMTP_SERVER_placeholder|${SMTP_SERVER}|g" "${CONFIG_FILE}"
 perl -i -pe"s|SMTP_PORT_placeholder|${SMTP_PORT}|g" "${CONFIG_FILE}"

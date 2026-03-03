@@ -309,8 +309,9 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
             
             # nohup ${PEM_TOOL} run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app ${AUTO_RELOAD_OPTION} --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT} > /dev/null 2>&1 &
             ${PEM_TOOL} run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app ${AUTO_RELOAD_OPTION} --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT} --proxy-headers --forwarded-allow-ips="*" &
+            UVICORN_PID=$!
             
-            echo "Waiting for the server (PID: ${PID}) to start..."
+            echo "Waiting for the server (PID: ${UVICORN_PID}) to start..."
             for i in {1..30}; do
                 # Assuming /docs is your OpenAPI UI endpoint, which is common for FastAPI.
                 # Adjust if your health check endpoint is different.
@@ -324,10 +325,9 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
                 sleep 1
             done
 
-            PID=$(pgrep -f "uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app")
-            echo "Stopping the process: ${PID}"
-            kill ${PID}
-            wait ${PID} 2>/dev/null # Wait for the process to terminate
+            echo "Stopping the process: ${UVICORN_PID}"
+            kill ${UVICORN_PID}
+            wait ${UVICORN_PID} 2>/dev/null # Wait for the process to terminate
             echo ""
         else
             if [ "${RUN_PROTOCOL}" = "https" ] && [ "${USE_CONTAINERS_ENGINE_APP}" = "1" ]; then

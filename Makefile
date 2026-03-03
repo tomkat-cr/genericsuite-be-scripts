@@ -214,7 +214,7 @@ generate_cf_mysql:
 	# Create the tables in the database...
 	#   ACTION=create_tables STAGE=dev make generate_cf_mysql
 	#
-	DB_TYPE=mysql bash node_modules/genericsuite-be-scripts/scripts/sql_db/generate_sql_db_cf/generate_sql_db_cf.sh 
+	DB_TYPE=mysql bash node_modules/genericsuite-be-scripts/scripts/sql_db/generate_sql_db_cf/generate_sql_db_cf.sh
 
 generate_mysql_dev_sql:
 	ACTION=generate STAGE=dev make generate_cf_mysql

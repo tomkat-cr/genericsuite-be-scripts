@@ -47,7 +47,9 @@ check_cloudflare_cli() {
     echo "1.1. Installing CloudFared Tunnel CLI"
     if ! brew install cloudflared
     then
-      echo "ERROR: could not install the cloudflared CLI"
+      echo "ERROR: could not install the cloudflared CLI with brew"
+      echo "Please install it manually. For more information, visit:"
+      echo "https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/local-management/create-local-tunnel"
       exit 1
     fi
   fi
