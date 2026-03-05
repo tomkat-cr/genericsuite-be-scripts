@@ -190,8 +190,10 @@ services:
     ports:
       - 8082:80
     environment:
-      - PMA_HOST=mysql-local
-      - PMA_PORT=3306
-      - PMA_ARBITRARY=1
+      PMA_HOST: mysql-local
+      PMA_PORT: 3306
+      PMA_ARBITRARY: 1
+      # Set to 1 if using SSL for connecting to the database
+      PMA_SSL: 0 
     profiles:
       - mysql
