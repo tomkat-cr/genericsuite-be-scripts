@@ -5,7 +5,7 @@
 -- For Supabase only --
 -----------------------
 
--- DROP FUNCTION IF EXISTS get_tables();
+DROP FUNCTION IF EXISTS get_tables();
 CREATE OR REPLACE FUNCTION get_tables()
 RETURNS text[] AS $$
 BEGIN
@@ -17,21 +17,53 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql; 
 
--- DROP FUNCTION IF EXISTS get_columns(text);
-CREATE OR REPLACE FUNCTION get_columns( in tablename text, out column_names text[], out data_types text[], out character_maximum_lengths text[] )
-RETURNS SETOF record AS $$
+DROP FUNCTION IF EXISTS get_columns(text);
+CREATE OR REPLACE FUNCTION get_columns(target_table_name text DEFAULT NULL)
+RETURNS TABLE (
+    table_name text,
+    column_name text,
+    data_type text,
+    character_maximum_length int
+) 
+LANGUAGE plpgsql
+AS $$
 BEGIN
-    RETURN QUERY (
-        SELECT
-            array_agg(t.column_name::text),
-            array_agg(t.data_type::text),
-            array_agg(t.character_maximum_length::text)
-        FROM information_schema.columns AS t
-        WHERE t.table_schema = 'public'
-        AND t.table_name = tablename
-    );
+    RETURN QUERY
+    SELECT 
+        cols.table_name::text,
+        cols.column_name::text,
+        cols.data_type::text,
+        cols.character_maximum_length::int
+    FROM information_schema.columns AS cols
+    WHERE cols.table_schema = 'public'
+      -- If target_table_name is null, return all. Otherwise, filter.
+      AND (target_table_name IS NULL OR cols.table_name = target_table_name)
+    ORDER BY cols.table_name, cols.ordinal_position;
 END;
-$$ LANGUAGE plpgsql; 
+$$; 
+
+DROP FUNCTION IF EXISTS get_primary_keys(text);
+CREATE OR REPLACE FUNCTION get_primary_keys(target_table_name text DEFAULT NULL)
+RETURNS TABLE (
+    table_name text,
+    primary_key text
+) 
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        t.table_name:: text,
+        k.column_name:: text AS primary_key
+    FROM information_schema.table_constraints t
+      JOIN information_schema.key_column_usage k 
+        ON k.constraint_name = t.constraint_name
+        AND k.table_schema = t.table_schema
+    WHERE t.constraint_type = 'PRIMARY KEY'
+        AND k.table_schema = 'public'
+        AND (target_table_name IS NULL OR t.table_name = target_table_name);
+END;
+$$; 
 
 -- Optionally:
 
