@@ -1,0 +1,8 @@
+FROM python:3.9
+
+COPY . /app
+WORKDIR /app
+
+RUN echo "No pip install commands here"
+
+CMD ["python", "main.py"]

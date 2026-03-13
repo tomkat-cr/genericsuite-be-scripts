@@ -63,9 +63,9 @@ Resources:
                   - secretsmanager:GetSecretValue
                 Resource: '*'
                 # Resource: 
-                # #   - arn:aws:secretsmanager:*:*:secret:AWS_SECRETS_MANAGER_SECRETS_NAME_placeholder
+                # #  - arn:aws:secretsmanager:*:*:secret:AWS_SECRETS_MANAGER_SECRETS_NAME_placeholder
                 #   - !Sub arn:aws:secretsmanager:*:*:secret:${AsmSecretsName}
-                # #   - arn:aws:secretsmanager:*:*:secret:AWS_SECRETS_MANAGER_ENVS_NAME_placeholder
+                # #  - arn:aws:secretsmanager:*:*:secret:AWS_SECRETS_MANAGER_ENVS_NAME_placeholder
                 #   - !Sub arn:aws:secretsmanager:*:*:secret:${AsmEnvsName}
         - PolicyName: Ec2KmsAccessPolicy
           PolicyDocument:
@@ -77,40 +77,45 @@ Resources:
                   - kms:GenerateDataKey*
                   - kms:CreateGrant
                 Resource: !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/*'
-                # Resource: !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${KmsKeyAlias}'
-                # Resource: '*'
                 # Resource: 
-                # # - arn:aws:kms:AWS_REGION_placeholder:AWS_ACCOUNT_ID_placeholder:alias/AWS_KMS_KEY_ALIAS_placeholder
-                #   - !Sub arn:aws:kms:${AwsRegion}:${AwsAccountId}:alias/${KmsKeyAlias}
+                # #  - arn:aws:kms:AWS_REGION_placeholder:AWS_ACCOUNT_ID_placeholder:alias/AWS_KMS_KEY_ALIAS_placeholder
+                #   - !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${KmsKeyAlias}'
 
   APIHandler:
     Type: AWS::Serverless::Function
     Properties:
       Description: APP_NAME_LOWERCASE_placeholder-backend-APP_STAGE_placeholder
-      Runtime: python3.9
+      Runtime: python3.12
       Handler: app.app
       CodeUri: ./deployment.zip
       Tags:
-        aws-chalice: version=1.30.0:stage=APP_STAGE_placeholder:app=APP_NAME_LOWERCASE_placeholder-backend-APP_STAGE_placeholder
+        APP: APP_NAME_LOWERCASE_placeholder-backend-APP_STAGE_placeholder
+        STAGE: APP_STAGE_placeholder
+        FRAMEWORK: name=fastapi:version=APP_VERSION_placeholder
+        # FRAMEWORK: name=aws-chalice:version=APP_VERSION_placeholder
       Tracing: PassThrough
-      Timeout: 60
-      MemorySize: 256
+      Timeout: 180
+      MemorySize: 512
+      # Architectures:
+      #   - arm64
       Environment:
         Variables:
           APP_NAME: APP_NAME_placeholder
           APP_STAGE: APP_STAGE_placeholder
           CLOUD_PROVIDER: CLOUD_PROVIDER_placeholder
-          # AWS_REGION: AWS_REGION_placeholder
+          APP_VERSION: APP_VERSION_placeholder
+
           # Lambda was unable to configure your environment variables because the environment variables you have provided contains reserved keys that are currently not supported for modification. Reserved keys used in this request: AWS_REGION
+          # AWS_REGION: AWS_REGION_placeholder
 
           # GET_SECRETS_ENABLED: 0
           # GET_SECRETS_ENVVARS: 0
           # GET_SECRETS_CRITICAL: 0
 
           # AI_ASSISTANT_NAME: AI_ASSISTANT_NAME_placeholder
-          # APP_VERSION: APP_VERSION_placeholder
           # FLASK_APP: FLASK_APP_placeholder
           # APP_DEBUG: APP_DEBUG_placeholder
+          # APP_STAGE: APP_STAGE_placeholder
           # # APP_SECRET_KEY: APP_SECRET_KEY_placeholder    # GsSecretParameter
           # # APP_SUPERADMIN_EMAIL: APP_SUPERADMIN_EMAIL_placeholder    # GsSecretParameter
           # APP_CORS_ORIGIN: APP_CORS_ORIGIN_placeholder
@@ -136,22 +141,28 @@ Resources:
           # LANGCHAIN_PROJECT: LANGCHAIN_PROJECT_placeholder
           # USER_AGENT: USER_AGENT_placeholder
           # # HUGGINGFACE_API_KEY: HUGGINGFACE_API_KEY_placeholder    # GsSecretParameter
-          # HUGGINGFACE_ENDPOINT_URL: HUGGINGFACE_ENDPOINT_URL_placeholder
+          # HUGGINGFACE_DEFAULT_CHAT_MODEL: HUGGINGFACE_DEFAULT_CHAT_MODEL_placeholder
           # # FDA_API_KEY: FDA_API_KEY_placeholder    # GsSecretParameter
 
-          # # New 2024-05-30
           # APP_HOST_NAME: APP_HOST_NAME_placeholder
           # # STORAGE_URL_SEED: STORAGE_URL_SEED_placeholder    # GsSecretParameter
 
-          # # New 2024-06-16
           # CLOUD_PROVIDER: CLOUD_PROVIDER_placeholder
           # AWS_REGION: AWS_REGION_placeholder
 
       Role:
         Fn::GetAtt:
         - LambdaExecutionRole
-        # - DefaultRole
         - Arn
+
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /asset/{item_id}
+            Method: get
+            RestApiId:
+              Ref: RestAPI
 
   APIHandlerInvokePermission:
     Type: AWS::Lambda::Permission
@@ -175,11 +186,15 @@ Resources:
       Domain: 
         DomainName: api.example.com
         CertificateArn: CertificateArn_placeholder
+
+      Cors:
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        AllowHeaders: "'Access-Control-Allow-Origin,Authorization,Content-Type,X-Amz-Date,X-Amz-Security-Token,X-Api-Key'"
+        AllowOrigin: "'APP_CORS_ORIGIN_placeholder'"
+        AllowCredentials: "'true'"
+
       BinaryMediaTypes:
       - multipart/form-data
-      - application/octet-stream
-      - application/x-tar
-      - application/zip
       - audio/basic
       - audio/ogg
       - audio/mp4
@@ -193,139 +208,50 @@ Resources:
       - video/ogg
       - video/mpeg
       - video/webm
+      - application/octet-stream
+      - application/x-tar
+      - application/zip
+
       DefinitionBody:
-        swagger: '2.0'
+        openapi: 3.0.1
+
         info:
           version: '1.0'
           title: APP_NAME_LOWERCASE_placeholder-backend
-        schemes:
-        - https
-
-        definitions:
-          Empty:
-            type: object
-            title: Empty Schema
-        x-amazon-apigateway-binary-media-types:
-        - multipart/form-data
-        - application/octet-stream
-        - application/x-tar
-        - application/zip
-        - audio/basic
-        - audio/ogg
-        - audio/mp4
-        - audio/mpeg
-        - audio/wav
-        - audio/webm
-        - image/png
-        - image/jpg
-        - image/jpeg
-        - image/gif
-        - video/ogg
-        - video/mpeg
-        - video/webm
 
         paths:
 
-          /asset/{item_id}/{response_type}:
+          /v1/asset/{item_id}:
             get:
+              summary: Get asset (image, audio, or any other file type) stored in S3
               parameters:
                 - name: item_id
-                  in: "path"
+                  in: path
                   required: true
-                  type: "string"
-                - name: response_type
-                  in: "path"
-                  required: true
-                  type: "string"
-              # consumes:
-              # - application/json
-              produces:
-              - application/json
-              - application/octet-stream
-              - application/x-tar
-              - application/zip
-              - audio/basic
-              - audio/ogg
-              - audio/mp4
-              - audio/mpeg
-              - audio/wav
-              - audio/webm
-              - image/png
-              - image/jpg
-              - image/jpeg
-              - image/gif
-              - video/ogg
-              - video/mpeg
-              - video/webm
-              - text/csv
+                  schema:
+                    type: string
               responses:
                 '200':
                   description: 200 response
-                  schema:
-                    $ref: '#/definitions/Empty'
+                  content:
+                    application/octet-stream:
+                      schema:
+                        type: string
+                        format: binary
+                '404':
+                  description: File not found
               x-amazon-apigateway-integration:
-                # timeoutInMillis: 180000 # Does not work, only 30000 (3 seconds) max allowed
-                responses:
-                  default:
-                    statusCode: '200'
-                responseTemplates:
-                  application/json: '{"statusCode": 200}'
-                  application/octet-stream: '{"statusCode": 200}'
-                  application/x-tar: '{"statusCode": 200}'
-                  application/zip: '{"statusCode": 200}'
-                  audio/basic: '{"statusCode": 200}'
-                  audio/ogg: '{"statusCode": 200}'
-                  audio/mp4: '{"statusCode": 200}'
-                  audio/mpeg: '{"statusCode": 200}'
-                  audio/wav: '{"statusCode": 200}'
-                  audio/webm: '{"statusCode": 200}'
-                  image/png: '{"statusCode": 200}'
-                  image/jpg: '{"statusCode": 200}'
-                  image/jpeg: '{"statusCode": 200}'
-                  image/gif: '{"statusCode": 200}'
-                  video/ogg: '{"statusCode": 200}'
-                  video/mpeg: '{"statusCode": 200}'
-                  video/webm: '{"statusCode": 200}'
-                  text/csv: '{"statusCode": 200}'
                 uri:
                   Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${APIHandler.Arn}/invocations
                 passthroughBehavior: when_no_match
                 httpMethod: POST
-                # Content type conversions in API Gateway
-                # https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-payload-encodings-workflow.html
-                # contentHandling: CONVERT_TO_TEXT # Does not work
-                # contentHandling: - # Does not work
-                # contentHandling: CONVERT_TO_BINARY # Does not work
                 type: aws_proxy
-              summary: Get Asset endpoint.
-              description: Get asset (image, audio, or any other file type) stored in S3.
-
-          /asset/{item_id}:
-            get:
-              parameters:
-                - name: item_id
-                  in: "path"
-                  required: true
-                  type: "string"
+            options:
+              summary: Get asset (image, audio, or any other file type) stored in S3 (options)
+              consumes:
+              - application/json
               produces:
               - application/json
-              - application/octet-stream
-              - application/x-tar
-              - application/zip
-              - audio/basic
-              - audio/ogg
-              - audio/mp4
-              - audio/mpeg
-              - audio/wav
-              - audio/webm
-              - image/png
-              - image/jpg
-              - image/jpeg
-              - image/gif
-              - video/ogg
-              - video/mpeg
-              - video/webm
-              - text/csv
               responses:
                 '200':
                   description: 200 response
@@ -335,36 +261,15 @@ Resources:
                 responses:
                   default:
                     statusCode: '200'
-                responseTemplates:
+                requestTemplates:
                   application/json: '{"statusCode": 200}'
-                  application/octet-stream: '{"statusCode": 200}'
-                  application/x-tar: '{"statusCode": 200}'
-                  application/zip: '{"statusCode": 200}'
-                  audio/basic: '{"statusCode": 200}'
-                  audio/ogg: '{"statusCode": 200}'
-                  audio/mp4: '{"statusCode": 200}'
-                  audio/mpeg: '{"statusCode": 200}'
-                  audio/wav: '{"statusCode": 200}'
-                  audio/webm: '{"statusCode": 200}'
-                  image/png: '{"statusCode": 200}'
-                  image/jpg: '{"statusCode": 200}'
-                  image/jpeg: '{"statusCode": 200}'
-                  image/gif: '{"statusCode": 200}'
-                  video/ogg: '{"statusCode": 200}'
-                  video/mpeg: '{"statusCode": 200}'
-                  video/webm: '{"statusCode": 200}'
-                  text/csv: '{"statusCode": 200}'
-                uri:
-                  Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${APIHandler.Arn}/invocations
                 passthroughBehavior: when_no_match
-                httpMethod: POST
-                type: aws_proxy
-              summary: Get Asset endpoint.
-              description: Get asset (image, audio, or any other file type) stored in S3.
+                type: mock
+                contentHandling: CONVERT_TO_TEXT
 
-
-          /asset/{item_id}/{response_type}:
+          /v1/menu_options:
             get:
+              summary: Get authorized menu options
               consumes:
               - application/json
               produces:
@@ -384,58 +289,8 @@ Resources:
                 httpMethod: POST
                 contentHandling: CONVERT_TO_TEXT
                 type: aws_proxy
-              summary: 'Get asset (image, audio, or any other file type stored in S3) for a specified response_type'
             options:
-              consumes:
-              - application/json
-              produces:
-              - application/json
-              responses:
-                '200':
-                  description: 200 response
-                  schema:
-                    $ref: '#/definitions/Empty'
-                  headers:
-                    Access-Control-Allow-Methods:
-                      type: string
-                    Access-Control-Allow-Origin:
-                      type: string
-                    Access-Control-Allow-Headers:
-                      type: string
-                    Access-Control-Expose-Headers:
-                      type: string
-                    Access-Control-Max-Age:
-                      type: string
-                    Access-Control-Allow-Credentials:
-                      type: string
-              x-amazon-apigateway-integration:
-                responses:
-                  default:
-                    statusCode: '200'
-
-          /menu_options:
-            get:
-              consumes:
-              - application/json
-              produces:
-              - application/json
-              responses:
-                '200':
-                  description: 200 response
-                  schema:
-                    $ref: '#/definitions/Empty'
-              x-amazon-apigateway-integration:
-                responses:
-                  default:
-                    statusCode: '200'
-                uri:
-                  Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${APIHandler.Arn}/invocations
-                passthroughBehavior: when_no_match
-                httpMethod: POST
-                contentHandling: CONVERT_TO_TEXT
-                type: aws_proxy
-              summary: 'Get authorized menu options '
-            options:
+              summary: Menu options CRUD operations (options)
               consumes:
               - application/json
               produces:
@@ -475,8 +330,9 @@ Resources:
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
 
-          /menu_options/element:
+          /v1/menu_options/element:
             post:
+              summary: Get menu element configuration
               consumes:
               - application/json
               produces:
@@ -496,8 +352,8 @@ Resources:
                 httpMethod: POST
                 contentHandling: CONVERT_TO_TEXT
                 type: aws_proxy
-              summary: 'Get menu element configuration '
             options:
+              summary: Menu options CRUD operations (options)
               consumes:
               - application/json
               produces:
@@ -537,8 +393,9 @@ Resources:
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
 
-          /users:
+          /v1/users:
             get:
+              summary: User's CRUD operations (read, list)
               consumes:
               - application/json
               produces:
@@ -558,8 +415,8 @@ Resources:
                 httpMethod: POST
                 contentHandling: CONVERT_TO_TEXT
                 type: aws_proxy
-              summary: User's CRUD operations (create, read, update, delete)
             post:
+              summary: User's CRUD operations (create)
               consumes:
               - application/json
               produces:
@@ -579,8 +436,8 @@ Resources:
                 httpMethod: POST
                 contentHandling: CONVERT_TO_TEXT
                 type: aws_proxy
-              summary: User's CRUD operations (create, read, update, delete)
             put:
+              summary: User's CRUD operations (update)
               consumes:
               - application/json
               produces:
@@ -600,8 +457,8 @@ Resources:
                 httpMethod: POST
                 contentHandling: CONVERT_TO_TEXT
                 type: aws_proxy
-              summary: User's CRUD operations (create, read, update, delete)
             delete:
+              summary: User's CRUD operations (delete)
               consumes:
               - application/json
               produces:
@@ -621,8 +478,8 @@ Resources:
                 httpMethod: POST
                 contentHandling: CONVERT_TO_TEXT
                 type: aws_proxy
-              summary: User's CRUD operations (create, read, update, delete)
             options:
+              summary: Users CRUD operations (options)
               consumes:
               - application/json
               produces:
@@ -662,8 +519,9 @@ Resources:
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
 
-          /users/test:
+          /v1/users/test:
             get:
+              summary: Connection handler test
               consumes:
               - application/json
               produces:
@@ -683,8 +541,8 @@ Resources:
                 httpMethod: POST
                 contentHandling: CONVERT_TO_TEXT
                 type: aws_proxy
-              summary: Connection handler test
             options:
+              summary: Connection handler test (options)
               consumes:
               - application/json
               produces:
@@ -724,8 +582,9 @@ Resources:
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
 
-          /users/login:
+          /v1/users/login:
             get:
+              summary: User login
               consumes:
               - application/json
               produces:
@@ -745,8 +604,8 @@ Resources:
                 httpMethod: POST
                 contentHandling: CONVERT_TO_TEXT
                 type: aws_proxy
-              summary: User login
             post:
+              summary: User login
               consumes:
               - application/json
               produces:
@@ -766,8 +625,8 @@ Resources:
                 httpMethod: POST
                 contentHandling: CONVERT_TO_TEXT
                 type: aws_proxy
-              summary: User login
             options:
+              summary: User login (options)
               consumes:
               - application/json
               produces:
@@ -807,8 +666,9 @@ Resources:
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
 
-          /users/supad-create:
+          /v1/users/supad-create:
             post:
+              summary: Super admin user creation
               consumes:
               - application/json
               produces:
@@ -828,8 +688,8 @@ Resources:
                 httpMethod: POST
                 contentHandling: CONVERT_TO_TEXT
                 type: aws_proxy
-              summary: Super admin user emergency creation
             options:
+              summary: Super admin user creation (options)
               consumes:
               - application/json
               produces:
@@ -869,8 +729,10 @@ Resources:
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
 
-          /ai/chatbot:
+          /v1/ai/chatbot:
             post:
+              summary: AI Chatbot
+              description: Retrieves the user data (question), runs the conversation with the AI Chatbot and returns the AI Chatbot response
               consumes:
               - application/json
               produces:
@@ -901,9 +763,8 @@ Resources:
                 # contentHandling: CONVERT_TO_TEXT
                 # contentHandling: CONVERT_TO_BINARY
                 type: aws_proxy
-              summary: This function is the endpoint for the AI Chatbot.
-              description: 'Retrieves the user data (question), runs the conversation with the AI Chatbot and returns the AI Chatbot''s response.'
             options:
+              summary: AI Chatbot (options)
               consumes:
               - application/json
               produces:
@@ -943,8 +804,10 @@ Resources:
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
 
-          /ai/image_to_text:
+          /v1/ai/image_to_text:
             post:
+              summary: AI Image to Text
+              description: Receives an image file, saves it to a temporary directory with a uuid4 .jpg | .png filename, calls @vision_image_analyzer with the file path, and returns the result
               consumes:
               - multipart/form-data
               produces:
@@ -964,18 +827,8 @@ Resources:
                 httpMethod: POST
                 contentHandling: CONVERT_TO_TEXT
                 type: aws_proxy
-              summary: This endpoint receives an image file, saves it to a temporary
-                directory
-              description: 'with a uuid4 .jpg | .png filename, calls @vision_image_analyzer
-                with
-
-                the file path, and returns the result.
-
-
-                :param request: The request containing the image file.
-
-                :return: The transcription result.'
             options:
+              summary: AI Image to Text (options)
               consumes:
               - application/json
               produces:
@@ -1015,8 +868,10 @@ Resources:
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
 
-          /ai/voice_to_text:
+          /v1/ai/voice_to_text:
             post:
+              summary: AI Voice to Text
+              description: Receives an audio file, saves it to a temporary directory with a uuid4 .mp3 filename, calls @audio_to_text_transcript with the file path, and returns the result
               consumes:
               - multipart/form-data
               produces:
@@ -1036,18 +891,8 @@ Resources:
                 httpMethod: POST
                 contentHandling: CONVERT_TO_TEXT
                 type: aws_proxy
-              summary: This endpoint receives an audio file, saves it to a temporary
-                directory
-              description: 'with a uuid4 .mp3 filename, calls @audio_to_text_transcript
-                with
-
-                the file path, and returns the result.
-
-
-                :param request: The request containing the audio file.
-
-                :return: The transcription result.'
             options:
+              summary: AI Voice to Text (options)
               consumes:
               - application/json
               produces:
@@ -1087,8 +932,9 @@ Resources:
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
 
-          /ai_chatbot_conversations:
+          /v1/ai_chatbot_conversations:
             get:
+              summary: AI Chatbot Conversations CRUD operations (read, list)
               consumes:
               - application/json
               produces:
@@ -1108,12 +954,8 @@ Resources:
                 httpMethod: POST
                 contentHandling: CONVERT_TO_TEXT
                 type: aws_proxy
-              summary: Handles generic route requests and delegates to the appropriate
-              description: "CRUD operation based on the request parameters.\n\nArgs:\n\
-                \    request (AuthorizedRequest): The authorized request object.\n\
-                \    kwargs (dict): Additional keyword arguments.\n\nReturns:\n  \
-                \  Response: The response from the CRUD operation."
             post:
+              summary: AI Chatbot Conversations CRUD operations (create)
               consumes:
               - application/json
               produces:
@@ -1133,12 +975,8 @@ Resources:
                 httpMethod: POST
                 contentHandling: CONVERT_TO_TEXT
                 type: aws_proxy
-              summary: Handles generic route requests and delegates to the appropriate
-              description: "CRUD operation based on the request parameters.\n\nArgs:\n\
-                \    request (AuthorizedRequest): The authorized request object.\n\
-                \    kwargs (dict): Additional keyword arguments.\n\nReturns:\n  \
-                \  Response: The response from the CRUD operation."
             put:
+              summary: AI Chatbot Conversations CRUD operations (update)
               consumes:
               - application/json
               produces:
@@ -1158,12 +996,8 @@ Resources:
                 httpMethod: POST
                 contentHandling: CONVERT_TO_TEXT
                 type: aws_proxy
-              summary: Handles generic route requests and delegates to the appropriate
-              description: "CRUD operation based on the request parameters.\n\nArgs:\n\
-                \    request (AuthorizedRequest): The authorized request object.\n\
-                \    kwargs (dict): Additional keyword arguments.\n\nReturns:\n  \
-                \  Response: The response from the CRUD operation."
             delete:
+              summary: AI Chatbot Conversations CRUD operations (delete)
               consumes:
               - application/json
               produces:
@@ -1183,12 +1017,8 @@ Resources:
                 httpMethod: POST
                 contentHandling: CONVERT_TO_TEXT
                 type: aws_proxy
-              summary: Handles generic route requests and delegates to the appropriate
-              description: "CRUD operation based on the request parameters.\n\nArgs:\n\
-                \    request (AuthorizedRequest): The authorized request object.\n\
-                \    kwargs (dict): Additional keyword arguments.\n\nReturns:\n  \
-                \  Response: The response from the CRUD operation."
             options:
+              summary: AI Chatbot Conversations CRUD operations (options)
               consumes:
               - application/json
               produces:
@@ -1228,8 +1058,9 @@ Resources:
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
 
-          /general_config:
+          /v1/general_config:
             get:
+              summary: General Configurations CRUD operations (read, list)
               consumes:
               - application/json
               produces:
@@ -1249,12 +1080,8 @@ Resources:
                 httpMethod: POST
                 contentHandling: CONVERT_TO_TEXT
                 type: aws_proxy
-              summary: Handles generic route requests and delegates to the appropriate
-              description: "CRUD operation based on the request parameters.\n\nArgs:\n\
-                \    request (AuthorizedRequest): The authorized request object.\n\
-                \    kwargs (dict): Additional keyword arguments.\n\nReturns:\n  \
-                \  Response: The response from the CRUD operation."
             post:
+              summary: General Configurations CRUD operations (create)
               consumes:
               - application/json
               produces:
@@ -1274,12 +1101,8 @@ Resources:
                 httpMethod: POST
                 contentHandling: CONVERT_TO_TEXT
                 type: aws_proxy
-              summary: Handles generic route requests and delegates to the appropriate
-              description: "CRUD operation based on the request parameters.\n\nArgs:\n\
-                \    request (AuthorizedRequest): The authorized request object.\n\
-                \    kwargs (dict): Additional keyword arguments.\n\nReturns:\n  \
-                \  Response: The response from the CRUD operation."
             put:
+              summary: General Configurations CRUD operations (update)
               consumes:
               - application/json
               produces:
@@ -1299,12 +1122,8 @@ Resources:
                 httpMethod: POST
                 contentHandling: CONVERT_TO_TEXT
                 type: aws_proxy
-              summary: Handles generic route requests and delegates to the appropriate
-              description: "CRUD operation based on the request parameters.\n\nArgs:\n\
-                \    request (AuthorizedRequest): The authorized request object.\n\
-                \    kwargs (dict): Additional keyword arguments.\n\nReturns:\n  \
-                \  Response: The response from the CRUD operation."
             delete:
+              summary: General Configurations CRUD operations (delete)
               consumes:
               - application/json
               produces:
@@ -1324,12 +1143,8 @@ Resources:
                 httpMethod: POST
                 contentHandling: CONVERT_TO_TEXT
                 type: aws_proxy
-              summary: Handles generic route requests and delegates to the appropriate
-              description: "CRUD operation based on the request parameters.\n\nArgs:\n\
-                \    request (AuthorizedRequest): The authorized request object.\n\
-                \    kwargs (dict): Additional keyword arguments.\n\nReturns:\n  \
-                \  Response: The response from the CRUD operation."
             options:
+              summary: General Configurations CRUD operations (options)
               consumes:
               - application/json
               produces:
@@ -1369,8 +1184,9 @@ Resources:
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
 
-          /users_config:
+          /v1/users_config:
             get:
+              summary: Users Configurations CRUD operations (read, list)
               consumes:
               - application/json
               produces:
@@ -1390,12 +1206,8 @@ Resources:
                 httpMethod: POST
                 contentHandling: CONVERT_TO_TEXT
                 type: aws_proxy
-              summary: Handles generic route requests and delegates to the appropriate
-              description: "CRUD operation based on the request parameters.\n\nArgs:\n\
-                \    request (AuthorizedRequest): The authorized request object.\n\
-                \    kwargs (dict): Additional keyword arguments.\n\nReturns:\n  \
-                \  Response: The response from the CRUD operation."
             post:
+              summary: Users Configurations CRUD operations (create)
               consumes:
               - application/json
               produces:
@@ -1415,12 +1227,8 @@ Resources:
                 httpMethod: POST
                 contentHandling: CONVERT_TO_TEXT
                 type: aws_proxy
-              summary: Handles generic route requests and delegates to the appropriate
-              description: "CRUD operation based on the request parameters.\n\nArgs:\n\
-                \    request (AuthorizedRequest): The authorized request object.\n\
-                \    kwargs (dict): Additional keyword arguments.\n\nReturns:\n  \
-                \  Response: The response from the CRUD operation."
             put:
+              summary: Users Configurations CRUD operations (update)
               consumes:
               - application/json
               produces:
@@ -1440,12 +1248,8 @@ Resources:
                 httpMethod: POST
                 contentHandling: CONVERT_TO_TEXT
                 type: aws_proxy
-              summary: Handles generic route requests and delegates to the appropriate
-              description: "CRUD operation based on the request parameters.\n\nArgs:\n\
-                \    request (AuthorizedRequest): The authorized request object.\n\
-                \    kwargs (dict): Additional keyword arguments.\n\nReturns:\n  \
-                \  Response: The response from the CRUD operation."
             delete:
+              summary: Users Configurations CRUD operations (delete)
               consumes:
               - application/json
               produces:
@@ -1465,12 +1269,8 @@ Resources:
                 httpMethod: POST
                 contentHandling: CONVERT_TO_TEXT
                 type: aws_proxy
-              summary: Handles generic route requests and delegates to the appropriate
-              description: "CRUD operation based on the request parameters.\n\nArgs:\n\
-                \    request (AuthorizedRequest): The authorized request object.\n\
-                \    kwargs (dict): Additional keyword arguments.\n\nReturns:\n  \
-                \  Response: The response from the CRUD operation."
             options:
+              summary: Users Configurations CRUD operations (options)
               consumes:
               - application/json
               produces:
@@ -1510,8 +1310,9 @@ Resources:
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
 
-          /users/current_user_d:
+          /v1/users_api_keys:
             get:
+              summary: Get users API keys CRUD operations (create)
               consumes:
               - application/json
               produces:
@@ -1531,9 +1332,8 @@ Resources:
                 httpMethod: POST
                 contentHandling: CONVERT_TO_TEXT
                 type: aws_proxy
-              summary: Handles generic route requests and delegates to the appropriate
-              description: "Get current authenticated user data."
             post:
+              summary: Get users API keys CRUD operations (create)
               consumes:
               - application/json
               produces:
@@ -1553,9 +1353,8 @@ Resources:
                 httpMethod: POST
                 contentHandling: CONVERT_TO_TEXT
                 type: aws_proxy
-              summary: Handles generic route requests and delegates to the appropriate
-              description: "Get current authenticated user data."
             put:
+              summary: Get users API keys CRUD operations (update)
               consumes:
               - application/json
               produces:
@@ -1575,9 +1374,8 @@ Resources:
                 httpMethod: POST
                 contentHandling: CONVERT_TO_TEXT
                 type: aws_proxy
-              summary: Handles generic route requests and delegates to the appropriate
-              description: "Get current authenticated user data."
             delete:
+              summary: Get users API keys CRUD operations (delete)
               consumes:
               - application/json
               produces:
@@ -1597,9 +1395,71 @@ Resources:
                 httpMethod: POST
                 contentHandling: CONVERT_TO_TEXT
                 type: aws_proxy
-              summary: Handles generic route requests and delegates to the appropriate
-              description: "Get current authenticated user data."
             options:
+              summary: Get users API keys CRUD operations (options)
+              consumes:
+              - application/json
+              produces:
+              - application/json
+              responses:
+                '200':
+                  description: 200 response
+                  schema:
+                    $ref: '#/definitions/Empty'
+                  headers:
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Origin:
+                      type: string
+                    Access-Control-Allow-Headers:
+                      type: string
+                    Access-Control-Expose-Headers:
+                      type: string
+                    Access-Control-Max-Age:
+                      type: string
+                    Access-Control-Allow-Credentials:
+                      type: string
+              x-amazon-apigateway-integration:
+                responses:
+                  default:
+                    statusCode: '200'
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Methods: '''GET,POST,PUT,DELETE,OPTIONS'''
+                      method.response.header.Access-Control-Allow-Origin: '''http://localhost:3000'''
+                      method.response.header.Access-Control-Allow-Headers: '''Access-Control-Allow-Origin,Authorization,Content-Type,X-Amz-Date,X-Amz-Security-Token,X-Api-Key'''
+                      method.response.header.Access-Control-Expose-Headers: '''Authorization,Access-Control-Allow-Origin,Content-Type,Content-Disposition,Content-Length'''
+                      method.response.header.Access-Control-Max-Age: '''600'''
+                      method.response.header.Access-Control-Allow-Credentials: '''true'''
+                requestTemplates:
+                  application/json: '{"statusCode": 200}'
+                passthroughBehavior: when_no_match
+                type: mock
+                contentHandling: CONVERT_TO_TEXT
+
+          /v1/users/current_user_d:
+            get:
+              summary: Get current authenticated user data
+              consumes:
+              - application/json
+              produces:
+              - application/json
+              responses:
+                '200':
+                  description: 200 response
+                  schema:
+                    $ref: '#/definitions/Empty'
+              x-amazon-apigateway-integration:
+                responses:
+                  default:
+                    statusCode: '200'
+                uri:
+                  Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${APIHandler.Arn}/invocations
+                passthroughBehavior: when_no_match
+                httpMethod: POST
+                contentHandling: CONVERT_TO_TEXT
+                type: aws_proxy
+            options:
+              summary: Get current authenticated user data (options)
               consumes:
               - application/json
               produces:
@@ -1638,3 +1498,5 @@ Resources:
                 passthroughBehavior: when_no_match
                 type: mock
                 contentHandling: CONVERT_TO_TEXT
+
+          # App-specific routes

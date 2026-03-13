@@ -1,10 +1,43 @@
 #!/bin/bash
-# big_lambdas_manager.sh
+# aws_big_lambda/big_lambdas_manager.sh
 # 2023-12-10 | CR
 
 # Reference:
 # Deploy Python Lambda functions with container images
 # https://docs.aws.amazon.com/lambda/latest/dg/python-image.html#python-image-instructions
+
+# ACTION="down"
+# Shut down the containers defined in docker-compose-big-lambda-${TARGET_OS}.yml
+#
+# ACTION="enter"
+# Enter the container defined in docker-compose-big-lambda-${TARGET_OS}.yml
+#
+# ACTION="test"
+# Test the AWS Lambda locally
+#
+# ACTION="build_docker"
+# Build the Docker image for the AWS Lambda deployment
+#
+# ACTION="sam_deploy"
+# Deploy the AWS Lambda using SAM
+#
+# ACTION="tmp_dir"
+# Prepare the temporary build directory only. Usefull to check the content of the directory and eventual issues
+#
+# ACTION="rebuild"
+# Rebuild the AWS Lambda locally
+#
+# ACTION=""
+# Start the AWS Lambda locally
+#
+# ACTION="sam_validate"
+# Validate the SAM template
+#
+# ACTION="sam_run_local"
+# Run the SAM project locally
+#
+# ACTION="package"
+# Package the AWS Lambda
 
 DEBUG="0"
 
@@ -29,6 +62,9 @@ exit_abort() {
 }
 
 ask_to_continue() {
+    if [ "${CICD}" = "1" ]; then
+        return
+    fi
     echo "Continue (Y/n)?"
     yes_or_no
     if [ $choice = "n" ]; then
@@ -37,6 +73,11 @@ ask_to_continue() {
 }    
 
 ask_for_force_ecr_image_creation() {
+  if [ "${CICD}" = "1" ]; then
+      FORCE_ECR_IMAGE_CREATION="1"
+      return
+  fi
+  
   echo "----"
   echo "Do you want to perform the AWS ECR image creation (Y/n)?"
   yes_or_no
@@ -81,6 +122,10 @@ show_existing_ecr_images() {
 }
 
 ask_to_show_existing_ecr_images() {
+  if [ "${CICD}" = "1" ]; then
+      return
+  fi
+
   echo "---"
   echo "Do you want to see the existing ECT images (y/n)?"
   yes_or_no
@@ -91,6 +136,11 @@ ask_to_show_existing_ecr_images() {
 
 ask_for_app_version() {
     APP_VERSION=$(cat ${REPO_BASEDIR}/version.txt)
+    if [ "${CICD}" = "1" ]; then
+        echo "App version will be: ${APP_VERSION}"
+        return
+    fi
+
     echo "----"
     echo "What will be the new App version? (press Enter for default: ${APP_VERSION})"
     read new_version
@@ -107,6 +157,11 @@ ask_for_app_version() {
 }
 
 ask_for_frontend_version_assignment() {
+  if [ "${CICD}" = "1" ]; then
+    COPY_VERSION_TO_FRONTEND="1"
+    return
+  fi
+
   echo ""
   echo "----"
   echo "Do you want to assign the version ${APP_VERSION} to the frontend '${FRONTEND_DIRECTORY}' (Y/n)?"
@@ -160,8 +215,13 @@ remember_endpoint_definitions() {
   ask_to_continue
 }
 
-
 ask_for_sam_guided_deployment() {
+    if [ "${CICD}" = "1" ]; then
+      SAM_GUIDED="n"
+      SAM_FORCED="--force-upload"
+      return
+    fi
+
     echo ""
     echo "----"
     echo "SAM Deployment Methods:"
@@ -192,6 +252,12 @@ write_new_app_version() {
 }
 
 ask_for_docker_image_version() {
+    if [ "${CICD}" = "1" ]; then
+        DOCKER_IMAGE_VERSION="${APP_VERSION}"
+        AWS_DOCKER_IMAGE_URI="${AWS_DOCKER_IMAGE_URI_BASE}/${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}:${DOCKER_IMAGE_VERSION}"
+        return
+    fi
+
     echo "----"
     echo "What will be the Docker Image version to use? (e.g. latest or a version number)."
     echo "(press Enter for default: ${APP_VERSION})"
@@ -213,6 +279,11 @@ ask_for_docker_image_version() {
 }
 
 ask_for_docker_system_prune() {
+    if [ "${CICD}" = "1" ]; then
+      DOCKER_PRUNE="n"
+      return
+    fi
+
     echo "----"
     echo "Do you want to perform a Docker System Prune to have more free disk space (y/n)?"
     yes_or_no
@@ -233,7 +304,7 @@ docker_system_prune() {
     fi
 }    
 
-verify_docker_image_exist() {
+verify_docker_image_exists() {
     ERROR_MSG=""
     ECR_REPO_URI=$(aws ecr describe-repositories \
       --repository-names ${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE} \
@@ -269,6 +340,31 @@ verify_docker_image_exist() {
             fi
         fi
     fi
+}
+
+remove_unnecessary_files() {
+    echo ""
+    echo cd ${TMP_BUILD_DIR}
+    cd ${TMP_BUILD_DIR}
+
+    echo ""
+    echo "Removing unnecessary files..."
+    rm app.${APP_NAME_LOWERCASE}.local.key
+    rm app.${APP_NAME_LOWERCASE}.local.crt
+    rm app.${APP_NAME_LOWERCASE}.local.chain.crt
+    rm ca.crt
+    if [ "${USE_EXISTING_ZIP}" != "1" ]; then
+      if [ -f ../deployment.zip ]; then
+        rm ../deployment.zip
+      fi
+    fi
+    rm template.yml
+    rm samconfig.toml
+    rm run_api_gateway.sh
+    rm docker-compose-big-lambda-${TARGET_OS}.yml
+    rm entry-${TARGET_OS}.sh
+    rm prepare_local_docker.sh
+    rm nginx.conf
 }
 
 recover_at_sign() {
@@ -331,7 +427,7 @@ export OPENAI_TEMPERATURE="${OPENAI_TEMPERATURE}"
 export USER_AGENT="${APP_NAME_LOWERCASE}-${STAGE}"
 export DYNAMDB_PREFIX="${APP_NAME_LOWERCASE}_${STAGE}_"
 export LANGCHAIN_PROJECT="${LANGCHAIN_PROJECT}"
-export HUGGINGFACE_ENDPOINT_URL="${HUGGINGFACE_ENDPOINT_URL}"
+export HUGGINGFACE_DEFAULT_CHAT_MODEL="${HUGGINGFACE_DEFAULT_CHAT_MODEL}"
 export SMTP_SERVER="${SMTP_SERVER}"
 export SMTP_PORT="${SMTP_PORT}"
 export SMTP_DEFAULT_SENDER="${SMTP_DEFAULT_SENDER}"
@@ -357,7 +453,7 @@ END
   SMTP_PORT=${SMTP_PORT},
   OPENAI_TEMPERATURE=${OPENAI_TEMPERATURE},
   LANGCHAIN_PROJECT="${LANGCHAIN_PROJECT}"
-  HUGGINGFACE_ENDPOINT_URL="${HUGGINGFACE_ENDPOINT_URL}"
+  HUGGINGFACE_DEFAULT_CHAT_MODEL="${HUGGINGFACE_DEFAULT_CHAT_MODEL}"
   SMTP_SERVER=${SMTP_SERVER},
   OPENAI_MODEL=${OPENAI_MODEL},
   APP_DB_ENGINE=${APP_DB_ENGINE}
@@ -379,7 +475,7 @@ END
   --env SMTP_PORT=\"${SMTP_PORT}\"
   --env OPENAI_TEMPERATURE=\"${OPENAI_TEMPERATURE}\"
   --env LANGCHAIN_PROJECT=\"${LANGCHAIN_PROJECT}\"
-  --env HUGGINGFACE_ENDPOINT_URL=\"${HUGGINGFACE_ENDPOINT_URL}\"
+  --env HUGGINGFACE_DEFAULT_CHAT_MODEL=\"${HUGGINGFACE_DEFAULT_CHAT_MODEL}\"
   --env SMTP_SERVER=\"${SMTP_SERVER}\"
   --env OPENAI_MODEL=\"${OPENAI_MODEL}\"
   --env APP_DB_ENGINE=\"${APP_DB_ENGINE}\"
@@ -396,7 +492,14 @@ prepare_tmp_build_dir() {
     # are under a common parent and then COPY that parent.
 
     echo ""
-    echo "Create temporary directories in: ${TMP_BUILD_DIR}"
+    echo "Create working directory: ${TMP_WORKING_DIR}"
+    echo ""
+    echo "Removing existing: ${TMP_WORKING_DIR}"
+    rm -rf "${TMP_WORKING_DIR}"
+    mkdir -p "${TMP_WORKING_DIR}"
+
+    echo ""
+    echo "Create build directory: ${TMP_BUILD_DIR}"
     echo ""
 
     echo "Removing existing: ${TMP_BUILD_DIR}"
@@ -610,20 +713,33 @@ create_sam_yaml() {
   # Replace @ with \@
   recover_at_sign
 
+  RESTORE_DOMAIN_NAME="${DOMAIN_NAME}"
+
   # perl -i -pe "s|Runtime: python3.9|#|g" "${TMP_WORKING_DIR}/template.yml"
-  # perl -i -pe "s|Runtime: python|# Runtime: python|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe "s|Runtime: python.*|Runtime: python${PYTHON_VERSION}|g" "${TMP_WORKING_DIR}/template.yml"
+
   # perl -i -pe "s|CodeUri: ./deployment.zip|ImageUri: ${AWS_DOCKER_IMAGE_URI}|g" "${TMP_WORKING_DIR}/template.yml"
   # perl -i -pe "s|Handler: app.app|PackageType: Image|g" "${TMP_WORKING_DIR}/template.yml"
-  RESTORE_DOMAIN_NAME="${DOMAIN_NAME}"
-  # if [ "${CODE_URI_PATH}" != "" ]; then
+
   if [ "${ACTION}" = "sam_run_local" ]; then
+    # For local run, the "CodeUri:..." must be replaced by the local path to the code and "Handler: app.app" must be replaced by the correct handler
     perl -i -pe "s|CodeUri:.*|CodeUri: ${CODE_URI_PATH}|g" "${TMP_WORKING_DIR}/template.yml"
     perl -i -pe "s|Handler: app.app|Handler: ${APP_MAIN_FILE}.${APP_HANDLER}|g" "${TMP_WORKING_DIR}/template.yml"
+    # Domain name is not used when running locally
     DOMAIN_NAME=""
   else
-    perl -i -pe "s|Runtime: python|# Runtime: python|g" "${TMP_WORKING_DIR}/template.yml"
-    perl -i -pe "s|CodeUri:.*|ImageUri: ${AWS_DOCKER_IMAGE_URI}|g" "${TMP_WORKING_DIR}/template.yml"
-    perl -i -pe "s|Handler: app.app|PackageType: Image|g" "${TMP_WORKING_DIR}/template.yml"
+    if [ "${AWS_LAMBDA_DEPLOYMENT_TYPE}" = "container" ]; then
+      # For container deployment, the "CodeUri:..." must be replaced by "ImageUri:..." and "Handler: app.app" must be replaced by "PackageType: Image"
+      perl -i -pe "s|CodeUri:.*|ImageUri: ${AWS_DOCKER_IMAGE_URI}|g" "${TMP_WORKING_DIR}/template.yml"
+      perl -i -pe "s|Handler: app.app|PackageType: Image|g" "${TMP_WORKING_DIR}/template.yml"
+      # To avoid the error "Resource with id [APIHandler] is invalid. Runtime, Handler, Layers cannot be present when PackageType is of type `Image`"
+      perl -i -pe "s|Runtime: python|# Runtime: python|g" "${TMP_WORKING_DIR}/template.yml"
+    else
+      # For zip deployment, the "CodeUri: ../deployment.zip" is used and
+      # the "Handler: app.app" is replaced by the correct handler
+      perl -i -pe "s|CodeUri:.*|CodeUri: ${TMP_BUILD_DIR}/../deployment.zip|g" "${TMP_WORKING_DIR}/template.yml"
+      perl -i -pe "s|Handler: app.app|Handler: ${APP_MAIN_FILE}.${APP_HANDLER}|g" "${TMP_WORKING_DIR}/template.yml"
+    fi
   fi
 
   if [ "${DOMAIN_NAME}" = "" ];then
@@ -675,6 +791,7 @@ create_sam_yaml() {
   perl -i -pe "s|APP_STAGE_placeholder|${STAGE}|g" "${TMP_WORKING_DIR}/template.yml"
 
   perl -i -pe "s|FLASK_APP_placeholder|${FLASK_APP}|g" "${TMP_WORKING_DIR}/template.yml"
+
   # GsSecretParameter
   # perl -i -pe "s|APP_SECRET_KEY_placeholder|${APP_SECRET_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
   # GsSecretParameter
@@ -687,6 +804,7 @@ create_sam_yaml() {
 
   perl -i -pe "s|APP_DB_ENGINE_placeholder|${APP_DB_ENGINE}|g" "${TMP_WORKING_DIR}/template.yml"
   perl -i -pe "s|APP_DB_NAME_placeholder|${APP_DB_NAME}|g" "${TMP_WORKING_DIR}/template.yml"
+
   # GsSecretParameter
   # perl -i -pe "s|APP_DB_URI_placeholder|${APP_DB_URI}|g" "${TMP_WORKING_DIR}/template.yml"
 
@@ -721,7 +839,7 @@ create_sam_yaml() {
 
   # GsSecretParameter
   # perl -i -pe"s|HUGGINGFACE_API_KEY_placeholder|${HUGGINGFACE_API_KEY}|g" "${TMP_WORKING_DIR}/template.yml"
-  perl -i -pe"s|HUGGINGFACE_ENDPOINT_URL_placeholder|${HUGGINGFACE_ENDPOINT_URL}|g" "${TMP_WORKING_DIR}/template.yml"
+  perl -i -pe"s|HUGGINGFACE_DEFAULT_CHAT_MODEL_placeholder|${HUGGINGFACE_DEFAULT_CHAT_MODEL}|g" "${TMP_WORKING_DIR}/template.yml"
 
   perl -i -pe "s|CLOUD_PROVIDER_placeholder|${CLOUD_PROVIDER}|g" "${TMP_WORKING_DIR}/template.yml"
   perl -i -pe "s|AWS_REGION_placeholder|${AWS_REGION}|g" "${TMP_WORKING_DIR}/template.yml"
@@ -821,17 +939,40 @@ verify_requirements_with_local_dependencies() {
 requirements_rebuild() {
     cd "${REPO_BASEDIR}"
     REQUIREMENTS_REBUILD="0"
-    if [[ Pipfile -nt requirements.txt ]]; then
-      REQUIREMENTS_REBUILD="1"
-      make requirements
+    echo "Checking if requirements.txt needs to be rebuilt..."
+
+    if [ "${PEM_TOOL}" = "pipenv" ]; then
+      if [[ Pipfile -nt requirements.txt ]]; then
+        echo "Pipfile is newer than requirements.txt..."
+        REQUIREMENTS_REBUILD="1"
+      fi
+    else
+      if [[ pyproject.toml -nt requirements.txt ]]; then
+        echo "pyproject.toml is newer than requirements.txt..."
+        REQUIREMENTS_REBUILD="1"
+      fi
+      if [ -f uv.lock ] && [ uv.lock -nt requirements.txt ]; then
+        echo "uv.lock is newer than requirements.txt..."
+        REQUIREMENTS_REBUILD="1"
+      fi
+      if [ -f poetry.lock ] && [ poetry.lock -nt requirements.txt ]; then
+        echo "poetry.lock is newer than requirements.txt..."
+        REQUIREMENTS_REBUILD="1"
+      fi
+    fi
+
+    if [ "${REQUIREMENTS_REBUILD}" = "1" ]; then
+      echo "Rebuilding requirements.txt..."
+      if ! sh "${SCRIPTS_DIR}/../aws/run_aws.sh" requirements; then
+        echo "Failed to rebuild requirements.txt..."
+        exit_abort
+      fi
     fi
 }
 
 build_docker() {
     # Create and upload the docker image to ECR (docker_image, ecr_image)
 
-    # requirements_rebuild
-    # verify_requirements_with_local_dependencies
     docker_system_prune
 
     # Prepare the build directory
@@ -848,23 +989,9 @@ build_docker() {
     echo ${DOCKER_COMPOSE_CMD} -f docker-compose-big-lambda-${TARGET_OS}.yml down
     ${DOCKER_COMPOSE_CMD} -f docker-compose-big-lambda-${TARGET_OS}.yml down
 
-    echo ""
-    echo "Removing unnecessary files..."
-    rm app.${APP_NAME_LOWERCASE}.local.key
-    rm app.${APP_NAME_LOWERCASE}.local.crt
-    rm app.${APP_NAME_LOWERCASE}.local.chain.crt
-    rm ca.crt
-    # rm deployment.zip
-    rm template.yml
-    rm samconfig.toml
-    rm run_api_gateway.sh
-    rm docker-compose-big-lambda-${TARGET_OS}.yml
-    rm entry-${TARGET_OS}.sh
-    rm prepare_local_docker.sh
-    rm nginx.conf
+    remove_unnecessary_files
 
     # Build and test
-
     echo ""
     if ! ${DOCKER_CMD} kill ${LOCAL_LAMBDA_DOCKER_NAME}
     then
@@ -884,8 +1011,16 @@ build_docker() {
 
     # Build the docker image (previously buildx)
     echo ""
-    echo "${DOCKER_CMD} buildx build --platform linux/amd64 -t docker-image:${DOCKER_IMAGE_NAME} --provenance=false ."
-    ${DOCKER_CMD} buildx build --platform linux/amd64 -t docker-image:${DOCKER_IMAGE_NAME} --provenance=false . 
+    if [ "${CONTAINERS_ENGINE}" = "podman" ]; then
+      echo "Building image with Podman..."
+      echo "${DOCKER_CMD} buildx build --platform linux/amd64 -t docker-image:${DOCKER_IMAGE_NAME} --format docker ."
+      BUILDX_NO_DEFAULT_ATTESTATIONS=1
+      ${DOCKER_CMD} buildx build --platform linux/amd64 -t docker-image:${DOCKER_IMAGE_NAME} --format docker . 
+    else
+      echo "Building Docker image with buildx..."
+      echo "${DOCKER_CMD} buildx build --platform linux/amd64 -t docker-image:${DOCKER_IMAGE_NAME} --format docker --provenance=false ."
+      ${DOCKER_CMD} buildx build --platform linux/amd64 -t docker-image:${DOCKER_IMAGE_NAME} --provenance=false . 
+    fi
 
     # Run the docker container for the local testing
     echo ""
@@ -962,6 +1097,58 @@ build_docker() {
     echo ""
 }
 
+build_deployment_zip() {
+    # Create the deployment.zip file for Lambda deployment
+
+    # This is alway needed to have the template.yml and samconfig.toml files
+    echo ""
+    echo "Prepare the build directory..."
+    prepare_tmp_build_dir
+    remove_unnecessary_files
+
+    if [ "${USE_EXISTING_ZIP}" = "1" ] && [ -f "${TMP_BUILD_DIR}/../deployment.zip" ]; then
+      echo ""
+      echo "Using existing deployment.zip file..."
+      echo ""
+      return
+    fi
+
+    echo "Build directory content:"
+    cd "${TMP_BUILD_DIR}"
+    pwd
+    ls -la
+    echo ""
+
+    echo ""
+    echo "Building the deployment.zip file..."
+    echo ""
+    if ! chmod +x ${SCRIPTS_DIR}/zip-build-entrypoint.sh
+    then
+      echo "Error setting permissions for zip-build-entrypoint.sh"
+      exit 1
+    fi
+    if ! ${DOCKER_COMPOSE_CMD} -f "${SCRIPTS_DIR}/zip-build-docker-compose.yml" up
+    then
+      echo "Error running the container compose to build the deployment.zip file"
+      exit 1
+    fi
+    if [ ! -d "${TMP_BUILD_DIR}/genericsuite" ]; then
+      echo "Error building the deployment.zip file: 'genericsuite' directory not found in the build directory"
+      exit 1
+    fi
+
+    echo ""
+    echo "Creating deployment.zip file..."
+    echo ""
+    if ! zip -r ../deployment.zip .
+    then
+      echo "Error creating deployment.zip file"
+      exit 1
+    fi
+    echo ""
+    echo "Deployment.zip file created successfully"
+}
+
 deploy_with_sam() {
   cd ${SCRIPTS_DIR}
 
@@ -971,14 +1158,21 @@ deploy_with_sam() {
   echo "Current directory:"
   pwd
   echo ""
+
   if [ "${SAM_GUIDED}" = "y" ]; then
     # Guided SAM deployment
-    echo "sam deploy --guided"
-    sam deploy --guided
+
+    echo "sam deploy --guided --template-file ${TMP_WORKING_DIR}/template.yml --stack-name ${AWS_STACK_NAME} --region ${AWS_REGION} --config-file ${TMP_WORKING_DIR}/samconfig.toml"
+
+    sam deploy --guided --template-file ${TMP_WORKING_DIR}/template.yml --stack-name ${AWS_STACK_NAME} --region ${AWS_REGION} --config-file ${TMP_WORKING_DIR}/samconfig.toml 
+
   else
+
     DEPLOYMENT_ERROR="0"
     # Automatic SAM deployment (no prompts after the final confirmation)
+
     echo "sam deploy --template-file ${TMP_WORKING_DIR}/template.yml --stack-name ${AWS_STACK_NAME} --region ${AWS_REGION} --config-file ${TMP_WORKING_DIR}/samconfig.toml --capabilities CAPABILITY_IAM --no-confirm-changeset --no-disable-rollback ${SAM_FORCED} --save-params --resolve-image-repos"
+
     if ! sam deploy --template-file ${TMP_WORKING_DIR}/template.yml --stack-name ${AWS_STACK_NAME} --region ${AWS_REGION} --config-file ${TMP_WORKING_DIR}/samconfig.toml --capabilities CAPABILITY_IAM --no-confirm-changeset --no-disable-rollback ${SAM_FORCED} --save-params --resolve-image-repos
     then
       DEPLOYMENT_ERROR="1"
@@ -1612,9 +1806,15 @@ docker_dependencies() {
   if ! ${DOCKER_CMD} ps | grep dns-server -q
   then
       echo ""
-      echo "0)" make local_dns
+      echo "0)" Running local_dns
       echo ""
-      make local_dns
+      if ! sh "${SCRIPTS_DIR}/../dns/run_local_dns.sh"
+      then
+          echo ""
+          echo "Failed to run local DNS"
+          exit_abort
+      fi
+      echo "Finished running local DNS"
   fi
 }
 
@@ -1666,7 +1866,7 @@ FRONTEND_DIRECTORY="$3"
 
 REPO_BASEDIR="`pwd`"
 cd "`dirname "$0"`"
-SCRIPTS_DIR="`pwd`"
+export SCRIPTS_DIR="`pwd`"
 cd "${REPO_BASEDIR}"
 
 LAMBDA_PORT="9000"
@@ -1735,12 +1935,34 @@ if [ "${APP_DOMAIN_NAME}" = "" ]; then
 fi
 
 if [ "${STORAGE_URL_SEED}" = "" ]; then
-    echo "ERROR: STORAGE_URL_SEED not set"
-    exit 1
+    if [ "${STORAGE_URL_ENCRYPTION}" = "1" ]; then
+        echo "ERROR: STORAGE_URL_ENCRYPTION is set to 1 but STORAGE_URL_SEED is not set"
+        exit 1
+    fi
 fi
 
-TMP_BUILD_DIR="/tmp/${APP_NAME_LOWERCASE}_backend_aws_tmp"
-TMP_WORKING_DIR="/tmp"
+if [ "${AWS_LAMBDA_DEPLOYMENT_TYPE}" = "" ]; then
+  # Default to container
+  AWS_LAMBDA_DEPLOYMENT_TYPE="container"
+fi
+if [ "${AWS_LAMBDA_DEPLOYMENT_TYPE}" != "container" ] && [ "${AWS_LAMBDA_DEPLOYMENT_TYPE}" != "zip" ]; then
+    echo "ERROR: invalid AWS_LAMBDA_DEPLOYMENT_TYPE. This script only works with 'container' or 'zip'. Current value: '${AWS_LAMBDA_DEPLOYMENT_TYPE}'"
+    exit 1
+fi
+if [ "${AWS_LAMBDA_DEPLOYMENT_TYPE}" != "container" ]; then
+  if [ "${ACTION}" = "build_docker" ] || [ "${ACTION}" = "package" ]; then
+    echo "Skipping the entire execution because ACTION is '${ACTION}' and AWS_LAMBDA_DEPLOYMENT_TYPE is '${AWS_LAMBDA_DEPLOYMENT_TYPE}'"
+    exit 1
+  fi
+fi
+
+if [ "${PYTHON_VERSION}" = "" ]; then
+  echo "ERROR: PYTHON_VERSION not set"
+  exit 1
+fi
+
+export TMP_BUILD_DIR="${REPO_BASEDIR}/tmp/big_lambda_build_dir/${APP_NAME_LOWERCASE}_backend_aws_tmp"
+export TMP_WORKING_DIR="${REPO_BASEDIR}/tmp/big_lambda_working_dir"
 
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --output json --no-paginate | jq -r '.Account')
 AWS_LAMBDA_FUNCTION_NAME_AND_STAGE=$(echo ${AWS_LAMBDA_FUNCTION_NAME}-${STAGE_UPPERCASE} | tr '[:upper:]' '[:lower:]')
@@ -1787,6 +2009,7 @@ echo ""
 echo "1) Action (ACTION): ${ACTION}"
 echo "2) Stage (STAGE): ${STAGE}"
 echo "3) Frontend Directory (FRONTEND_DIRECTORY): ${FRONTEND_DIRECTORY}"
+echo "4) AWS Lambda Deployment Type (AWS_LAMBDA_DEPLOYMENT_TYPE): ${AWS_LAMBDA_DEPLOYMENT_TYPE}"
 echo ""
 echo "==========================="
 
@@ -1814,32 +2037,38 @@ else
   remember_endpoint_definitions
   echo ""
 
-  ask_for_force_ecr_image_creation
-  echo ""
-
-  ask_to_show_existing_ecr_images
-  echo ""
+  FORCE_ECR_IMAGE_CREATION="0"
+  if [ "${AWS_LAMBDA_DEPLOYMENT_TYPE}" = "container" ]; then
+    ask_for_force_ecr_image_creation
+    echo ""
+    ask_to_show_existing_ecr_images
+    echo ""
+  fi
 
   ask_for_app_version
   echo ""
 
-  ask_for_docker_image_version
-  echo ""
-
-  verify_docker_image_exist
-  if [ "${ERROR_MSG}" != "" ];then
+  DOCKER_IMAGE_VERSION=""
+  if [ "${AWS_LAMBDA_DEPLOYMENT_TYPE}" = "container" ]; then
+    ask_for_docker_image_version
     echo ""
-    echo "${ERROR_MSG}"
-    exit_abort
+
+    verify_docker_image_exists
+    if [ "${ERROR_MSG}" != "" ];then
+      echo ""
+      echo "${ERROR_MSG}"
+      exit_abort
+    fi
   fi
 
   ask_for_sam_guided_deployment
   echo ""
 
-  if [[ "${ACTION}" = "build_docker" || "${ACTION}" = "sam_deploy" ]]; then
-    ask_for_docker_system_prune
-  else
-    DOCKER_PRUNE="is_not_the_case"
+  DOCKER_PRUNE="is_not_the_case"
+  if [ "${AWS_LAMBDA_DEPLOYMENT_TYPE}" = "container" ]; then
+    if [ "${ACTION}" = "build_docker" ] || [ "${ACTION}" = "sam_deploy" ]; then
+      ask_for_docker_system_prune
+    fi
   fi
 
   ask_for_frontend_version_assignment
@@ -1858,12 +2087,17 @@ echo "App name (APP_NAME): ${APP_NAME}"
 echo "App version (APP_VERSION): ${APP_VERSION}"
 echo "App framework (CURRENT_FRAMEWORK): ${CURRENT_FRAMEWORK}"
 echo "App main directory and code file: (APP_DIR/APP_MAIN_FILE): "${APP_DIR}/${APP_MAIN_FILE}".py"
+echo "Python version (PYTHON_VERSION): ${PYTHON_VERSION}"
 echo ""
 echo "Target operating system (TARGET_OS): ${TARGET_OS}"
 echo ""
-echo "Local base directorry (REPO_BASEDIR): ${REPO_BASEDIR}"
-echo "Script direcrory (SCRIPTS_DIR): ${SCRIPTS_DIR}"
-echo "Temporary directory for build ECR image (TMP_BUILD_DIR): ${TMP_BUILD_DIR}"
+echo "Local base directory (REPO_BASEDIR): ${REPO_BASEDIR}"
+echo "Script directory (SCRIPTS_DIR): ${SCRIPTS_DIR}"
+if [ "${AWS_LAMBDA_DEPLOYMENT_TYPE}" = "container" ]; then
+  echo "Temporary directory for build ECR image (TMP_BUILD_DIR): ${TMP_BUILD_DIR}"
+else
+  echo "Temporary directory for build 'deployment.zip' file (TMP_BUILD_DIR): ${TMP_BUILD_DIR}"
+fi
 echo ""
 echo "Copy version to the Frontend (COPY_VERSION_TO_FRONTEND): ${COPY_VERSION_TO_FRONTEND}"
 echo ""
@@ -1871,9 +2105,9 @@ echo "AWS parameters:"
 echo ""
 echo "Account ID (AWS_ACCOUNT_ID): ${AWS_ACCOUNT_ID}"
 echo "Region (AWS_REGION): ${AWS_REGION}"
-echo "Force ECR image creation (FORCE_ECR_IMAGE_CREATION): ${FORCE_ECR_IMAGE_CREATION}"
-echo "Image URI (AWS_DOCKER_IMAGE_URI): ${AWS_DOCKER_IMAGE_URI}"
+echo "Deployment type (AWS_LAMBDA_DEPLOYMENT_TYPE): ${AWS_LAMBDA_DEPLOYMENT_TYPE}"
 if [ "${DEBUG}" = "1" ];then
+  echo ""
   echo "AWS_LAMBDA_FUNCTION_NAME: ${AWS_LAMBDA_FUNCTION_NAME}"
   echo "AWS_LAMBDA_FUNCTION_NAME_AND_STAGE: ${AWS_LAMBDA_FUNCTION_NAME_AND_STAGE}"
   echo "LAMBDA_PORT: ${LAMBDA_PORT}"
@@ -1881,11 +2115,15 @@ if [ "${DEBUG}" = "1" ];then
   echo "BACKEND_LOCAL_PORT: ${BACKEND_LOCAL_PORT}"
   echo "FRONTEND_LOCAL_PORT: ${FRONTEND_LOCAL_PORT}"
 fi
-echo ""
-echo "Docker parameters:"
-echo ""
-echo "Docker image name (DOCKER_IMAGE_NAME): ${DOCKER_IMAGE_NAME}"
-echo "Docker system prune (DOCKER_PRUNE): ${DOCKER_PRUNE}"
+if [ "${AWS_LAMBDA_DEPLOYMENT_TYPE}" = "container" ]; then
+  echo ""
+  echo "Docker parameters:"
+  echo ""
+  echo "Docker image name (DOCKER_IMAGE_NAME): ${DOCKER_IMAGE_NAME}"
+  echo "Docker system prune (DOCKER_PRUNE): ${DOCKER_PRUNE}"
+  echo "Force ECR image creation (FORCE_ECR_IMAGE_CREATION): ${FORCE_ECR_IMAGE_CREATION}"
+  echo "Image URI (AWS_DOCKER_IMAGE_URI): ${AWS_DOCKER_IMAGE_URI}"
+fi
 echo ""
 echo "SAM parameters"
 echo ""
@@ -1906,55 +2144,76 @@ sh ${SCRIPTS_DIR}/../show_date_time.sh
 echo ""
 perform_frontend_version_assignment
 
+BLM_ACTION="${ACTION}"
 docker_dependencies
+ACTION="${BLM_ACTION}"
+
+echo "Running action: ${ACTION}..."
 
 if [ "${ACTION}" = "down" ]; then
-    # if [ ! -f "${TMP_BUILD_DIR}/set_env_vars.sh" ];then
+    # Shut down the containers defined in docker-compose-big-lambda-${TARGET_OS}.yml
     if [ ! -f "${TMP_BUILD_DIR}/docker-compose-big-lambda-${TARGET_OS}.yml" ];then
         prepare_tmp_build_dir
     fi
-    # set -o allexport; . "${TMP_BUILD_DIR}/set_env_vars.sh" ; set +o allexport ;
     ${DOCKER_COMPOSE_CMD} -f ${TMP_BUILD_DIR}/docker-compose-big-lambda-${TARGET_OS}.yml down
     ${DOCKER_CMD} ps
 fi
 
 if [ "${ACTION}" = "enter" ]; then
+    # Enter the container defined in docker-compose-big-lambda-${TARGET_OS}.yml
     ${DOCKER_CMD} exec -ti ${LOCAL_LAMBDA_DOCKER_NAME} sh
 fi
 
 if [ "${ACTION}" = "test" ]; then
+  # Test the AWS Lambda locally
   test_lambda_docker
   test_nginx
   test_api_gateway
 fi
 
 if [ "${ACTION}" = "build_docker" ]; then
+  # Build the Docker image for the AWS Lambda deployment
   build_docker
 fi
 
 if [ "${ACTION}" = "sam_deploy" ]; then
-  if [ "${FORCE_ECR_IMAGE_CREATION}" = "1" ]; then
-    build_docker
+  # Deploy the AWS Lambda using SAM
+  echo "Deploying the AWS Lambda using SAM..."
+
+  if [ "${AWS_LAMBDA_DEPLOYMENT_TYPE}" = "container" ]; then
+    if [ "${FORCE_ECR_IMAGE_CREATION}" = "1" ]; then
+      build_docker
+    else
+      prepare_tmp_build_dir
+    fi
   else
-    prepare_tmp_build_dir
+    build_deployment_zip
   fi
+
   if [ "${DEPLOYMENT_METHOD}" = "deploy_with_sam" ];then
     deploy_with_sam
   else
     deploy_without_sam
   fi
-  # ECR image cleaning
-  cd "${REPO_BASEDIR}"
-  if [ "${DEPLOYMENT_ERROR}" = "0" ]; then
-    sh ${SCRIPTS_DIR}/../aws/clean_ecr_images.sh ${STAGE} 1
+
+  if [ "${AWS_LAMBDA_DEPLOYMENT_TYPE}" = "container" ]; then
+    # ECR image cleaning
+    cd "${REPO_BASEDIR}"
+    if [ "${DEPLOYMENT_ERROR}" = "0" ]; then
+      PERFORM_DELETION="1"
+      IMAGES_TO_KEEP="2"
+      sh ${SCRIPTS_DIR}/../aws/clean_ecr_images.sh ${STAGE} ${PERFORM_DELETION} ${IMAGES_TO_KEEP}
+    fi
   fi
 fi
 
 if [ "${ACTION}" = "tmp_dir" ]; then
+    # Prepare the temporary build directory only. Usefull to check the content of the directory and eventual issues
     prepare_tmp_build_dir
 fi
 
 if [ "${ACTION}" = "rebuild" ]; then
+    # Rebuild the AWS Lambda locally
     prepare_tmp_build_dir
     if ${DOCKER_CMD} ps | grep ${LOCAL_LAMBDA_DOCKER_NAME} -q
     then
@@ -1973,6 +2232,7 @@ if [ "${ACTION}" = "rebuild" ]; then
 fi
 
 if [ "${ACTION}" = "" ]; then
+    # Start the AWS Lambda locally
     prepare_tmp_build_dir
     if ${DOCKER_CMD} ps | grep ${LOCAL_LAMBDA_DOCKER_NAME} -q
     then
@@ -1992,23 +2252,19 @@ if [ "${ACTION}" = "" ]; then
 fi
 
 if [ "${ACTION}" = "sam_validate" ]; then
+  # Validate the SAM template
   prepare_tmp_build_dir
   echo sam validate -t ${TMP_WORKING_DIR}/template.yml
   sam validate -t ${TMP_WORKING_DIR}/template.yml
 fi
 
 if [ "${ACTION}" = "sam_run_local" ]; then
+  # Run the SAM project locally
+
   # Build the project using the temp dir root path
   CODE_URI_PATH="."
   # Avoid removing temporary files
   REMOVE_TEMP_FILES="0"
-
-  # Re-build requirements if Pipfile changed
-  # requirements_rebuild
-
-  # Verify local requirements and avoid "-e ../genericsuite..."
-  # verify_requirements_with_local_dependencies
-
   # Prepare SAM template.yml
   prepare_tmp_build_dir
   # Build local SAM project
@@ -2057,6 +2313,7 @@ if [ "${ACTION}" = "sam_run_local" ]; then
 fi
 
 if [ "${ACTION}" = "package" ]; then
+  # Package the AWS Lambda
   DOCKER_IMAGE_NAME="${DOCKER_IMAGE_NAME}_${APP_VERSION}"
   echo "Removing docker image docker-image:${DOCKER_IMAGE_NAME}..."
   if ${DOCKER_CMD} image inspect docker-image:${DOCKER_IMAGE_NAME} > /dev/null 2>&1; then

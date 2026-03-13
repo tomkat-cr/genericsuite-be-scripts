@@ -73,9 +73,10 @@ scripts/dns/Dockerfile
 
 response.json
 
-tmp
-
 localstack_requirements.txt
 venv
 scripts/code_generation/final_summary.txt
 scripts/code_generation/requirements.txt
+
+# Big lambdas deployment
+tmp

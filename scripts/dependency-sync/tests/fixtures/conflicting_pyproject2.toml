@@ -1,0 +1,11 @@
+[tool.poetry]
+name = "project-two"
+version = "0.1.0"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+requests = "~2.30.0"
+fastapi = "^0.104.0"
+pydantic = ">=1.10.0"
+click = ">=8.0.0"
+uvicorn = "^0.24.0"

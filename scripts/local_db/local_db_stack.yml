@@ -1,0 +1,199 @@
+# File: "scripts/local_db/local_db_stack.yml"
+# 2022-03-18 | CR
+
+# Local MongoDB stack:
+# Use http://localhost:8081 to access the MongoDb Admin UI.
+# Use user: "admin" and password: "pass" as credentials to access the Admin UI.
+# Use "mongodb://root:example@mongo:27017/" as URL to connect to the local MongoDb database.
+
+# Local DynamoDB stack:
+# Use http://localhost:8095 to access the DynamoDB Manager UI.
+# Configure it to connect to the local DynamoDB:
+#   [Add connection]
+#     Alias: Local
+#     Endpoint: http://127.0.0.1:8000
+#     Region: us-east-1
+#     Access Key: test
+#     Secret Key: test
+# The database port is 8000.
+#   dynamodb.endpoint = 'http://127.0.0.1:8000'
+#   dynamodb.endpoint = 'http://dynamodb-local:8000'
+
+# Local Postgres stack:
+# Use http://localhost:8080 to access the pgAdmin UI.
+# Use user: "admin@admin.com" and password: "admin" as credentials to access the pgAdmin UI.
+# The database port is 5432.
+# Use "postgresql://user:pass@postgres-local:5432/db" as URL to connect to the local Postgres database.
+
+# Local MySQL stack:
+# Use http://localhost:8082 to access the phpMyAdmin UI.
+# Use user: "root" and password: "pass" as credentials to access the phpMyAdmin UI.
+# The database port is 3306.
+# Use "mysql://root:pass@mysql-local:3306/db" as URL to connect to the local MySQL database.
+
+# Local Supabase stack:
+# There's no local implementation for Supabase.
+
+services:
+
+  mongo:
+    container_name: mongo-db
+    image: mongo:latest
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    ports:
+      - 27017:27017
+    expose:
+      - 27017
+    profiles:
+      - mongodb
+
+  mongo-express:
+    # http://localhost:8081
+    # Login:
+    #     Email: admin
+    #     Password: pass
+    container_name: mongo-express
+    image: mongo-express
+    restart: unless-stopped
+    ports:
+      - 8081:8081
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: pass
+      ME_CONFIG_MONGODB_URL: mongodb://root:example@mongo:27017/
+    profiles:
+      - mongodb
+
+  dynamodb-local:
+    # dynamodb.endpoint = 'http://127.0.0.1:8000'
+    # dynamodb.endpoint = 'http://dynamodb-local:8000'
+    container_name: dynamodb-local
+    image: amazon/dynamodb-local:latest
+    # YoyaTeam/dynamodb-manager : Error "Configuration is not in effect
+    # https://github.com/YoyaTeam/dynamodb-manager/issues/9
+    command: -Djava.library.path=./DynamoDBLocal_lib -jar DynamoDBLocal.jar -sharedDb -cors http://127.0.0.1:8095
+    platform: linux/x86_64
+    expose:
+      - 8000
+    ports:
+      - 8000:8000
+    profiles:
+      - dynamodb
+
+  dynamodb-manager:
+    # http://127.0.0.1:8095
+    # [Add connection]
+    #     Alias: Local
+    #     Endpoint: http://127.0.0.1:8000
+    #     Region: us-east-1
+    #     Access Key: test
+    #     Secret Key: test
+    container_name: dynamodb-manager
+    image: taydy/dynamodb-manager
+    platform: linux/x86_64
+    expose:
+      - 8095
+    ports:
+      - 8095:80
+    environment:
+      DISABLE_CORS_CHECKS: 1
+    profiles:
+      - dynamodb
+
+  postgres-local:
+    container_name: postgres-local
+    image: postgres:latest
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: db
+    expose:
+      - 5432
+    ports:
+      - 5432:5432
+    # healthcheck:
+    #   test: ["CMD", "pg_isready", "-U", "user"]
+    #   interval: 10s
+    #   timeout: 5s
+    #   retries: 5
+    profiles:
+      - postgres
+
+  pgadmin:
+    # http://localhost:8080
+    # Login:
+    #     Email: admin@admin.com
+    #     Password: admin
+    # [Add new server]
+    #     [General]:
+    #         Name: Localhost
+    #     [Connection]:
+    #         Host name/address: postgres-local (localhost doesn't work)
+    #         Port: 5432
+    #         Maintenance database: postgres
+    #         Username: user
+    #         Password: pass
+    # Database explorer:
+    #     [Servers]:
+    #         [Localhost]:
+    #             [Databases]:
+    #                 [db]:
+    #                     [Schemas]:
+    #                         [public]:
+    #                             [Tables]
+    container_name: pgadmin
+    image: dpage/pgadmin4
+    restart: unless-stopped
+    ports:
+      - 8080:80
+      - 8443:443
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    # links:
+    #   - postgres-local
+    # depends_on:
+    #   postgres-local:
+    #     condition: service_healthy
+    profiles:
+      - postgres
+
+  mysql-local:
+    container_name: mysql-local
+    image: mysql:latest
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: pass
+      MYSQL_DATABASE: db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: pass
+    expose:
+      - 3306
+    ports:
+      - 3306:3306
+    profiles:
+      - mysql
+
+  phpmyadmin:
+    # http://localhost:8082
+    # Login:
+    #     Server: mysql-local
+    #     User: root
+    #     Password: pass
+    container_name: phpmyadmin
+    image: phpmyadmin/phpmyadmin
+    restart: unless-stopped
+    ports:
+      - 8082:80
+    environment:
+      PMA_HOST: mysql-local
+      PMA_PORT: 3306
+      PMA_ARBITRARY: 1
+      # Set to 1 if using SSL for connecting to the database
+      PMA_SSL: 0 
+    profiles:
+      - mysql

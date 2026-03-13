@@ -22,9 +22,15 @@ SCRIPTS_DIR="`pwd`" ;
 WORKING_DIR="/tmp/generate_sam_dynamodb"
 mkdir -p "${WORKING_DIR}"
 
+echo ""
+echo "Creating virtual environment"
+echo ""
 python -m venv venv
 . venv/bin/activate
 
+echo ""
+echo "Installing dependencies"
+echo ""
 if [ ! -f requirements.txt ]; then
     pip install pyyaml
     pip freeze > requirements.txt

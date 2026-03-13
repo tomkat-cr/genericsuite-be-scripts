@@ -55,8 +55,8 @@ if [ "${APP_DB_URI}" = "" ]; then
     ERROR_MSG="ERROR: APP_DB_URI must be set";
     abort_with_help
 fi
-if [ "${APP_DB_ENGINE}" != "MONGO_DB" ]; then
-    ERROR_MSG="ERROR: App Engine must be 'MONGO_DB' (currently is '${APP_DB_ENGINE}' for ${APP_DB_NAME} in ${STAGE})";
+if [ "${APP_DB_ENGINE}" != "MONGODB" ]; then
+    ERROR_MSG="ERROR: App Engine must be 'MONGODB' (currently is '${APP_DB_ENGINE}' for ${APP_DB_NAME} in ${STAGE})";
     abort_with_help
 fi
 if [ "${STAGE_UPPERCASE}" = "PROD" ]; then

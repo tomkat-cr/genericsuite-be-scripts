@@ -14,6 +14,83 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 
 ### Removed
 
+### Security
+
+
+## [1.3.0] - 2026-02-18
+
+### Added
+- Sync Dependencies module ("scripts/dependency-sync") to sync python dependencies in a Dockerfile from GenericSuite monorepo backend directories ("./server" and "./mcp-server" with a "pyproject.toml" file) [GS-243].
+- "scripts/run_mcp_server.sh" to standardize the MCP server bash script [GS-243].
+- Postgres database support [GS-194].
+- Makes for Postgres:
+```
+make generate_postgres_dev_sql
+make create_postgres_dev_tables
+make generate_cf_postgres
+make deploy_postgres
+```
+- MySQL database support [GS-249].
+- Makes for MySQL:
+```
+make generate_mysql_dev_sql
+make create_mysql_dev_tables
+make generate_cf_mysql
+make deploy_mysql
+```
+- "make create-supad" to create the initial super admin user (supad) for local development environment [GS-125].
+- Field types h1 to h6 to JSON files [GS-250].
+- Validation for BACKEND_LOCAL_PORT and BACKEND_DEBUG_LOCAL_PORT to be different on the "secure_local_server/run.sh" script.
+- Ports and local database UI managers documentation in "scripts/local_db/local_db_stack.yml" [GS-249] [GS-194].
+- Zip option to AWS lambda deployment [GS-248].
+- AWS_LAMBDA_DEPLOYMENT_TYPE envvar to select the deployment type for AWS Lambda functions ("zip" or "container", default "container"). If the project includes GS BE AI, it cannot be "zip" due to AWS Lambda zip file size limit of 250 MB max [GS-248].
+- CICD envvar to "big_lambdas_manager.sh" to avoid asking for confirmation on several steps and run it non-interactively [GS-248].
+- USE_EXISTING_ZIP envvar to "big_lambdas_manager.sh" to use an existing zip file instead of building a new one [GS-248].
+- PATH_TO_SAVE_OPENAPI envvar to "run_aws.sh" to save the OpenAPI schema files [GS-245].
+- Implement Cloudflare Tunnel to allow https access to local development environment without Docker/local DNS and make localhost public for testing purposes, e.g. to access the PC camera (no port forwarding needed) [GS-257].
+- Add USE_CONTAINERS_ENGINE_APP envvar to turn on/off use containers engine app for local development environment when RUN_PROTOCOL="https" [GS-257].
+- Add RUN_PROTOCOL_AND_PORT_REPLACEMENT envvar to turn on/off automatic protocol and port replacement for local development environment variables APP_CORS_ORIGIN (assigned from APP_CORS_ORIGIN_{STAGE}), APP_FE_URL (assigned from APP_FE_URL_{STAGE}), and REACT_APP_API_URL (assigned from APP_API_URL_{STAGE}), depending on RUN_PROTOCOL value [GS-257].
+- Configure uvicorn to process proxy headers and forwarded IPs in the `run_aws.sh` script [GS-37].
+
+### Changed
+- Allow merge ".env" files between GenericSuite monorepo backends ("./server" and "./mcp-server"), rename APP_MAIN_FILE and APP_DIR envvars to MCP_APP_MAIN_FILE_DEV and MCP_APP_DIR_DEV in run_mcp_server.sh [GS-243].
+- Rename APP_DB_ENGINE values "MONGO_DB" and "DYNAMO_DB" to "MONGODB" and "DYNAMODB" [GS-194].
+- Profiles added to "local_db_stack.yml" so only the selected APP_DB_ENGINE is enabled [GS-194].
+- Remove all "link", "depends_on" and "healthcheck" sections in "local_db_stack.yml" to make it compatible with Podman [GS-215] [GS-194].
+- STORAGE_URL_SEED envvar is only required when STORAGE_URL_ENCRYPTION is set to 1 in "run_aws.sh" and "set_chalice_cnf.sh" [GS-72].
+- Rename "mongo" and "postgres" folders to more appropriate names, as they are now used for several databases: "mongo" is now "local_db", including local Docker containers for MongoDB, DynamoDB, Postgres, and MySQL. "postgres" is now "sql_db" because it works for Postgres and MySQL. [GS-249]:
+```
+/postgres -> /sql_db
+/postgres/generate_postgres_cf -> /sql_db/generate_sql_db_cf
+/postgres/generate_postgres_cf/run-postgres-deploy.sh -> /sql_db/generate_sql_db_cf/run_sql_db_deploy.sh
+
+/mongo/run_mongo_docker.sh -> /local_db/run_local_db_docker.sh
+/mongo/mongodb_stack_for_test.yml -> /local_db/local_db_stack.yml
+
+make mongo_docker -> make local-db-up
+make mongo_docker_down -> make local-db-down
+make mongo_logs -> make local-db-logs
+set_chalice_cnf.sh mongo_docker -> set_chalice_cnf.sh local_db_docker
+```
+- Rename HUGGINGFACE_TEXT_TO_IMAGE_ENDPOINT to HUGGINGFACE_DEFAULT_CHAT_MODEL [GS-59].
+- Pump up Python version to 3.12 on Big Lambdas Amazon Linux deployment, EC2 ELB deployment and local server Dockerfiles [GS-248].
+- Big Lambda python version 3.11 Dockerfile is on the "Dockerfile-big-lambda-AL2-python3.11" file [GS-248].
+- Add "v1" to endpoints defined in "aws_big_lambda/template-sam-endpoint-entry.yml" [GS-245].
+- Add additional debug to "run-cf-deployment.sh" and "aws_secrets_manager.sh" [GS-248].
+- Rename "dns/docker-compose.yml" to "dns/docker-compose-template.yml" [GS-215].
+- Due to the "fastmcp" and "mcp" dependencies removal, run_mcp_server.sh now verifies if both are installed [GS-248].
+- Upgrade Lambda runtime to Python 3.12, update API Gateway to OpenAPI 3.0.1 with CORS, and refactor endpoint definitions in "aws_big_lambda/template-sam.yml" [GS-245].
+
+### Fixed
+- Comment out cleanup commands in "run_aws.sh" to prevent accidental deletion of important files during the clean operation.
+- Rename CONTAINER_ENGINE with CONTAINERS_ENGINE [GS-215].
+- Fix "secure_local_server/run.sh" to run secure local server with Podman by creating a named volume to mount configuration files in the nginx container "/etc/nginx/conf.d" directory which is read-only and Podman does not allow to mount read-only directories the same way Docker does. Now GS is compatible with Podman [GS-215].
+- Local_dns works with Podman [GS-215].
+- APP_VERSION removed from CORE_ENVS in "aws_secrets/aws_secrets_manager.sh" separated from the rest of the environment variables that are pushed to AWS Secrets Manager and included in the AWS Lambda Function CloudFormation template "aws_big_lambda/template-sam.yml".
+
+### Security
+- All "requirements.txt" files are now ignored and recreated on demand to avoid vulnerability reposts and have the latest dependencies [GS-219].
+
 
 ## [1.2.0] - 2025-11-17
 
@@ -50,12 +127,13 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Add GOOGLE_MAPS_API_KEY, ANTHROPIC_API_KEY, GROQ_API_KEY, AIMLAPI_API_KEY, NVIDIA_API_KEY, RHYMES_CHAT_API_KEY, RHYMES_VIDEO_API_KEY, IBM_WATSONX_API_KEY, IBM_WATSONX_PROJECT_ID, OPENROUTER_API_KEY, XAI_API_KEY, TOGETHER_API_KEY to the EXTENSION_SECRETS envvar in aws_secrets_manager.sh [GS-198].
 - Implement RUN_PROTOCOL envvar to have the http/https protocol automatically on app local running, no user intervention, as part of the Turborepo initiative [GS-188].
 - Implement Podman as an alternative to Docker [GS-215].
-- Add CONTAINER_ENGINE and OPEN_CONTAINERS_ENGINE_APP envvars to GenericSuite BE Core [GS-215].
+- Add CONTAINERS_ENGINE and OPEN_CONTAINERS_ENGINE_APP envvars to GenericSuite BE Core [GS-215].
 - Add configurable backend ports using the envvar BACKEND_LOCAL_PORT and BACKEND_DEBUG_LOCAL_PORT to the "sls" (secure local server) [GS-137].
-- Add "check_if_engine_is_running" to container_engine_manager.sh, to check if docker/podman engine is running.
+- Add "check_if_engine_is_running" to container_engine_manager.sh, to check if Docker/Podman engine is running [GS-215].
+- Add "make lock" and "make npm_lock" [FA-84] [GS-15].
 
 ### Changed
-- Remove "make lock_pip_file" and replace it with "make requirements". Add "make lock" and "make npm_lock" [FA-84] [GS-15].
+- Rename "make lock_pip_file" to "make requirements" [FA-84] [GS-15].
 - "run_aws.sh" validates that CURRENT_FRAMEWORK is Chalice for "run", "deploy", "create_stack", "describe_stack", "delete_app", "delete_stack" commands, and runs "set_chalice_cnf.sh" for all those commands when it's Chalice [GS-15].
 
 ### Fixed
@@ -64,7 +142,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Fix the GenericSuite dependencies verification in "big_lambdas_manager.sh" to abort the execution if there are local dependencies [FA-169].
 - Fix missing "g++" running docker build in "big_lambdas_manager.sh", adding "RUN yum -y groupinstall 'Development Tools'" to the "Dockerfile-big-lambda-AL2" [FA-169].
 - Fix the error "The image manifest, config or layer media type for the source image xx.dkr.ecr.us-east-1.amazonaws.com/xxx:version is not supported" running docker build in "big_lambdas_manager.sh", adding `--provenance=false` to stop BuiltKit from generating said manifest [FA-169].
-- Fix the net:ERR_CERT_AUTHORITY_INVALID error in GenericSuite FE/BE using the https protocol [GS-198].
+- Fix the "net:ERR_CERT_AUTHORITY_INVALID" error in GenericSuite FE/BE using the https protocol [GS-198].
 - Fix TMP_BUILD_DIR assignment in dynamodb deploy script.
 - Fix "run_aws.sh" to assign the correct AWS Stack Name and avoid the error "An error occurred (ValidationError) when calling the DescribeStacks operation: 1 validation error detected: Value '${APP_NAME_LOWERCASE}-be-stack' at 'stackName' failed to satisfy constraint: Member must satisfy regular expression pattern: [a-zA-Z][-a-zA-Z0-9]*|arn:[-a-zA-Z0-9:/._+]*" [GS-137].
 - Fix ".chalice/config_example.json" to remove the API_GATEWAY_STAGE_placeholder from the "api_gateway_stage" attribute and assign the correct value, and remove unused attributes in the QA stage [FA-248].

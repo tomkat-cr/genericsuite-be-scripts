@@ -3,7 +3,7 @@
 # 2023-11-27 | CR
 
 docker_dependencies() {
-    if ! source "${SCRIPTS_DIR}/../container_engine_manager.sh" start "${CONTAINERS_ENGINE}" "${OPEN_CONTAINERS_ENGINE_APP}"
+    if ! source "${DNS_SCRIPTS_DIR}/../container_engine_manager.sh" start "${CONTAINERS_ENGINE}" "${OPEN_CONTAINERS_ENGINE_APP}"
     then
         echo ""
         echo "Could not run container engine '${CONTAINERS_ENGINE}' automatically"
@@ -20,16 +20,60 @@ docker_dependencies() {
 }
 
 prepare_podman() {
-    if [ "${CONTAINERS_ENGINE}" = "podman" ]; then
-        echo ">> Running: podman machine ssh \"sudo sysctl -w net.ipv4.ip_unprivileged_port_start=53\""
-        podman machine ssh "sudo sysctl -w net.ipv4.ip_unprivileged_port_start=53"
+    if [ "${CONTAINERS_ENGINE}" != "podman" ]; then
+        return
     fi
+    # Chek if "net.ipv4.ip_unprivileged_port_start=53" is set in /etc/sysctl.conf in the podman machine
+    # if ! podman machine ssh "cat /etc/sysctl.conf | grep net.ipv4.ip_unprivileged_port_start=53"
+    if ! podman machine ssh "grep -q net.ipv4.ip_unprivileged_port_start=53 /etc/sysctl.conf"
+    then
+        echo ""
+        echo "net.ipv4.ip_unprivileged_port_start=53 is not set in /etc/sysctl.conf in the podman machine"
+        echo ""
+        # Set "net.ipv4.ip_unprivileged_port_start=53" in /etc/sysctl.conf in the podman machine
+        echo "Running: podman machine ssh \"sudo bash -c 'echo \"net.ipv4.ip_unprivileged_port_start=53\" >> /etc/sysctl.conf'\""
+        echo ""
+        if ! podman machine ssh "sudo bash -c 'echo \"net.ipv4.ip_unprivileged_port_start=53\" >> /etc/sysctl.conf'"
+        then
+            echo ""
+            echo "Could not run podman machine ssh automatically"
+            echo ""
+            exit 1
+        fi
+
+        echo ">> Running: podman machine ssh \"sudo sysctl -w net.ipv4.ip_unprivileged_port_start=53\""
+        if ! podman machine ssh "sudo sysctl -w net.ipv4.ip_unprivileged_port_start=53"
+        then
+            echo ""
+            echo "Could not run podman machine ssh automatically"
+            echo ""
+            exit 1
+        fi
+
+        echo ""
+        echo "Restarting podman machine..."
+        echo ""
+        podman machine stop && podman machine start
+        if [ $? -ne 0 ]; then
+            echo ""
+            echo "Could not restart podman machine automatically"
+            echo ""
+            exit 1
+        fi
+    fi
+
+    # Replace "53:53/udp" and "53:53/tcp" in the docker-compose.yml file
+    perl -i -pe 's/53:53/5300:53/g' ${TMP_WORKING_DIR}/dns/docker-compose.yml
 }
 
-REPO_BASEDIR="`pwd`"
+docker_compose_down() {
+    ${DOCKER_COMPOSE_CMD} -f ${DNS_SCRIPTS_DIR}/docker-compose-template.yml down
+}
+
+DNS_REPO_BASEDIR="`pwd`"
 cd "`dirname "$0"`"
-CURRENT_SCRIPT_DIR="`pwd`"
-cd "${REPO_BASEDIR}"
+DNS_SCRIPTS_DIR="`pwd`"
+cd "${DNS_REPO_BASEDIR}"
 
 echo "Local DNS server starting..."
 
@@ -37,7 +81,6 @@ echo "Local DNS server starting..."
 set -o allexport; . .env ; set +o allexport ;
 
 docker_dependencies
-prepare_podman
 
 if [ "${APP_NAME}" = "" ]; then
     echo "APP_NAME environment variable must be defined"
@@ -54,14 +97,12 @@ export TMP_WORKING_DIR="/tmp"
 export APP_NAME_LOWERCASE=$(echo ${APP_NAME} | tr '[:upper:]' '[:lower:]')
 
 # These settings can be overwritten by the ".env" file
-# export SCRIPTS_DIR="./scripts"
-export SCRIPTS_DIR="${CURRENT_SCRIPT_DIR}/.."
 export DNS_SERVER_PASSW="dns_password"
 export DNS_DOMAIN_NAME="app.${APP_NAME_LOWERCASE}.local"
-ACTION="$1"
+DNS_ACTION="$1"
 
 # Get the local IP
-IP_ADDRESS=$(sh ${SCRIPTS_DIR}/get_localhost_ip.sh)
+IP_ADDRESS=$(sh ${DNS_SCRIPTS_DIR}/../get_localhost_ip.sh)
 
 # Removes the VPN IP address if it exists
 IP_ADDRESS_VPN=$(echo $IP_ADDRESS | awk '{print $2}')
@@ -76,27 +117,27 @@ if [ "${FRONTEND_LOCAL_PORT}" = "" ]; then
     FRONTEND_LOCAL_PORT="3000"
 fi
 
-if [ "${ACTION}" = "down" ]; then
-    ${DOCKER_COMPOSE_CMD} -f ${SCRIPTS_DIR}/dns/docker-compose.yml down
+if [ "${DNS_ACTION}" = "down" ]; then
+    docker_compose_down
 fi
 
-if [ "${ACTION}" = "rebuild" ]; then
-    ${DOCKER_COMPOSE_CMD} -f ${SCRIPTS_DIR}/dns/docker-compose.yml down
+if [ "${DNS_ACTION}" = "rebuild" ]; then
+    docker_compose_down
     ${DOCKER_CMD} image rm dns-dns-server
-    ACTION=""
+    DNS_ACTION=""
 fi
 
-if [ "${ACTION}" = "restart" ]; then
-    ${DOCKER_COMPOSE_CMD} -f ${SCRIPTS_DIR}/dns/docker-compose.yml down
-    ACTION=""
+if [ "${DNS_ACTION}" = "restart" ]; then
+    docker_compose_down
+    DNS_ACTION=""
 fi
 
-if [ "${ACTION}" = "enter" ]; then
+if [ "${DNS_ACTION}" = "enter" ]; then
     echo "Password: ${DNS_SERVER_PASSW}"
     ${DOCKER_CMD} exec -ti dns-server bash
 fi
 
-if [ "${ACTION}" = "test" ]; then
+if [ "${DNS_ACTION}" = "test" ]; then
     echo "Local IP address: ${IP_ADDRESS}"
     if [ "${IP_ADDRESS_VPN}" != "" ]; then
         echo "VPN IP address: ${IP_ADDRESS_VPN}"
@@ -135,7 +176,7 @@ if [ "${ACTION}" = "test" ]; then
     echo ""
 fi
 
-if [ "${ACTION}" = "" ]; then
+if [ "${DNS_ACTION}" = "" ]; then
 
     # This will be added to the DNS configuration file "/etc/bind/named.conf"
     echo "Creating ${TMP_WORKING_DIR}/dns/config/named-to-add.conf"
@@ -163,12 +204,12 @@ EOF
 @       IN      A       ${IP_ADDRESS}
 EOF
     echo "Copying ${TMP_WORKING_DIR}/dns/docker-compose.yml"
-    cp ${SCRIPTS_DIR}/dns/docker-compose.yml ${TMP_WORKING_DIR}/dns/docker-compose.yml
+    cp ${DNS_SCRIPTS_DIR}/docker-compose-template.yml ${TMP_WORKING_DIR}/dns/docker-compose.yml
     echo "Creating ${TMP_WORKING_DIR}/dns/Dockerfile"
-    cp ${SCRIPTS_DIR}/dns/Dockerfile.template ${TMP_WORKING_DIR}/dns/Dockerfile
+    cp ${DNS_SCRIPTS_DIR}/Dockerfile.template ${TMP_WORKING_DIR}/dns/Dockerfile
     perl -i -pe "s|APP_NAME_LOWERCASE_placeholder|${APP_NAME_LOWERCASE}|g" "${TMP_WORKING_DIR}/dns/Dockerfile"
 
-    if ! source "${SCRIPTS_DIR}/container_engine_manager.sh" start "${CONTAINERS_ENGINE}" "${OPEN_CONTAINERS_ENGINE_APP}"
+    if ! source "${DNS_SCRIPTS_DIR}/../container_engine_manager.sh" start "${CONTAINERS_ENGINE}" "${OPEN_CONTAINERS_ENGINE_APP}"
     then
         echo ""
         echo "Could not run container engine '${CONTAINERS_ENGINE}' automatically"
@@ -182,16 +223,24 @@ EOF
         exit_abort
     fi
 
+    prepare_podman
+
     # Restart the DNS contaier to apply the new configuration
     if ${DOCKER_CMD} ps | grep dns-server -q
     then
         ${DOCKER_CMD} restart dns-server
     else
-        ${DOCKER_COMPOSE_CMD} -f ${TMP_WORKING_DIR}/dns/docker-compose.yml up -d
+        if ! ${DOCKER_COMPOSE_CMD} -f ${TMP_WORKING_DIR}/dns/docker-compose.yml up -d
+        then
+            echo ""
+            echo "Could not start the DNS server"
+            echo ""
+            exit 1
+        fi
     fi
 
     # Refresh the forntend/backend ".env" files to reflect the new domain name
-    sh ${SCRIPTS_DIR}/change_local_ip_for_dev.sh ${DNS_DOMAIN_NAME}
+    sh ${DNS_SCRIPTS_DIR}/../change_local_ip_for_dev.sh ${DNS_DOMAIN_NAME}
 
     echo ""
     echo "All is set!"

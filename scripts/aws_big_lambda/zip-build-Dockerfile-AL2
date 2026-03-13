@@ -1,0 +1,18 @@
+# Dockerfile-zip-build-AL2
+# 2025-12-14 | CR
+# Used by: "scrips/aws_big_lambda/big_lambdas_manager.sh" to build the deployment.zip file
+
+FROM public.ecr.aws/lambda/python:3.12
+
+# Error: Please make sure the libxml2 and libxslt development packages are installed.
+    # google: alpine install libxml2-dev libxslt-dev python-dev
+    # https://stackoverflow.com/questions/5178416/libxml-install-error-using-pip
+    # google: alpine linux can't find Rust compiler
+    # https://github.com/docker/compose/issues/8105
+    # https://github.com/pyca/cryptography/blob/main/docs/installation.rst#alpine
+
+RUN dnf -y install \
+    gcc gcc-c++ \
+    libxslt-devel libxml2-devel \
+    redhat-rpm-config libffi-devel python3-devel openssl-devel cargo pkg-config \
+    git

@@ -1,9 +1,9 @@
-# Dockerfile
-# Jira Story: GS-96 - Script to deploy the app to EC2
+# aws_ec2_elb/Dockerfile.template
+# Script to deploy the app to EC2 [GS-96]
 # 2024-06-21 | CR
 
 # Use an official Python runtime as a parent image
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 # Set the working directory in the container
 WORKDIR /app

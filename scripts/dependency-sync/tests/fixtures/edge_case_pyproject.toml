@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "edge-case-project"
+version = "0.1.0"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+# Package with underscores and hyphens
+package-with-hyphens = "^1.0.0"
+package_with_underscores = "^2.0.0"
+# Package with numbers
+package123 = "^3.0.0"
+# Very long package name
+very-long-package-name-that-might-cause-formatting-issues = "^1.0.0"
+# Package with special characters in version
+special-package = "1.0.0a1"
+# Pre-release versions
+beta-package = "2.0.0b1"
+# Release candidates
+rc-package = "3.0.0rc1"
+# Development versions
+dev-package = "4.0.0.dev1"
+# Local versions
+local-package = "1.0.0+local.1"

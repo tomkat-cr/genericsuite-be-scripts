@@ -44,6 +44,9 @@ if [ "${ACTION}" = "" ]; then
     ACTION="generate"
 fi
 
+GT_ACTION=${ACTION}
+GT_STAGE=${STAGE}
+
 set -o allexport; . .env ; set +o allexport ;
 
 REPO_BASEDIR="`pwd`"
@@ -55,9 +58,15 @@ mkdir -p "${WORKING_DIR}"
 
 docker_dependencies
 
+echo ""
+echo "Creating virtual environment"
+echo ""
 python -m venv venv
 . venv/bin/activate
 
+echo ""
+echo "Installing dependencies"
+echo ""
 if [ ! -f requirements.txt ]; then
     pip install pyyaml boto3 botocore
     pip freeze > requirements.txt
@@ -77,13 +86,13 @@ if [ "${APP_NAME}" = "" ]; then
     exit 1
 fi
 
-if [ "${ACTION}" = "create_tables" ]; then
-    if [ "${STAGE}" = "" ]; then
-        echo 'ERROR: 'STAGE' environment variable must be set to run the '${ACTION}' action (dev, qa, staging, demo, prod)'
+if [ "${GT_ACTION}" = "create_tables" ]; then
+    if [ "${GT_STAGE}" = "" ]; then
+        echo 'ERROR: 'STAGE' environment variable must be set to run the '${GT_ACTION}' action (dev, qa, staging, demo, prod)'
         exit 1
     fi
     if [ "${AWS_REGION}" = "" ]; then
-        echo 'ERROR: 'AWS_REGION' environment variable must be set to run the '${ACTION}' action'
+        echo 'ERROR: 'AWS_REGION' environment variable must be set to run the '${GT_ACTION}' action'
         exit 1
     fi
 fi
@@ -92,15 +101,15 @@ APP_NAME_LOWERCASE=$(echo ${APP_NAME} | tr '[:upper:]' '[:lower:]')
 CF_TEMPLATE_NAME="cf-template-dynamodb.yml"
 FINAL_TARGET_DIR="${REPO_BASEDIR}/scripts/aws_dynamodb"
 
-STAGE_UPPERCASE=$(echo ${STAGE} | tr '[:upper:]' '[:lower:]')
+STAGE_UPPERCASE=$(echo ${GT_STAGE} | tr '[:upper:]' '[:lower:]')
 DYNAMDB_PREFIX=$(eval echo \$DYNAMDB_PREFIX_${STAGE_UPPERCASE})
 if [ "${DYNAMDB_PREFIX}" = "" ]; then
-    DYNAMDB_PREFIX="${APP_NAME_LOWERCASE}_${STAGE}_"
+    DYNAMDB_PREFIX="${APP_NAME_LOWERCASE}_${GT_STAGE}_"
 fi
 
 ERROR="0"
 DONE="0"
-if [ "${ACTION}" = "generate" ]; then
+if [ "${GT_ACTION}" = "generate" ]; then
     # "generate": generate the CloudFormation yaml file.
     if ! python -m generate_dynamodb_cf "${BASE_CONFIG_PATH}" "${WORKING_DIR}/${CF_TEMPLATE_NAME}" "" "0"
     then
@@ -111,14 +120,14 @@ if [ "${ACTION}" = "generate" ]; then
         DONE="1"
     fi
 fi
-if [ "${ACTION}" = "create_tables" ]; then
+if [ "${GT_ACTION}" = "create_tables" ]; then
     # "create_tables": create the tables in the local Docker DynamoDB instance.
     
-    # Verify if DynamoDB local container is running to avoid cycling "make mongo_docker" call
+    # Verify if DynamoDB local container is running to avoid cycling "make local-db-up" call
     if ! ${DOCKER_CMD} ps | grep dynamodb-local -q
     then
         cd "${REPO_BASEDIR}"
-        if ! make mongo_docker
+        if ! make local-db-up
         then
             echo ""
             echo "ERROR: Failed to start the local Docker databases container"
@@ -141,13 +150,13 @@ deactivate
 rm -rf __pycache__
 rm -rf venv
 
-if [ "${ACTION}" = "generate" ]; then
+if [ "${GT_ACTION}" = "generate" ]; then
     if [ "${ERROR}" = "1" ]; then
         echo ""
-        echo "ERROR: Failed to generate SAM template file"
+        echo "ERROR: Failed to generate CloudFormation template file"
     else
         echo ""
-        echo "Generated SAM template file in:"
+        echo "Generated CloudFormation template file in:"
         echo "${WORKING_DIR}/${CF_TEMPLATE_NAME}"
         echo ""
         echo "Do you want to edit it (y/n)?"
@@ -205,7 +214,7 @@ if [ "${ACTION}" = "generate" ]; then
     fi
 fi
 
-if [ "${ACTION}" = "create_tables" ]; then
+if [ "${GT_ACTION}" = "create_tables" ]; then
     if [ "${ERROR}" = "1" ]; then
         echo ""
         echo "ERROR: Failed to generate the DynamoDB tables in the local environment"
@@ -226,7 +235,7 @@ if [ "${ERROR}" = "0" ]; then
     if [ "${DONE}" = "1" ]; then
         echo "Done!"
     else
-        echo "ERROR: Invalid ACTION '${ACTION}'"
+        echo "ERROR: Invalid ACTION '${GT_ACTION}'"
     fi
 fi
 echo ""

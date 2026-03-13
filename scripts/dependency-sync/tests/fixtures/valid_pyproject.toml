@@ -1,0 +1,13 @@
+[tool.poetry]
+name = "test-project"
+version = "0.1.0"
+description = "Test project for dependency sync"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.104.1"
+uvicorn = {extras = ["standard"], version = "^0.24.0"}
+pydantic = ">=2.0.0"
+requests = "~2.31.0"
+click = "8.1.7"
+numpy = "*"

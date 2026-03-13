@@ -1,0 +1,5 @@
+FROM python:3.9
+RUN pip install --upgrade pip && pip install --no-cache-dir "fastapi==0.68.0" "uvicorn==0.15.0"
+COPY . /app
+WORKDIR /app
+CMD ["python", "main.py"]

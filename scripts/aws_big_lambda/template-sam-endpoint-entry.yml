@@ -1,4 +1,4 @@
-          /ENDPOINT_placeholder:
+          /v1/ENDPOINT_placeholder:
             get:
               consumes:
               - application/json

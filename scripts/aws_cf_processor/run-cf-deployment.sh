@@ -210,8 +210,19 @@ validate_cloud_cf_stack() {
     echo ""
     create_tmp_cf_template_file "${cf_template_file_original}"
     local cf_template_file="${TEMP_CF_TEMPLATE_FILE}"
+    if [ "${DEBUG}" = "1" ]; then
+        echo ""
+        echo "File to validate: ${cf_template_file}"
+        echo ""
+        cat ${cf_template_file}
+        echo ""
+        echo "Press any key to continue..."
+        read
+    fi
+    echo "Running CloudFormation template validation..."
+    echo "$AWS_COMMAND cloudformation validate-template --template-body file://${cf_template_file} --output text"
     if ! AWS_CMD_RESULT=$($AWS_COMMAND cloudformation validate-template --template-body file://${cf_template_file} --output text)
-        then
+    then
         echo "ERROR: CloudFormation template validation failed"
         echo "ERROR: ${AWS_CMD_RESULT}"
         exit_abort
@@ -245,6 +256,15 @@ create_and_test_cloud_cf_stack() {
     echo ""
     if [ "${cf_stack_parameters}" != "" ]; then
         cf_stack_parameters="--parameters ${cf_stack_parameters}"
+    fi
+    if [ "${DEBUG}" = "1" ]; then
+        echo ""
+        echo "File to validate: ${cf_template_file}"
+        echo ""
+        cat ${cf_template_file}
+        echo ""
+        echo "Press any key to continue..."
+        read
     fi
     echo "$AWS_COMMAND cloudformation ${STACK_ACTION} --stack-name ${cf_stack_name} --template-body file://${cf_template_file} ${cf_stack_parameters} --capabilities CAPABILITY_NAMED_IAM --output text"
     echo ""

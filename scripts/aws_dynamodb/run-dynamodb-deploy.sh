@@ -1,6 +1,6 @@
 #!/bin/bash
 # run-dynamodb-deploy.sh
-# Create AWS DynamoDD tbles using AWS CloudFormation templates.
+# Create AWS DynamoDB tables using AWS CloudFormation templates.
 # 2024-07-14 | CR
 # Usage:
 # scripts/aws_dynamodb/run-dynamodb-deploy.sh ACTION TARGET STAGE DEBUG

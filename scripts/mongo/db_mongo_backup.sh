@@ -84,8 +84,8 @@ if [ "${APP_DB_URI}" = "" ]; then
     ERROR_MSG="ERROR: Database connection URI must be set (APP_DB_URI_[stage])"
     abort_with_help
 fi
-if [ "${APP_DB_ENGINE}" != "MONGO_DB" ]; then
-    ERROR_MSG="ERROR: App Engine must be 'MONGO_DB' (APP_DB_ENGINE_[stage]). Currently is '${APP_DB_ENGINE}' for ${APP_DB_NAME} in ${STAGE})"
+if [ "${APP_DB_ENGINE}" != "MONGODB" ]; then
+    ERROR_MSG="ERROR: App Engine must be 'MONGODB' (APP_DB_ENGINE_[stage]). Currently is '${APP_DB_ENGINE}' for ${APP_DB_NAME} in ${STAGE})"
     abort_with_help
 fi
 

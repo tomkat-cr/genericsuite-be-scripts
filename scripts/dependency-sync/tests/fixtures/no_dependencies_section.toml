@@ -1,0 +1,7 @@
+[tool.poetry]
+name = "test-project"
+version = "0.1.0"
+description = "Test project without dependencies"
+
+[tool.poetry.dev-dependencies]
+pytest = "^7.0.0"

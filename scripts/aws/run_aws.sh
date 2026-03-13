@@ -65,8 +65,10 @@ if [ "${APP_DOMAIN_NAME}" = "" ]; then
 fi
 
 if [ "${STORAGE_URL_SEED}" = "" ]; then
-    echo "ERROR: STORAGE_URL_SEED not set"
-    exit 1
+    if [ "${STORAGE_URL_ENCRYPTION}" = "1" ]; then
+        echo "ERROR: STORAGE_URL_ENCRYPTION is set to 1 but STORAGE_URL_SEED is not set"
+        exit 1
+    fi
 fi
 
 if [ ! -d "./${APP_DIR}" ]; then
@@ -88,6 +90,15 @@ AWS_STACK_NAME="${APP_NAME_LOWERCASE}-be-stack"
 # RUN_METHOD="gunicorn"
 # RUN_METHOD="chalice"
 RUN_METHOD="chalice_docker"
+
+# Run protocol and port replacement: automatic protocol and port replacement for
+# local development environment variables REACT_APP_API_URL and APP_API_URL
+# when RUN_PROTOCOL="https" can be turned off by assigning RUN_PROTOCOL_AND_PORT_REPLACEMENT=0.
+# Defaults to "1"
+RUN_PROTOCOL_AND_PORT_REPLACEMENT=1
+
+# Whether to use containers engine app for local development environment when RUN_PROTOCOL="https". Defaults to "1"
+USE_CONTAINERS_ENGINE_APP=1
 
 echo "SCRIPTS_DIR: ${SCRIPTS_DIR}"
 echo "REPO_BASEDIR: ${REPO_BASEDIR}"
@@ -136,17 +147,17 @@ if [ "$1" = "clean" ]; then
     rm -rf __pycache__ ;
     rm -rf ../__pycache__ ;
     rm -rf bin ;
-    rm -rf include ;
-    rm -rf instance ;
-    rm -rf lib ;
-    rm -rf src ;
+    # rm -rf include ;
+    # rm -rf instance ;
+    # rm -rf lib ;
+    # rm -rf src ;
     rm -rf pyvenv.cfg ;
     rm -rf .vercel/cache ;
     rm -rf ../.vercel/cache ;
     rm -rf ../node_modules ;
-    rm requirements.txt
-    rm ../requirements.txt
-    rm -rf var ;
+    # rm requirements.txt
+    # rm ../requirements.txt
+    # rm -rf var ;
     ls -lah
 fi
 
@@ -165,6 +176,8 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
     echo "Port: ${BACKEND_LOCAL_PORT}"
     echo "Run method (RUN_METHOD): ${RUN_METHOD}"
     echo "Run protocol (RUN_PROTOCOL): ${RUN_PROTOCOL}"
+    echo "Run protocol and port replacement (RUN_PROTOCOL_AND_PORT_REPLACEMENT): ${RUN_PROTOCOL_AND_PORT_REPLACEMENT}"
+    echo "Use containers engine app (USE_CONTAINERS_ENGINE_APP): ${USE_CONTAINERS_ENGINE_APP}"
     echo "Python entry point (APP_DIR.APP_MAIN_FILE): ${APP_DIR}.${APP_MAIN_FILE}"
     echo ""
 
@@ -191,7 +204,7 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
     fi
 
     if [ "${STAGE}" = "dev" ];then
-        . ${SCRIPTS_DIR}/../get_domain_name_dev.sh "${STAGE}" "${APP_DOMAIN_NAME}" "${SCRIPTS_DIR}/.."
+        . ${SCRIPTS_DIR}/../get_domain_name_dev.sh "${STAGE}" "${APP_DOMAIN_NAME}" "${SCRIPTS_DIR}/.." "${USE_CONTAINERS_ENGINE_APP}"
         export GS_LOCAL_ENVIR="true"
     else
         . ${SCRIPTS_DIR}/../get_domain_name.sh "${STAGE}"
@@ -210,7 +223,7 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
     export AWS_S3_CHATBOT_ATTACHMENTS_BUCKET=$(eval echo \$AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_${STAGE_UPPERCASE})
 
     if [ "${CURRENT_FRAMEWORK}" = "chalice" ]; then
-        if [ "${RUN_PROTOCOL}" = "https" ]; then
+        if [ "${RUN_PROTOCOL}" = "https" ] && [ "${USE_CONTAINERS_ENGINE_APP}" = "1" ]; then
             export RUN_METHOD="chalice_docker"
         else
             export RUN_METHOD="chalice"
@@ -219,12 +232,17 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
     else
         if [ "${RUN_PROTOCOL}" = "http" ]; then
             make down_qa
-            echo "NOTE: The warning '-i used with no filenames on the command line, reading from STDIN.' is normal..."
-            echo ">> Old APP_CORS_ORIGIN: ${APP_CORS_ORIGIN}"
-            if [ "${APP_CORS_ORIGIN}" != "*" ]; then
-                export APP_CORS_ORIGIN="$(echo ${APP_CORS_ORIGIN} | perl -i -pe 's|https:\/\/|http:\/\/|')"
+
+            if [ "${RUN_PROTOCOL_AND_PORT_REPLACEMENT}" = "1" ]; then
+                echo "NOTE: The warning '-i used with no filenames on the command line, reading from STDIN.' is normal..."
+                echo ">> Old APP_CORS_ORIGIN: ${APP_CORS_ORIGIN}"
+                if [ "${APP_CORS_ORIGIN}" != "*" ]; then
+                    export APP_CORS_ORIGIN="$(echo ${APP_CORS_ORIGIN} | perl -i -pe 's|https:\/\/|http:\/\/|')"
+                fi
+                echo ">> New APP_CORS_ORIGIN: ${APP_CORS_ORIGIN}"
+            else
+                echo ">> APP_CORS_ORIGIN: ${APP_CORS_ORIGIN}"
             fi
-            echo ">> New APP_CORS_ORIGIN: ${APP_CORS_ORIGIN}"
         fi
     fi
 
@@ -259,7 +277,7 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
 
     if [ "${RUN_METHOD}" = "gunicorn" ]; then
         set_gunicorn_autoreload_option
-        if [ "${RUN_PROTOCOL}" = "https" ]; then
+        if [ "${RUN_PROTOCOL}" = "https" ] && [ "${USE_CONTAINERS_ENGINE_APP}" = "1" ]; then
             echo "${SCRIPTS_DIR}/../secure_local_server/run.sh"
             ${SCRIPTS_DIR}/../secure_local_server/run.sh "run" ${STAGE}
         else
@@ -282,19 +300,50 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
 
     if [ "${RUN_METHOD}" = "uvicorn" ]; then
         set_uvicorn_autoreload_option
-        if [ "${RUN_PROTOCOL}" = "https" ]; then
-            echo "${SCRIPTS_DIR}/../secure_local_server/run.sh"
-            ${SCRIPTS_DIR}/../secure_local_server/run.sh "run" ${STAGE}
-        else
-            echo "${PEM_TOOL} run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app ${AUTO_RELOAD_OPTION} --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT}"
+        if [ "${PATH_TO_SAVE_OPENAPI}" != "" ]; then
             echo ""
-            ${PEM_TOOL} run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app ${AUTO_RELOAD_OPTION} --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT}
+            echo "Generating the OpenAPI schema files..."
+            echo ""
+            # Run uvicorn in background and terminate it if it is already running
+            echo "Running: ${PEM_TOOL} run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app ${AUTO_RELOAD_OPTION} --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT} --proxy-headers --forwarded-allow-ips=\"*\""
+            
+            # nohup ${PEM_TOOL} run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app ${AUTO_RELOAD_OPTION} --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT} > /dev/null 2>&1 &
+            ${PEM_TOOL} run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app ${AUTO_RELOAD_OPTION} --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT} --proxy-headers --forwarded-allow-ips="*" &
+            UVICORN_PID=$!
+            
+            echo "Waiting for the server (PID: ${UVICORN_PID}) to start..."
+            for i in {1..30}; do
+                # Assuming /docs is your OpenAPI UI endpoint, which is common for FastAPI.
+                # Adjust if your health check endpoint is different.
+                if curl -s --head "http://localhost:${BACKEND_LOCAL_PORT}/docs" | head -n 1 | grep "HTTP/1.[1-9] [23].." > /dev/null; then
+                    echo "Server is up!"
+                    # Here you would have the logic to fetch and save the OpenAPI schema.
+                    # For example: curl http://localhost:${BACKEND_LOCAL_PORT}/openapi.json > ${PATH_TO_SAVE_OPENAPI}/openapi.json
+                    break
+                fi
+                echo "Waiting for server... attempt $i"
+                sleep 1
+            done
+
+            echo "Stopping the process: ${UVICORN_PID}"
+            kill ${UVICORN_PID}
+            wait ${UVICORN_PID} 2>/dev/null # Wait for the process to terminate
+            echo ""
+        else
+            if [ "${RUN_PROTOCOL}" = "https" ] && [ "${USE_CONTAINERS_ENGINE_APP}" = "1" ]; then
+                echo "${SCRIPTS_DIR}/../secure_local_server/run.sh"
+                ${SCRIPTS_DIR}/../secure_local_server/run.sh "run" ${STAGE}
+            else
+                echo "${PEM_TOOL} run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app ${AUTO_RELOAD_OPTION} --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT} --proxy-headers --forwarded-allow-ips=\"*\""
+                echo ""
+                ${PEM_TOOL} run uvicorn ${APP_DIR}.${APP_MAIN_FILE}:app ${AUTO_RELOAD_OPTION} --host 0.0.0.0 --port ${BACKEND_LOCAL_PORT} --proxy-headers --forwarded-allow-ips="*"
+            fi
         fi
     fi
 
     # Stop local NGINX
     if [ "${STAGE}" = "dev" ];then
-        bash ${SCRIPTS_DIR}/../get_domain_name_dev.sh "stop_local_nginx" "${APP_DOMAIN_NAME}" "${SCRIPTS_DIR}/.."
+        bash ${SCRIPTS_DIR}/../get_domain_name_dev.sh "stop_local_nginx" "${APP_DOMAIN_NAME}" "${SCRIPTS_DIR}/.." "${USE_CONTAINERS_ENGINE_APP}"
     fi
 fi
 

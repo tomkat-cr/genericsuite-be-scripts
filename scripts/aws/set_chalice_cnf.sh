@@ -41,9 +41,12 @@ if [ "${APP_DOMAIN_NAME}" = "" ]; then
     echo "ERROR: APP_HOST_NAME not set"
     exit 1
 fi
+
 if [ "${STORAGE_URL_SEED}" = "" ]; then
-    echo "ERROR: STORAGE_URL_SEED not set"
-    exit 1
+    if [ "${STORAGE_URL_ENCRYPTION}" = "1" ]; then
+        echo "ERROR: STORAGE_URL_ENCRYPTION is set to 1 but STORAGE_URL_SEED is not set"
+        exit 1
+    fi
 fi
 
 if [[ "${CURRENT_FRAMEWORK}" != "chalice" && "${CURRENT_FRAMEWORK}" != "chalice_docker" ]]; then
@@ -99,7 +102,7 @@ if [ "${TARGET_STAGE}" = "qa" ] && [ "${TARGET_ACTION}" = "http" ]; then
     echo "APP_CORS_ORIGIN_QA after: ${APP_CORS_ORIGIN_QA}"
 fi
 
-if [ "${TARGET_STAGE}" == "mongo_docker" ]; then
+if [ "${TARGET_STAGE}" == "local_db_docker" ]; then
     export APP_STAGE="dev"
     APP_DB_NAME_DEV="mongo"
     APP_DB_URI_DEV="mongodb://root:example@127.0.0.1:27017/"
@@ -173,7 +176,7 @@ perl -i -pe"s|GOOGLE_CSE_ID_placeholder|${GOOGLE_CSE_ID}|g" "${CONFIG_FILE}"
 perl -i -pe"s|LANGCHAIN_API_KEY_placeholder|${LANGCHAIN_API_KEY}|g" "${CONFIG_FILE}"
 perl -i -pe"s|LANGCHAIN_PROJECT_placeholder|${LANGCHAIN_PROJECT}|g" "${CONFIG_FILE}"
 perl -i -pe"s|HUGGINGFACE_API_KEY_placeholder|${HUGGINGFACE_API_KEY}|g" "${CONFIG_FILE}"
-perl -i -pe"s|HUGGINGFACE_ENDPOINT_URL_placeholder|${HUGGINGFACE_ENDPOINT_URL}|g" "${CONFIG_FILE}"
+perl -i -pe"s|HUGGINGFACE_DEFAULT_CHAT_MODEL_placeholder|${HUGGINGFACE_DEFAULT_CHAT_MODEL}|g" "${CONFIG_FILE}"
 
 perl -i -pe"s|SMTP_SERVER_placeholder|${SMTP_SERVER}|g" "${CONFIG_FILE}"
 perl -i -pe"s|SMTP_PORT_placeholder|${SMTP_PORT}|g" "${CONFIG_FILE}"

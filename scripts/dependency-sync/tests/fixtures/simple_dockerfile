@@ -1,0 +1,7 @@
+FROM python:3.9
+
+RUN pip install --no-cache-dir \
+    "uvicorn[standard]>=0.15.0"
+
+COPY . /app
+WORKDIR /app
