@@ -24,7 +24,8 @@ prepare_podman() {
         return
     fi
     # Chek if "net.ipv4.ip_unprivileged_port_start=53" is set in /etc/sysctl.conf in the podman machine
-    if ! podman machine ssh "cat /etc/sysctl.conf | grep net.ipv4.ip_unprivileged_port_start=53"
+    # if ! podman machine ssh "cat /etc/sysctl.conf | grep net.ipv4.ip_unprivileged_port_start=53"
+    if ! podman machine ssh "grep -q net.ipv4.ip_unprivileged_port_start=53 /etc/sysctl.conf"
     then
         echo ""
         echo "net.ipv4.ip_unprivileged_port_start=53 is not set in /etc/sysctl.conf in the podman machine"
