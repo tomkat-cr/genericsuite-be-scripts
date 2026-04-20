@@ -17,6 +17,13 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Security
 
 
+## [Unreleased] - 2026-04-03
+
+### Added
+- AGENTS.md and CLAUDE.md files to provide context and instructions to AI agents [GS-303].
+- Add SAST testing [GS-315].
+
+
 ## [1.3.0] - 2026-02-18
 
 ### Added

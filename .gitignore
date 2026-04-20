@@ -80,3 +80,6 @@ scripts/code_generation/requirements.txt
 
 # Big lambdas deployment
 tmp
+
+# Claude Code
+.claude/settings.local.json

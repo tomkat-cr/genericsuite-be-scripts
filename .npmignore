@@ -73,3 +73,5 @@ scripts/dns/Dockerfile
 response.json
 
 tmp
+
+.claude/settings.local.json

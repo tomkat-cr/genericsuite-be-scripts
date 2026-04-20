@@ -371,13 +371,16 @@ init_chalice:
 npm_lock:
 	npm install --package-lock-only
 
-pre-publish:
+pre-publish: sast-test
 	bash scripts/npm_publish.sh pre-publish
 
-publish:
+publish: sast-test
 	bash scripts/npm_publish.sh publish
 
 ## Pypi library scripts
+
+sast-test:
+	bash scripts/sast_test.sh
 
 pypi-build:
 	# Build 'dist' directory needed for the Pypi publish
@@ -413,3 +416,6 @@ cf-tunnel-check:
 
 cf-tunnel-delete:
 	ACTION=delete bash node_modules/genericsuite-be-scripts/scripts/cloudfared-tunnel-manager.sh
+
+agents_md_link:
+	ln -s CLAUDE.md AGENTS.md

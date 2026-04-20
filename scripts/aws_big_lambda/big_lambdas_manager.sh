@@ -1,5 +1,6 @@
 #!/bin/bash
 # aws_big_lambda/big_lambdas_manager.sh
+# Deploy AWS Lambda Functions (Python) with ECR container images and the API Gateway service
 # 2023-12-10 | CR
 
 # Reference:

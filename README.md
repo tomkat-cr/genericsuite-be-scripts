@@ -1,4 +1,4 @@
-# The GenericSuite Scripts (backend version).
+# The GenericSuite Scripts (backend version)
 
 <img 
     align="right"
@@ -8,19 +8,20 @@
     title="GenericSuite logo by Carlos J. Ramirez"
 />
 
-[GenericSuite](https://www.carlosjramirez.com/genericsuite/) is a versatile backend solution, designed to provide a comprehensive suite of features for Python APIs. It supports various frameworks including Chalice, FastAPI, and Flask, making it adaptable to a range of projects.<be/>
-This repository contains the backend scripts necessary to build and deploy APIs made by the backend version of [The GenericSuite](https://www.carlosjramirez.com/genericsuite/).
+[GenericSuite](https://www.carlosjramirez.com/genericsuite/) is a versatile backend solution, designed to provide a comprehensive suite of features for Python APIs. It supports various frameworks including Chalice, FastAPI, and Flask, making it adaptable to a range of projects.
+
+This repository contains the scripts necessary to build and deploy API apps using [The GenericSuite](https://www.carlosjramirez.com/genericsuite/).
 
 ## Features
 
 - **AWS Deployment**: Deployment to AWS as Lambda Function with API Gateway usig SAM (AWS Serverless Application Model).
 - **Local Development Environment**: running with http or https, with or without Docker.
 - **Local DNS Server**: to allow https API access with a domain name like `app.exampleapp.local` and allow access from another devices locally (e.g. smartphones) to test your App.
-- **Self-signed SSL certificates creation**: to allow local development frontend and backend environments run over secure https connections.
+- **Self-signed SSL certificates creation**: to allow local development backend environments run over secure https connections.
 - **Common JSON config management**: to add the Git Submodule with the common JSON config directories.
 - **Local MongoDB Docker conntainer**: used by the test site and allows to have an offline local development environment.
-
-
+- **SAST Scanner**: to scan the code for security vulnerabilities.
+- **Test scripts**: to run tests.
 
 ## Getting Started
 

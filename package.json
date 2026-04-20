@@ -1,7 +1,7 @@
 {
-  "name": "genericsuite-be-scripts",
+  "name": "genericsuite-be-scripts (backend version)",
   "version": "1.3.0",
-  "description": "GenericSuite Scripts (backend version)",
+  "description": "GenericSuite Scripts",
   "author": "Carlos J. Ramirez <info@genericsuite.com>",
   "license": "ISC",
   "files": [
