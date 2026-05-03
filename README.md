@@ -38,7 +38,7 @@ Check the [The GenericSuite backend development scripts](https://genericsuite.ca
 
 ## License
 
-GenericSuite is open-sourced software licensed under the [ISC license](./LICENSE).
+GenericSuite is open-sourced software licensed under the [MIT license](./LICENSE).
 
 ## Credits
 

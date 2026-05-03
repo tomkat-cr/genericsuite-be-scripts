@@ -23,6 +23,9 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - AGENTS.md, GEMINI.md, and CLAUDE.md files to provide context and instructions to AI Coding Assistants [GS-303].
 - Add SAST testing [GS-315].
 
+### Changed
+- License changed to MIT [FA-244].
+
 
 ## [1.3.0] - 2026-02-18
 
