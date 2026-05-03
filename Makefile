@@ -416,6 +416,3 @@ cf-tunnel-check:
 
 cf-tunnel-delete:
 	ACTION=delete bash node_modules/genericsuite-be-scripts/scripts/cloudfared-tunnel-manager.sh
-
-agents_md_link:
-	ln -s CLAUDE.md AGENTS.md

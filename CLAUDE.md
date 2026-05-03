@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to AI Coding Assistants (Claude Code, Gemini CLI, Cursor, Antigravity, etc.) when working with code in this repository.
 
 ## Project Overview
 
@@ -20,7 +20,6 @@ make local-db-down    # Stop local DB Docker containers
 make local-db-logs    # View local DB container logs
 make link_gs_libs     # Symlink local GenericSuite libs for development
 make create-supad     # Create super admin user (use CHECKING=1 STAGE=dev make create-supad to preview)
-make agents_md_link        # Link AGENTS.md and CLAUDE.md files
 ```
 
 ### Testing & Quality
@@ -144,7 +143,7 @@ Security scanning (`sast-test`) is **mandatory** before publishing. The `make pu
 
 ## Important Notes
 
-- The `AGENTS.md` file (if present) is a symlink to `CLAUDE.md` — edit only `CLAUDE.md`.
+- The files `AGENTS.md`, `GEMINI.md`, etc. (if present) have only a referece to `@CLAUDE.md` — edit only `CLAUDE.md`.
 - Skills, commands, rules, and sub-agents are located in the `.claude/` directory.
 - Scripts detect Docker vs Podman via `scripts/container_engine_manager.sh`.
 - Node version is pinned to 20 via `.nvmrc`.
