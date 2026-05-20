@@ -74,4 +74,9 @@ response.json
 
 tmp
 
-.claude/settings.local.json
+# AI Agents
+.claude
+.agents
+.codex
+.cursor
+.gemini
