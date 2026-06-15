@@ -144,7 +144,7 @@ Security scanning (`sast-test`) is **mandatory** before publishing. The `make pu
 ## Important Notes
 
 - The files `AGENTS.md`, `GEMINI.md`, etc. (if present) have only a referece to `@CLAUDE.md` — edit only `CLAUDE.md`.
-- Skills, commands, rules, and sub-agents are located in the `.claude/` directory.
+- Skills live in `.ai/skills/` (source of truth); symlinked under `.agents/skills/`, `.claude/skills/`, `.codex/skills/`, `.gemini/skills/`, and `.devin/skills/`.
 - Scripts detect Docker vs Podman via `scripts/container_engine_manager.sh`.
 - Node version is pinned to 20 via `.nvmrc`.
 - Default Python package manager is `uv`; scripts also support `poetry` and `pipenv`.

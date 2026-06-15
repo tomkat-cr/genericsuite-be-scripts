@@ -21,11 +21,12 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 
 ### Added
 - AGENTS.md, GEMINI.md, and CLAUDE.md files to provide context and instructions to AI Coding Assistants [GS-303].
-- Add SAST testing [GS-315].
+- SAST testing [GS-315].
+- AWS_SSL_CERTIFICATE_ARN_BE to the `big_lambdas_manager.sh` script [GS-328]
 
 ### Changed
 - License changed to MIT [FA-244].
-
+- Enhance error handling and messaging in the `set_fe_cloudfront_domain.sh` script [GS-328]
 
 ## [1.3.0] - 2026-02-18
 

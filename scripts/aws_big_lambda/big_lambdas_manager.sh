@@ -750,6 +750,12 @@ create_sam_yaml() {
   else
     domain="${DOMAIN_NAME}"
     get_ssl_cert_arn
+
+    if [ "${AWS_SSL_CERTIFICATE_ARN_BE}" != "" ];then
+        AWS_SSL_CERTIFICATE_ARN="${AWS_SSL_CERTIFICATE_ARN_BE}"
+        echo "Using AWS_SSL_CERTIFICATE_ARN_BE..."
+    fi
+
     if [ "${ACM_CERTIFICATE_ARN}" = "" ]; then
       echo ""
       echo ">>> WARNING: ACM Certificate ARN not found for '${domain}'"
