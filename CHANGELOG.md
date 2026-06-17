@@ -4,16 +4,12 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Changelog](http://keepachangelog.com/).
 
 
-## [Unreleased]
+## [Unreleased] - YYYY-MM-DD
 
 ### Added
-
 ### Changed
-
 ### Fixed
-
 ### Removed
-
 ### Security
 
 
@@ -23,6 +19,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - AGENTS.md, GEMINI.md, and CLAUDE.md files to provide context and instructions to AI Coding Assistants [GS-303].
 - SAST testing [GS-315].
 - AWS_SSL_CERTIFICATE_ARN_BE to the `big_lambdas_manager.sh` script [GS-328]
+- Multiple CORS Origins support to FastAPI in the `aws_big_lambda/template-sam.yml` file [GS-329].
 
 ### Changed
 - License changed to MIT [FA-244].
