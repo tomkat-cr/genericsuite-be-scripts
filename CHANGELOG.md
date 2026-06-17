@@ -24,6 +24,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Changed
 - License changed to MIT [FA-244].
 - Enhance error handling and messaging in the `set_fe_cloudfront_domain.sh` script [GS-328]
+- Initialize APP_ENVS variable in `update_additional_envvars.sh` for app-specific environment variables example [GS-329].
 
 ## [1.3.0] - 2026-02-18
 
