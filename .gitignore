@@ -96,3 +96,4 @@ tmp
 .terraform.lock.hcl
 *.tfstate
 *.tfstate.*
+scripts/aws_tf/stacks/dynamodb/dynamodb.auto.tfvars.json
