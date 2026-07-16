@@ -34,7 +34,7 @@ def get_table_definition(config: dict) -> dict:
 
 
 def generate_tables(basedir: str) -> list:
-    tables = []
+    tables = {}
     dir_path = os.path.join(basedir, 'frontend')
     for root, _, files in os.walk(dir_path):
         for file in sorted(files):
@@ -48,8 +48,8 @@ def generate_tables(basedir: str) -> list:
                     config.update(json.load(f))
             definition = get_table_definition(config)
             if definition:
-                tables.append(definition)
-    return tables
+                tables[definition['name']] = definition
+    return list(tables.values())
 
 
 def main():
