@@ -90,3 +90,9 @@ tmp
 .codex
 .cursor
 .gemini
+
+# OpenTofu [GS-334]
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
