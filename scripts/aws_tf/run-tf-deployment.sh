@@ -92,6 +92,10 @@ if [ "${AWS_LAMBDA_FUNCTION_NAME:-}" != "" ]; then
     export TF_VAR_lambda_function_name
 fi
 export TF_VAR_app_domain_name="${APP_DOMAIN_NAME:-}"
+export TF_VAR_tf_state_bucket="${TF_STATE_BUCKET}"
+if [ "${ECR_DOCKER_IMAGE_TAG:-}" != "" ]; then
+    export TF_VAR_ecr_image_tag="${ECR_DOCKER_IMAGE_TAG}"
+fi
 
 # Optional per-stack variable builder (e.g. secrets maps, dynamodb tables)
 if [ -f "${SCRIPTS_DIR}/stacks/${STACK}/build-tfvars.sh" ]; then

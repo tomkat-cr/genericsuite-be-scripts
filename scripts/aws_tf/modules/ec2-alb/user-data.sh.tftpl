@@ -1,0 +1,54 @@
+#!/bin/bash
+exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+echo "Starting GS instance boot sequence..."
+
+yum update -y
+yum install aws-cli jq amazon-ssm-agent amazon-cloudwatch-agent -y
+
+cat <<EOF > /opt/aws/amazon-cloudwatch-agent/bin/config.json
+{
+  "agent": { "metrics_collection_interval": 60, "run_as_user": "root" },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/var/log/user-data.log",
+            "log_group_name": "${log_group_name}",
+            "log_stream_name": "{instance_id}-user-data-logs"
+          },
+          {
+            "file_path": "/var/log/docker",
+            "log_group_name": "${log_group_name}",
+            "log_stream_name": "{instance_id}-docker-logs"
+          }
+        ]
+      }
+    }
+  },
+  "metrics": {
+    "metrics_collected": {
+      "disk": { "measurement": ["used_percent"], "metrics_collection_interval": 60, "resources": ["/"] },
+      "mem": { "measurement": ["mem_used_percent"], "metrics_collection_interval": 60 }
+    }
+  }
+}
+EOF
+/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json
+
+amazon-linux-extras install docker -y
+systemctl start amazon-ssm-agent
+systemctl start docker
+systemctl enable docker
+
+aws ecr get-login-password --region ${aws_region} | docker login --username AWS --password-stdin ${aws_account_id}.dkr.ecr.${aws_region}.amazonaws.com
+docker pull ${ecr_image_uri}:${ecr_image_tag} > /dev/null 2>&1
+docker run -d -p 80:80 --name gs_app_be -e CLOUD_PROVIDER=aws -e APP_NAME=${app_name} -e APP_STAGE=${stage} -e AWS_REGION=${aws_region} ${ecr_image_uri}:${ecr_image_tag}
+
+if [ "$(docker ps -q -f name=gs_app_be)" ]; then
+  echo "Container is running successfully."
+else
+  echo "Container failed to start. Check docker logs."
+  docker logs gs_app_be
+fi
+echo "GS instance boot sequence finished"
