@@ -44,6 +44,11 @@ case "${ACTION}" in
     *) usage_abort "Unknown ACTION '${ACTION}'" ;;
 esac
 
+case "${STAGE}" in
+    dev|qa|staging|demo|prod) ;;
+    *) usage_abort "Unknown STAGE '${STAGE}'" ;;
+esac
+
 CICD_MODE="${CICD_MODE:-0}"
 
 # Load the consuming app's .env
@@ -63,7 +68,7 @@ STAGE_UPPERCASE="$(echo "${STAGE}" | tr '[:lower:]' '[:upper:]')"
 APP_NAME_LOWERCASE="$(echo "${APP_NAME}" | tr '[:upper:]' '[:lower:]')"
 
 if [ "${AWS_ACCOUNT_ID:-}" = "" ]; then
-    AWS_ACCOUNT_ID="$(aws sts get-caller-identity --output json --no-paginate | jq -r '.Account')"
+    AWS_ACCOUNT_ID="$(aws sts get-caller-identity --output json --no-paginate 2>/dev/null | jq -r '.Account' || true)"
 fi
 if [ "${AWS_ACCOUNT_ID}" = "" ] || [ "${AWS_ACCOUNT_ID}" = "null" ]; then
     echo "ERROR: AWS_ACCOUNT_ID could not be retrieved. Configure AWS credentials."
@@ -79,7 +84,8 @@ export TF_VAR_stage="${STAGE}"
 export TF_VAR_aws_region="${AWS_REGION}"
 export TF_VAR_aws_account_id="${AWS_ACCOUNT_ID}"
 export TF_VAR_kms_key_alias="${KMS_KEY_ALIAS:-genericsuite-key}"
-TF_VAR_chatbot_attachments_bucket_name="$(eval echo "\${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_${STAGE_UPPERCASE}:-}")"
+chatbot_bucket_varname="AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_${STAGE_UPPERCASE}"
+TF_VAR_chatbot_attachments_bucket_name="${!chatbot_bucket_varname:-}"
 export TF_VAR_chatbot_attachments_bucket_name
 if [ "${AWS_LAMBDA_FUNCTION_NAME:-}" != "" ]; then
     TF_VAR_lambda_function_name="$(echo "${AWS_LAMBDA_FUNCTION_NAME}-${STAGE}" | tr '[:upper:]' '[:lower:]')"
