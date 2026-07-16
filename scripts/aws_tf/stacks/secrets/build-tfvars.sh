@@ -21,15 +21,17 @@ APP_ENVS="${APP_ENVS:-}"
 # App-specific additions hook (same contract as the CF path)
 if [ -f "${REPO_BASEDIR}/scripts/aws/update_additional_envvars.sh" ]; then
     # shellcheck disable=SC1091
-    . "${REPO_BASEDIR}/scripts/aws/update_additional_envvars.sh"
+    . "${REPO_BASEDIR}/scripts/aws/update_additional_envvars.sh" "" "${REPO_BASEDIR}"
 fi
 
 # Resolve stage-dependent variables (VAR = VAR_${STAGE_UPPERCASE})
 STAGE_DEPENDENT_VAR_LIST="${STAGE_DEPENDENT_VAR_LIST:-APP_DB_ENGINE APP_DB_NAME APP_DB_URI APP_CORS_ORIGIN AWS_S3_CHATBOT_ATTACHMENTS_BUCKET}"
 for base_name in ${STAGE_DEPENDENT_VAR_LIST}; do
-    resolved="$(eval echo "\${${base_name}_${STAGE_UPPERCASE}:-}")"
+    resolved_varname="${base_name}_${STAGE_UPPERCASE}"
+    resolved="${!resolved_varname:-}"
     if [ "${resolved}" != "" ]; then
-        eval "export ${base_name}=\"\${resolved}\""
+        printf -v "${base_name}" '%s' "${resolved}"
+        export "${base_name}"
     fi
 done
 
@@ -55,7 +57,7 @@ build_json_map() {
     local json="{}"
     local name value
     for name in ${names}; do
-        value="$(eval echo "\${${name}:-}")"
+        value="${!name:-}"
         json="$(echo "${json}" | jq --arg k "${name}" --arg v "${value}" '. + {($k): $v}')"
     done
     echo "${json}"
