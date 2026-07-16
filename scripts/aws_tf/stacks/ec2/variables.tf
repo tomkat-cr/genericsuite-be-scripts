@@ -42,6 +42,7 @@ variable "kms_key_alias" {
 variable "ecr_image_tag" {
   description = "ECR image tag to deploy (ECR_DOCKER_IMAGE_TAG)"
   type        = string
+  default     = "latest"
 }
 
 variable "ssh_ingress_cidr" {
