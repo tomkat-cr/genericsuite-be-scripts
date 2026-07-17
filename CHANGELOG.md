@@ -7,6 +7,8 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ## [Unreleased] - YYYY-MM-DD
 
 ### Added
+- OpenTofu (Terraform-compatible) IaC deployments in `scripts/aws_tf`: generic wrapper (`run-tf-deployment.sh`), S3 remote state with native locking (`bootstrap-tf-state.sh`), and modules/stacks for S3 buckets, DynamoDB tables, KMS, Secrets Manager, ECR, ACM/Route53 app domains, EC2+ALB, and Lambda+API Gateway — parallel to the existing CloudFormation scripts, which remain unchanged [GS-334].
+- DynamoDB tfvars generator (`scripts/aws_tf/generate_dynamodb_tfvars.py`) reading the same GenericSuite JSON config as the CloudFormation generator [GS-334].
 ### Changed
 ### Fixed
 ### Removed
