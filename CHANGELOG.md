@@ -7,11 +7,13 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ## [Unreleased] - YYYY-MM-DD
 
 ### Added
-- OpenTofu (Terraform-compatible) IaC deployments in `scripts/aws_tf`: generic wrapper (`run-tf-deployment.sh`), S3 remote state with native locking (`bootstrap-tf-state.sh`), and modules/stacks for S3 buckets, DynamoDB tables, KMS, Secrets Manager, ECR, ACM/Route53 app domains, EC2+ALB, and Lambda+API Gateway — parallel to the existing CloudFormation scripts, which remain unchanged [GS-334].
-- DynamoDB tfvars generator (`scripts/aws_tf/generate_dynamodb_tfvars.py`) reading the same GenericSuite JSON config as the CloudFormation generator [GS-334].
+
 ### Changed
+
 ### Fixed
+
 ### Removed
+
 ### Security
 
 
@@ -22,6 +24,8 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - SAST testing [GS-315].
 - AWS_SSL_CERTIFICATE_ARN_BE to the `big_lambdas_manager.sh` script [GS-328]
 - Multiple CORS Origins support to FastAPI in the `aws_big_lambda/template-sam.yml` file [GS-329].
+- OpenTofu (Terraform-compatible) IaC deployments in `scripts/aws_tf`: generic wrapper (`run-tf-deployment.sh`), S3 remote state with native locking (`bootstrap-tf-state.sh`), and modules/stacks for S3 buckets, DynamoDB tables, KMS, Secrets Manager, ECR, ACM/Route53 app domains, EC2+ALB, and Lambda+API Gateway — parallel to the existing CloudFormation scripts, which remain unchanged [GS-334].
+- DynamoDB tfvars generator (`scripts/aws_tf/generate_dynamodb_tfvars.py`) reading the same GenericSuite JSON config as the CloudFormation generator [GS-334].
 
 ### Changed
 - License changed to MIT [FA-244].
@@ -327,7 +331,7 @@ set_chalice_cnf.sh mongo_docker -> set_chalice_cnf.sh local_db_docker
 ## [1.0.3] - 2024-04-09
 
 ### Changed
-- Add links to https://www.carlosjramirez.com/genericsuite/ to the README.
+- Add links to https://www.carlosjramirez.com/en/genericsuite/ to the README.
 
 
 ## [1.0.2] - 2024-04-06
