@@ -26,6 +26,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Multiple CORS Origins support to FastAPI in the `aws_big_lambda/template-sam.yml` file [GS-329].
 - OpenTofu (Terraform-compatible) IaC deployments in `scripts/aws_tf`: generic wrapper (`run-tf-deployment.sh`), S3 remote state with native locking (`bootstrap-tf-state.sh`), and modules/stacks for S3 buckets, DynamoDB tables, KMS, Secrets Manager, ECR, ACM/Route53 app domains, EC2+ALB, and Lambda+API Gateway — parallel to the existing CloudFormation scripts, which remain unchanged [GS-334].
 - DynamoDB tfvars generator (`scripts/aws_tf/generate_dynamodb_tfvars.py`) reading the same GenericSuite JSON config as the CloudFormation generator [GS-334].
+- ADDITIONAL_MCP_RUN_ARGS envvar can be passed to the MCP server "run_mcp_server.sh" script, so additional arguments can be passed to the MCP server without having to modify the script [GS-243].
 
 ### Changed
 - License changed to MIT [FA-244].
@@ -33,7 +34,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Initialize APP_ENVS variable in `update_additional_envvars.sh` for app-specific environment variables example [GS-329].
 
 ### Fixed
-- Fix CLOUD_PROVIDER, APP_NAME, and AWS_REGION envvars not being passed to the MCP server in "run_mcp_server.sh" [GS-243].
+- Fix envvars not being passed to the MCP server in "run_mcp_server.sh": CLOUD_PROVIDER, APP_NAME, AWS_REGION, STORAGE_URL_SEED, APP_SUPERADMIN_EMAIL, GIT_SUBMODULE_LOCAL_PATH, GET_SECRETS_ENABLED, GET_SECRETS_CRITICAL, and GET_SECRETS_ENVVARS [GS-243].
 
 
 ## [1.3.0] - 2026-02-18
