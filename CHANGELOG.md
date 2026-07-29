@@ -33,7 +33,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Initialize APP_ENVS variable in `update_additional_envvars.sh` for app-specific environment variables example [GS-329].
 
 ### Fixed
-- Fix "CLOUD_PROVIDER" envvar not being passed to the MCP server in "run_mcp_server.sh" [GS-243].
+- Fix CLOUD_PROVIDER, APP_NAME, and AWS_REGION envvars not being passed to the MCP server in "run_mcp_server.sh" [GS-243].
 
 
 ## [1.3.0] - 2026-02-18
