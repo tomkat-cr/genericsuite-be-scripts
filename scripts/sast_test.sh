@@ -36,7 +36,19 @@ verify_envvar "${SNYK_ORG}" "SNYK_ORG"
 verify_envvar "${SNYK_API_KEY}" "SNYK_API_KEY"
 
 run snyk config environment ${SNYK_ENVIRONMENT}
-snyk auth ${SNYK_API_KEY}
+if ! snyk auth ${SNYK_API_KEY}; then
+    echo ""
+    echo "Failed to authenticate with Snyk API Key: ${SNYK_API_KEY}"
+    echo ""
+    echo "Trying alternative method: snyk auth"
+    echo ""
+    if ! snyk auth; then
+        echo ""
+        echo "Failed to authenticate with Snyk"
+        echo ""
+        exit 1
+    fi
+fi
 run snyk code test --severity-threshold=high --org=${SNYK_ORG} --all-projects ${SNYK_ADDITIONAL_FLAGS} .
 run snyk test --severity-threshold=high --org=${SNYK_ORG} --all-projects ${SNYK_ADDITIONAL_FLAGS} .
 
