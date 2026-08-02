@@ -154,8 +154,6 @@ fi
 
 echo "🚀 Starting MCP server..."
 echo ""
-echo "${RUN_CMD}"
-echo ""
 
 if [ "$MCP_DEBUG_MODE" = "1" ]; then
     CLIENT_PORT=6274 SERVER_PORT=6277 \

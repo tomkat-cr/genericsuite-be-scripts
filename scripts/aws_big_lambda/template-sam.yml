@@ -105,12 +105,17 @@ Resources:
           CLOUD_PROVIDER: CLOUD_PROVIDER_placeholder
           APP_VERSION: APP_VERSION_placeholder
 
+          # Don't set AWS_REGION here, otherwise you'll get an error:
           # Lambda was unable to configure your environment variables because the environment variables you have provided contains reserved keys that are currently not supported for modification. Reserved keys used in this request: AWS_REGION
           # AWS_REGION: AWS_REGION_placeholder
+
+          # Uncomment the following lines to disable the secrets manager integration:
 
           # GET_SECRETS_ENABLED: 0
           # GET_SECRETS_ENVVARS: 0
           # GET_SECRETS_CRITICAL: 0
+
+          # Uncomment the following lines to specify envvars in the lambda function instead of using secrets manager:
 
           # AI_ASSISTANT_NAME: AI_ASSISTANT_NAME_placeholder
           # FLASK_APP: FLASK_APP_placeholder
@@ -178,8 +183,9 @@ Resources:
         DomainName: api.example.com
         CertificateArn: CertificateArn_placeholder
 
-      # # 2026-06-17: Commented out to allow all origins.
-      # # FastAPI will handle multiple origins by splitting the `CORS_ORIGIN` string if it contains commas.
+      # Uncomment the `Cors` section to restrict one origin and let API Gateway handle the CORS (less cost).
+      # Comment the `Cors` section to let FastAPI handle multiple origins by splitting the `CORS_ORIGIN` string if it contains commas (more cost). 
+
       # Cors:
       #   AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
       #   AllowHeaders: "'Access-Control-Allow-Origin,Authorization,Content-Type,X-Amz-Date,X-Amz-Security-Token,X-Api-Key'"
@@ -250,6 +256,9 @@ Resources:
                   description: 200 response
                   schema:
                     $ref: '#/definitions/Empty'
+
+              # Use this integration to let FastAPI handle the CORS for multiple origins. It calls the Lambda function for each OPTIONS request (extra cost).
+
               x-amazon-apigateway-integration:
                 responses:
                   default:
@@ -259,6 +268,18 @@ Resources:
                 passthroughBehavior: when_no_match
                 httpMethod: POST
                 type: aws_proxy
+
+              # Use this integration to return a 200 response with a body and let API Gateway handle the CORS for single origin (less cost).
+
+              # x-amazon-apigateway-integration:
+              #   responses:
+              #     default:
+              #       statusCode: '200'
+              #   requestTemplates:
+              #     application/json: '{"statusCode": 200}'
+              #   passthroughBehavior: when_no_match
+              #   type: mock
+              #   contentHandling: CONVERT_TO_TEXT
 
           /v1/menu_options:
             get:
@@ -306,6 +327,9 @@ Resources:
                       type: string
                     Access-Control-Allow-Credentials:
                       type: string
+
+              # Use this integration to let FastAPI handle the CORS for multiple origins. It calls the Lambda function for each OPTIONS request (extra cost).
+
               x-amazon-apigateway-integration:
                 responses:
                   default:
@@ -315,6 +339,25 @@ Resources:
                 passthroughBehavior: when_no_match
                 httpMethod: POST
                 type: aws_proxy
+
+              # Use this integration to return a 200 response with a body and let API Gateway handle the CORS for single origin (less cost).
+
+              # x-amazon-apigateway-integration:
+              #   responses:
+              #     default:
+              #       statusCode: '200'
+              #       responseParameters:
+              #         method.response.header.Access-Control-Allow-Methods: '''GET,OPTIONS'''
+              #         method.response.header.Access-Control-Allow-Origin: '''http://localhost:3000'''
+              #         method.response.header.Access-Control-Allow-Headers: '''Access-Control-Allow-Origin,Authorization,Content-Type,X-Amz-Date,X-Amz-Security-Token,X-Api-Key'''
+              #         method.response.header.Access-Control-Expose-Headers: '''Authorization,Access-Control-Allow-Origin,Content-Type,Content-Disposition,Content-Length'''
+              #         method.response.header.Access-Control-Max-Age: '''600'''
+              #         method.response.header.Access-Control-Allow-Credentials: '''true'''
+              #   requestTemplates:
+              #     application/json: '{"statusCode": 200}'
+              #   passthroughBehavior: when_no_match
+              #   type: mock
+              #   contentHandling: CONVERT_TO_TEXT
 
           /v1/menu_options/element:
             post:

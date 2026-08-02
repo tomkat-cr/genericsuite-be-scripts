@@ -35,10 +35,10 @@ verify_envvar "${SNYK_ENVIRONMENT}" "SNYK_ENVIRONMENT"
 verify_envvar "${SNYK_ORG}" "SNYK_ORG"
 verify_envvar "${SNYK_API_KEY}" "SNYK_API_KEY"
 
-run snyk config environment ${SNYK_ENVIRONMENT}
-if ! snyk auth ${SNYK_API_KEY}; then
+run snyk config environment "${SNYK_ENVIRONMENT}"
+if ! snyk auth "${SNYK_API_KEY}"; then
     echo ""
-    echo "Failed to authenticate with Snyk API Key: ${SNYK_API_KEY}"
+    echo "Failed to authenticate with Snyk API Key"
     echo ""
     echo "Trying alternative method: snyk auth"
     echo ""
@@ -49,8 +49,8 @@ if ! snyk auth ${SNYK_API_KEY}; then
         exit 1
     fi
 fi
-run snyk code test --severity-threshold=high --org=${SNYK_ORG} --all-projects ${SNYK_ADDITIONAL_FLAGS} .
-run snyk test --severity-threshold=high --org=${SNYK_ORG} --all-projects ${SNYK_ADDITIONAL_FLAGS} .
+run snyk code test --severity-threshold=high --org="${SNYK_ORG}" --all-projects ${SNYK_ADDITIONAL_FLAGS} .
+run snyk test --severity-threshold=high --org="${SNYK_ORG}" --all-projects ${SNYK_ADDITIONAL_FLAGS} .
 
 if [ "${FAILED_TESTS}" = "1" ]; then
     echo "SAST tests failed"
