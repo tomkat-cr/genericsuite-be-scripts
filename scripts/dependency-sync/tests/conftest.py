@@ -94,7 +94,7 @@ django = ">=4.0.0,<5.0.0"
 @pytest.fixture
 def multiline_dockerfile_content():
     """Multiline Dockerfile content for testing."""
-    return """FROM python:3.11-slim
+    return """FROM python:3.14-slim
 
 WORKDIR /app
 
@@ -117,15 +117,15 @@ def create_test_files(temp_dir):
     def _create_files(pyproject_content: str, dockerfile_content: str):
         pyproject_path = os.path.join(temp_dir, "pyproject.toml")
         dockerfile_path = os.path.join(temp_dir, "Dockerfile")
-        
+
         with open(pyproject_path, 'w') as f:
             f.write(pyproject_content)
-        
+
         with open(dockerfile_path, 'w') as f:
             f.write(dockerfile_content)
-        
+
         return pyproject_path, dockerfile_path
-    
+
     return _create_files
 
 
@@ -140,7 +140,7 @@ def create_multiple_pyproject_files(temp_dir):
                 f.write(content)
             files.append(file_path)
         return files
-    
+
     return _create_files
 
 
@@ -149,7 +149,7 @@ def load_fixture_file(fixtures_dir):
     """Factory fixture for loading fixture files."""
     def _load_fixture(filename: str) -> str:
         return load_fixture(fixtures_dir, filename)
-    
+
     return _load_fixture
 
 
@@ -234,12 +234,12 @@ CMD ["python", "main.py"]
     file_path = os.path.join(temp_dir, "Dockerfile")
     with open(file_path, 'w') as f:
         f.write(content)
-    
+
     # Make file read-only
     os.chmod(file_path, 0o444)
-    
+
     yield file_path
-    
+
     # Restore write permissions for cleanup
     try:
         os.chmod(file_path, 0o644)

@@ -2,7 +2,7 @@
 # 2024-04-10 | CR
 
 # Use an official Python 3.xx slim image
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 # Set the working directory in the container
 WORKDIR /app

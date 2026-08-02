@@ -36,6 +36,9 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Fixed
 - Fix envvars not being passed to the MCP server in "run_mcp_server.sh": CLOUD_PROVIDER, APP_NAME, AWS_REGION, STORAGE_URL_SEED, APP_SUPERADMIN_EMAIL, GIT_SUBMODULE_LOCAL_PATH, GET_SECRETS_ENABLED, GET_SECRETS_CRITICAL, and GET_SECRETS_ENVVARS [GS-243].
 
+### Security
+- Migrate to Python 3.14 [GS-337].
+
 
 ## [1.3.0] - 2026-02-18
 
