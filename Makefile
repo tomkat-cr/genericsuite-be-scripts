@@ -374,7 +374,7 @@ npm_lock:
 pre-publish: sast-test
 	bash scripts/npm_publish.sh pre-publish
 
-publish: sast-test
+publish:
 	bash scripts/npm_publish.sh publish
 
 ## Pypi library scripts
