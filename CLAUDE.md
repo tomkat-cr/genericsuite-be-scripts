@@ -146,6 +146,6 @@ Security scanning (`sast-test`) is **mandatory** before publishing. The `make pu
 - The files `AGENTS.md`, `GEMINI.md`, etc. (if present) have only a referece to `@CLAUDE.md` — edit only `CLAUDE.md`.
 - Skills live in `.ai/skills/` (source of truth); symlinked under `.agents/skills/`, `.claude/skills/`, `.codex/skills/`, `.gemini/skills/`, and `.devin/skills/`.
 - Scripts detect Docker vs Podman via `scripts/container_engine_manager.sh`.
-- Node version is pinned to 20 via `.nvmrc`.
+- Node.js version is pinned to 26 via `.nvmrc`.
 - Default Python package manager is `uv`; scripts also support `poetry` and `pipenv`.
 - Generated files (`.chalice/config.json`, `docker-compose.yml`, `Dockerfile`, `samconfig.toml`) are git-ignored — they are produced by config/build targets.

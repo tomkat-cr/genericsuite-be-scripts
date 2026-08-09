@@ -39,6 +39,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Security
 - Migrate to Python 3.14 [GS-337].
 - Clean up output in "run_mcp_server.sh" by removing unnecessary echo statements [GS-243].
+- Bump Node.js version in .nvmrc to 26 [GS-339].
 
 
 ## [1.3.0] - 2026-02-18
