@@ -35,6 +35,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 
 ### Fixed
 - Fix envvars not being passed to the MCP server in "run_mcp_server.sh": CLOUD_PROVIDER, APP_NAME, AWS_REGION, STORAGE_URL_SEED, APP_SUPERADMIN_EMAIL, GIT_SUBMODULE_LOCAL_PATH, GET_SECRETS_ENABLED, GET_SECRETS_CRITICAL, and GET_SECRETS_ENVVARS [GS-243].
+- Fix `pnpm install` calling the release command, treating the script named `publish` as an **npm lifecycle hook** while preparing a **git-hosted** dependency, instead of just cloning the repo. This happens when installing GS BE Scripts as a git-hosted dependency. Therefore, it won't be `publish`, `prepublish`, `prepublishOnly`, `prepack`, `prepare`, `postpack`, or `postpublish` reserved names in the NPM script names, so they were renamed to `npm-publish` and `npm-pre-publish` [GS-339].
 
 ### Security
 - Migrate to Python 3.14 [GS-337].
