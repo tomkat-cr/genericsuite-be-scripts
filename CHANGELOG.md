@@ -40,13 +40,13 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Security
 - Migrate to Python 3.14 [GS-337].
 - Clean up output in "run_mcp_server.sh" by removing unnecessary echo statements [GS-243].
+- Supress MCP server npm notice in "run_mcp_server.sh" by setting the MCP_DISABLE_NOTICE environment variable to true [GS-243].
 - Bump Node.js version in .nvmrc to 26 [GS-339].
 - Remove "office-addin-dev-certs" from package.json dependencies to let user choose to install it if needed, and fix security vulnerabilities [GS-219].
    * Forge has signature forgery in Ed25519 due to missing S > L check (CVE-2026-25793, CVE-2022-35961)
    * Forge has signature forgery in RSA-PKCS due to ASN.1 extra field (This issue is similar to CVE-2022-24771)
    * Forge has a basicConstraints bypass in its certificate chain verification (RFC 5280 violation) (same vulnerability class as: CVE-2014-0092, CVE-2015-1793, CVE-2020-0601)
    * uuid: Missing buffer bounds check in v3/v5/v6 when buf is provided
-
 
 ## [1.3.0] - 2026-02-18
 

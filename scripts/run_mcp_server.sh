@@ -146,19 +146,21 @@ fi
 
 # Start the server
 
-if [ "$MCP_SERVER_RUN_AS_MODULE" = "true" ]; then
-    RUN_CMD="${PEM_TOOL} run env $MCP_RUN_ARGS $PYTHON_CMD -m $MCP_APP_MAIN_FILE"
+if [ "${MCP_SERVER_RUN_AS_MODULE}" = "true" ]; then
+    RUN_CMD="${PEM_TOOL} run env ${MCP_RUN_ARGS} ${PYTHON_CMD} -m ${MCP_APP_MAIN_FILE}"
 else
-    RUN_CMD="${PEM_TOOL} run env $MCP_RUN_ARGS $PYTHON_CMD $MCP_APP_MAIN_FILE.py"
+    RUN_CMD="${PEM_TOOL} run env ${MCP_RUN_ARGS} ${PYTHON_CMD} ${MCP_APP_MAIN_FILE}.py"
 fi
 
 echo "🚀 Starting MCP server..."
 echo ""
 
 if [ "$MCP_DEBUG_MODE" = "1" ]; then
-    CLIENT_PORT=6274 SERVER_PORT=6277 \
-        npx @modelcontextprotocol/inspector \
+    export MCP_DISABLE_NOTICE=true
+    CLIENT_PORT=6274 SERVER_PORT=6277 MCP_DISABLE_NOTICE=true \
+        npx -y --quiet @modelcontextprotocol/inspector \
         ${RUN_CMD}
+    export MCP_DISABLE_NOTICE=""
 else
     ${RUN_CMD}
 fi
