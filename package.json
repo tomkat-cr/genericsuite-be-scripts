@@ -35,8 +35,5 @@
     "fastapi",
     "flask",
     "mongodb"
-  ],
-  "devDependencies": {
-    "office-addin-dev-certs": "^1.12.2"
-  }
+  ]
 }
