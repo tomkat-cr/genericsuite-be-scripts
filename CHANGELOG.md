@@ -32,6 +32,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - License changed to MIT [FA-244].
 - Enhance error handling and messaging in the `set_fe_cloudfront_domain.sh` script [GS-328]
 - Initialize APP_ENVS variable in `update_additional_envvars.sh` for app-specific environment variables example [GS-329].
+- Update `run_mcp_server.sh` to improve environment variable handling (removing double-quotes), adapt to MCP inspector 2.0, and create a .env.mcp.json file to have both stdio and streamable-http servers in the MCP inspector instance [GS-243].
 
 ### Fixed
 - Fix envvars not being passed to the MCP server in "run_mcp_server.sh": CLOUD_PROVIDER, APP_NAME, AWS_REGION, STORAGE_URL_SEED, APP_SUPERADMIN_EMAIL, GIT_SUBMODULE_LOCAL_PATH, GET_SECRETS_ENABLED, GET_SECRETS_CRITICAL, and GET_SECRETS_ENVVARS [GS-243].
