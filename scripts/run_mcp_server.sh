@@ -11,7 +11,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 cd "$BASE_DIR"
 
-PEM_TOOL=uv
+PEM_TOOL="uv"
 
 # mcp-server ".env" file read
 if [ -f "$BASE_DIR/.env" ]; then
@@ -67,17 +67,6 @@ fi
 
 echo "✅ Dependencies verified"
 
-# # Read the .env file from the application directory if it is not the current directory
-# if [ "$MCP_APP_DIR" != "." ]; then
-#     if [ -f ".env" ]; then
-#         echo "🔍 Reading .env file in: `pwd`"
-#         set -o allexport; . ".env"; set +o allexport ;
-#     else
-#         echo "❌ .env file not found in $MCP_APP_DIR. Please create one in `pwd`."
-#         exit 1
-#     fi
-# fi
-
 echo "🚀 Preparing environment..."
 
 # Enforce framework and method to enable running the MCP server from the API server directory
@@ -104,6 +93,9 @@ fi
 # MCP server host
 if [ -z "$MCP_SERVER_HOST" ]; then
     export MCP_SERVER_HOST="0.0.0.0"
+    export MCP_HTTP_SERVER_HOST="localhost"
+else
+    export MCP_HTTP_SERVER_HOST="${MCP_SERVER_HOST}"
 fi
 
 # Set working variables
@@ -126,7 +118,8 @@ fi
 export APP_CORS_ORIGIN="$(eval echo \"\$APP_CORS_ORIGIN_${STAGE_UPPERCASE}\")"
 export AWS_S3_CHATBOT_ATTACHMENTS_BUCKET=$(eval echo \$AWS_S3_CHATBOT_ATTACHMENTS_BUCKET_${STAGE_UPPERCASE})
 
-MCP_RUN_ARGS="APP_NAME=$APP_NAME APP_STAGE=$APP_STAGE APP_SECRET_KEY=$APP_SECRET_KEY STORAGE_URL_SEED=$STORAGE_URL_SEED APP_SUPERADMIN_EMAIL=$APP_SUPERADMIN_EMAIL GIT_SUBMODULE_LOCAL_PATH=$GIT_SUBMODULE_LOCAL_PATH APP_DB_ENGINE=$APP_DB_ENGINE APP_DB_NAME=$APP_DB_NAME APP_DB_URI=\"$APP_DB_URI\" APP_CORS_ORIGIN=\"$APP_CORS_ORIGIN\" APP_HOST_NAME=$APP_HOST_NAME CURRENT_FRAMEWORK=$CURRENT_FRAMEWORK  CLOUD_PROVIDER=$CLOUD_PROVIDER AWS_S3_CHATBOT_ATTACHMENTS_BUCKET=\"$AWS_S3_CHATBOT_ATTACHMENTS_BUCKET\" AWS_REGION=$AWS_REGION GET_SECRETS_ENABLED=$GET_SECRETS_ENABLED GET_SECRETS_CRITICAL=$GET_SECRETS_CRITICAL GET_SECRETS_ENVVARS=$GET_SECRETS_ENVVARS MCP_SERVER_PORT=$MCP_SERVER_PORT MCP_SERVER_HOST=$MCP_SERVER_HOST MCP_TRANSPORT=$MCP_TRANSPORT "
+APP_NAME_LOWERCASE_NO_BLANKS=$(echo ${APP_NAME} | tr '[:upper:]' '[:lower:]' | tr -d ' ')
+MCP_RUN_ARGS="APP_NAME=$APP_NAME APP_STAGE=$APP_STAGE APP_SECRET_KEY=$APP_SECRET_KEY STORAGE_URL_SEED=$STORAGE_URL_SEED APP_SUPERADMIN_EMAIL=$APP_SUPERADMIN_EMAIL GIT_SUBMODULE_LOCAL_PATH=$GIT_SUBMODULE_LOCAL_PATH APP_DB_ENGINE=$APP_DB_ENGINE APP_DB_NAME=$APP_DB_NAME APP_DB_URI=$APP_DB_URI APP_CORS_ORIGIN=$APP_CORS_ORIGIN APP_HOST_NAME=$APP_HOST_NAME CURRENT_FRAMEWORK=$CURRENT_FRAMEWORK CLOUD_PROVIDER=$CLOUD_PROVIDER AWS_S3_CHATBOT_ATTACHMENTS_BUCKET=$AWS_S3_CHATBOT_ATTACHMENTS_BUCKET AWS_REGION=$AWS_REGION GET_SECRETS_ENABLED=$GET_SECRETS_ENABLED GET_SECRETS_CRITICAL=$GET_SECRETS_CRITICAL GET_SECRETS_ENVVARS=$GET_SECRETS_ENVVARS MCP_SERVER_PORT=$MCP_SERVER_PORT MCP_SERVER_HOST=$MCP_SERVER_HOST "
 
 if [ "${GS_USER_NAME}" != '' ]; then
     MCP_RUN_ARGS="${MCP_RUN_ARGS} GS_USER_NAME=$GS_USER_NAME"
@@ -137,7 +130,7 @@ if [ "${GS_USER_ID}" != '' ]; then
 fi
 
 if [ "${GS_API_KEY}" != '' ]; then
-    MCP_RUN_ARGS="${MCP_RUN_ARGS} GS_API_KEY=\"$GS_API_KEY\""
+    MCP_RUN_ARGS="${MCP_RUN_ARGS} GS_API_KEY=$GS_API_KEY"
 fi
 
 if [ "${ADDITIONAL_MCP_RUN_ARGS}" != '' ]; then
@@ -146,21 +139,78 @@ fi
 
 # Start the server
 
+MCP_JSON_FILE_COMMAND="${PEM_TOOL}"
+MCP_JSON_FILE_COMMAND_ARG_1="run"
+MCP_JSON_FILE_COMMAND_ARG_2="${PYTHON_CMD}"
+
 if [ "${MCP_SERVER_RUN_AS_MODULE}" = "true" ]; then
-    RUN_CMD="${PEM_TOOL} run env ${MCP_RUN_ARGS} ${PYTHON_CMD} -m ${MCP_APP_MAIN_FILE}"
+    RUN_CMD="${PEM_TOOL} run env MCP_TRANSPORT=$MCP_TRANSPORT ${MCP_RUN_ARGS} ${PYTHON_CMD} -m ${MCP_APP_MAIN_FILE}"
+    RUN_HTTP_MCP_CMD="${PEM_TOOL} run env MCP_TRANSPORT=http ${MCP_RUN_ARGS} ${PYTHON_CMD} -m ${MCP_APP_MAIN_FILE}"
+    MCP_JSON_FILE_COMMAND_ARG_3="-m"
+    MCP_JSON_FILE_COMMAND_ARG_4="${MCP_APP_MAIN_FILE}"
 else
-    RUN_CMD="${PEM_TOOL} run env ${MCP_RUN_ARGS} ${PYTHON_CMD} ${MCP_APP_MAIN_FILE}.py"
+    RUN_CMD="${PEM_TOOL} run env MCP_TRANSPORT=$MCP_TRANSPORT ${MCP_RUN_ARGS} ${PYTHON_CMD} ${MCP_APP_MAIN_FILE}.py"
+    RUN_HTTP_MCP_CMD="${PEM_TOOL} run env MCP_TRANSPORT=http ${MCP_RUN_ARGS} ${PYTHON_CMD} ${MCP_APP_MAIN_FILE}.py"
+    MCP_JSON_FILE_COMMAND_ARG_3="${MCP_APP_MAIN_FILE}.py"
+    MCP_JSON_FILE_COMMAND_ARG_4=""
+fi
+
+TEMP_MCP_JSON_FILE="${BASE_DIR}/.env.mcp.json"
+if [ "${MCP_DEBUG_MODE}" = "1" ]; then
+  cat > "${TEMP_MCP_JSON_FILE}" <<END \
+
+{
+  "mcpServers": {
+    "${APP_NAME_LOWERCASE_NO_BLANKS}": {
+      "type": "stdio",
+      "command": "${MCP_JSON_FILE_COMMAND}",
+      "args": ["${MCP_JSON_FILE_COMMAND_ARG_1}", "${MCP_JSON_FILE_COMMAND_ARG_2}", "${MCP_JSON_FILE_COMMAND_ARG_3}", "${MCP_JSON_FILE_COMMAND_ARG_4}"],
+      "env": {
+        "APP_NAME": "${APP_NAME}",
+        "APP_STAGE": "${APP_STAGE}",
+        "APP_SECRET_KEY": "${APP_SECRET_KEY}",
+        "STORAGE_URL_SEED": "${STORAGE_URL_SEED}",
+        "APP_SUPERADMIN_EMAIL": "${APP_SUPERADMIN_EMAIL}",
+        "GIT_SUBMODULE_LOCAL_PATH": "${GIT_SUBMODULE_LOCAL_PATH}",
+        "APP_DB_ENGINE": "${APP_DB_ENGINE}",
+        "APP_DB_NAME": "${APP_DB_NAME}",
+        "APP_DB_URI": "${APP_DB_URI}",
+        "APP_CORS_ORIGIN": "${APP_CORS_ORIGIN}",
+        "APP_HOST_NAME": "${APP_HOST_NAME}",
+        "CURRENT_FRAMEWORK": "${CURRENT_FRAMEWORK}",
+        "CLOUD_PROVIDER": "${CLOUD_PROVIDER}",
+        "AWS_S3_CHATBOT_ATTACHMENTS_BUCKET": "${AWS_S3_CHATBOT_ATTACHMENTS_BUCKET}",
+        "AWS_REGION": "${AWS_REGION}",
+        "GET_SECRETS_ENABLED": "${GET_SECRETS_ENABLED}",
+        "GET_SECRETS_CRITICAL": "${GET_SECRETS_CRITICAL}",
+        "GET_SECRETS_ENVVARS": "${GET_SECRETS_ENVVARS}",
+        "MCP_SERVER_PORT": "${MCP_SERVER_PORT}",
+        "MCP_SERVER_HOST": "${MCP_SERVER_HOST}",
+        "MCP_TRANSPORT": "${MCP_TRANSPORT}",
+        "GS_API_KEY": "${GS_API_KEY}"
+      }
+    },
+    "${APP_NAME_LOWERCASE_NO_BLANKS}-web": {
+      "type": "streamable-http",
+      "url": "http://${MCP_HTTP_SERVER_HOST}:${MCP_SERVER_PORT}/mcp",
+      "headers": {
+        "Authorization": "Bearer ${GS_API_KEY}"
+      }
+    }
+  }
+}
+END
+
 fi
 
 echo "🚀 Starting MCP server..."
 echo ""
 
-if [ "$MCP_DEBUG_MODE" = "1" ]; then
-    export MCP_DISABLE_NOTICE=true
+if [ "${MCP_DEBUG_MODE}" = "1" ]; then
     CLIENT_PORT=6274 SERVER_PORT=6277 MCP_DISABLE_NOTICE=true \
-        npx -y --quiet @modelcontextprotocol/inspector \
-        ${RUN_CMD}
-    export MCP_DISABLE_NOTICE=""
+        npx -y @modelcontextprotocol/inspector \
+        --catalog "${TEMP_MCP_JSON_FILE}" &
+    ${RUN_HTTP_MCP_CMD}
 else
     ${RUN_CMD}
 fi
