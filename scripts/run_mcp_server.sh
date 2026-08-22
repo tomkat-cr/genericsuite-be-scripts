@@ -33,7 +33,7 @@ ev_to_env_file() {
     )
 
     for ev in "${ev_to_set[@]}"; do
-        ev_new_value="${!ev}"
+        ev_new_value="${!ev:-}"
         # Escape @ with \@ (e.g. for DB URI, superadmin email, etc.)
         ev_new_value="${ev_new_value//@/\\@}"
         if ! grep -q "^${ev}=" "${ENV_FILESPEC}"; then
