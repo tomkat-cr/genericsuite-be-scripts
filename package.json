@@ -3,7 +3,7 @@
   "version": "1.3.0",
   "description": "GenericSuite Scripts (backend version)",
   "author": "Carlos J. Ramirez <info@genericsuite.com>",
-  "license": "ISC",
+  "license": "MIT",
   "files": [
     ".chalice",
     "scripts",
@@ -12,8 +12,8 @@
     "README.md"
   ],
   "scripts": {
-    "publish": "bash scripts/npm_publish.sh publish",
-    "pre-publish": "bash scripts/npm_publish.sh pre-publish"
+    "npm-publish": "bash scripts/npm_publish.sh publish",
+    "npm-pre-publish": "bash scripts/npm_publish.sh pre-publish"
   },
   "repository": {
     "type": "git",
@@ -35,8 +35,5 @@
     "fastapi",
     "flask",
     "mongodb"
-  ],
-  "devDependencies": {
-    "office-addin-dev-certs": "^1.12.2"
-  }
+  ]
 }

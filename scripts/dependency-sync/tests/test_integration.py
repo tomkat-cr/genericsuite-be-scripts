@@ -361,7 +361,7 @@ minimum_constraint = ">=4.5.0"
         server_pyproject = fixtures_dir / "complex_pyproject.toml"
 
         # Create a test Dockerfile
-        dockerfile_content = """FROM python:3.11-slim
+        dockerfile_content = """FROM python:3.14-slim
 
 WORKDIR /app
 
@@ -782,7 +782,7 @@ Package-With-Mixed-Case = "^3.0.0"
         with open(pyproject_path, 'w') as f:
             f.write(complex_content)
 
-        dockerfile_content = """FROM python:3.11-slim
+        dockerfile_content = """FROM python:3.14-slim
 
 WORKDIR /app
 

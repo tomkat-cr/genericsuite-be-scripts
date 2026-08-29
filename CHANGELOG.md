@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Changelog](http://keepachangelog.com/).
 
 
-## [Unreleased]
+## [Unreleased] - YYYY-MM-DD
 
 ### Added
 
@@ -16,6 +16,38 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 
 ### Security
 
+
+## [1.4.0] - 2026-08-30
+
+### Added
+- AGENTS.md, GEMINI.md, and CLAUDE.md files to provide context and instructions to AI Coding Assistants [GS-303].
+- SAST testing [GS-315].
+- AWS_SSL_CERTIFICATE_ARN_BE to the `big_lambdas_manager.sh` script [GS-328]
+- Multiple CORS Origins support to FastAPI in the `aws_big_lambda/template-sam.yml` file [GS-329].
+- OpenTofu (Terraform-compatible) IaC deployments in `scripts/aws_tf`: generic wrapper (`run-tf-deployment.sh`), S3 remote state with native locking (`bootstrap-tf-state.sh`), and modules/stacks for S3 buckets, DynamoDB tables, KMS, Secrets Manager, ECR, ACM/Route53 app domains, EC2+ALB, and Lambda+API Gateway — parallel to the existing CloudFormation scripts, which remain unchanged [GS-334].
+- DynamoDB tfvars generator (`scripts/aws_tf/generate_dynamodb_tfvars.py`) reading the same GenericSuite JSON config as the CloudFormation generator [GS-334].
+- ADDITIONAL_MCP_RUN_ARGS envvar can be passed to the MCP server "run_mcp_server.sh" script, so additional arguments can be passed to the MCP server without having to modify the script [GS-243].
+
+### Changed
+- License changed to MIT [FA-244].
+- Enhance error handling and messaging in the `set_fe_cloudfront_domain.sh` script [GS-328]
+- Initialize APP_ENVS variable in `update_additional_envvars.sh` for app-specific environment variables example [GS-329].
+- Update `run_mcp_server.sh` to improve environment variable handling (removing double-quotes), adapt to MCP inspector 2.0, create a .env.mcp.json file to have both stdio and streamable-http servers in the MCP inspector instance, implement a function to manage environment variables, ensuring they are set correctly in the .env file., and improve error handling and streamline variable checks throughout the script [GS-243].
+
+### Fixed
+- Fix envvars not being passed to the MCP server in "run_mcp_server.sh": CLOUD_PROVIDER, APP_NAME, AWS_REGION, STORAGE_URL_SEED, APP_SUPERADMIN_EMAIL, GIT_SUBMODULE_LOCAL_PATH, GET_SECRETS_ENABLED, GET_SECRETS_CRITICAL, and GET_SECRETS_ENVVARS [GS-243].
+- Fix `pnpm install` calling the release command, treating the script named `publish` as an **npm lifecycle hook** while preparing a **git-hosted** dependency, instead of just cloning the repo. This happens when installing GS BE Scripts as a git-hosted dependency. Therefore, it won't be `publish`, `prepublish`, `prepublishOnly`, `prepack`, `prepare`, `postpack`, or `postpublish` reserved names in the NPM script names, so they were renamed to `npm-publish` and `npm-pre-publish` [GS-339].
+
+### Security
+- Migrate to Python 3.14 [GS-337].
+- Clean up output in "run_mcp_server.sh" by removing unnecessary echo statements [GS-243].
+- Supress MCP server npm notice in "run_mcp_server.sh" by setting the MCP_DISABLE_NOTICE environment variable to true [GS-243].
+- Bump Node.js version in .nvmrc to 26 [GS-339].
+- Remove "office-addin-dev-certs" from package.json dependencies to let user choose to install it if needed, and fix security vulnerabilities [GS-219].
+   * Forge has signature forgery in Ed25519 due to missing S > L check (CVE-2026-25793, CVE-2022-35961)
+   * Forge has signature forgery in RSA-PKCS due to ASN.1 extra field (This issue is similar to CVE-2022-24771)
+   * Forge has a basicConstraints bypass in its certificate chain verification (RFC 5280 violation) (same vulnerability class as: CVE-2014-0092, CVE-2015-1793, CVE-2020-0601)
+   * uuid: Missing buffer bounds check in v3/v5/v6 when buf is provided
 
 ## [1.3.0] - 2026-02-18
 
@@ -316,7 +348,7 @@ set_chalice_cnf.sh mongo_docker -> set_chalice_cnf.sh local_db_docker
 ## [1.0.3] - 2024-04-09
 
 ### Changed
-- Add links to https://www.carlosjramirez.com/genericsuite/ to the README.
+- Add links to https://www.carlosjramirez.com/en/genericsuite/ to the README.
 
 
 ## [1.0.2] - 2024-04-06

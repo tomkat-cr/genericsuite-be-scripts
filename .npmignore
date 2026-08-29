@@ -73,3 +73,10 @@ scripts/dns/Dockerfile
 response.json
 
 tmp
+
+# AI Agents
+.claude
+.agents
+.codex
+.cursor
+.gemini

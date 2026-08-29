@@ -12,6 +12,8 @@
 
 # Set the App specific secrets list (separated by blanks)
 export APP_SECRETS=""
+# Set the App specific envvars
+export APP_ENVS=""
 
 CONFIG_FILE="$1"
 if [ "${CONFIG_FILE}" = "" ]; then

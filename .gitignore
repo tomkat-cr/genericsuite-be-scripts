@@ -80,3 +80,20 @@ scripts/code_generation/requirements.txt
 
 # Big lambdas deployment
 tmp
+
+# Claude Code
+.claude/settings.local.json
+
+# AI Agents
+.claude
+.agents
+.codex
+.cursor
+.gemini
+
+# OpenTofu [GS-334]
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+scripts/aws_tf/stacks/dynamodb/dynamodb.auto.tfvars.json

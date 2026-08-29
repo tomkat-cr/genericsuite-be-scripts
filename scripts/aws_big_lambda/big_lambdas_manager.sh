@@ -1,5 +1,6 @@
 #!/bin/bash
 # aws_big_lambda/big_lambdas_manager.sh
+# Deploy AWS Lambda Functions (Python) with ECR container images and the API Gateway service
 # 2023-12-10 | CR
 
 # Reference:
@@ -749,6 +750,12 @@ create_sam_yaml() {
   else
     domain="${DOMAIN_NAME}"
     get_ssl_cert_arn
+
+    if [ "${AWS_SSL_CERTIFICATE_ARN_BE}" != "" ];then
+        AWS_SSL_CERTIFICATE_ARN="${AWS_SSL_CERTIFICATE_ARN_BE}"
+        echo "Using AWS_SSL_CERTIFICATE_ARN_BE..."
+    fi
+
     if [ "${ACM_CERTIFICATE_ARN}" = "" ]; then
       echo ""
       echo ">>> WARNING: ACM Certificate ARN not found for '${domain}'"

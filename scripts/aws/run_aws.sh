@@ -241,7 +241,7 @@ if [[ "$1" = "run_local" || "$1" = "" ]]; then
                 fi
                 echo ">> New APP_CORS_ORIGIN: ${APP_CORS_ORIGIN}"
             else
-                echo ">> APP_CORS_ORIGIN: ${APP_CORS_ORIGIN}"
+                echo ">> APP_CORS_ORIGIN: ${APP_CORS_ORIGIN} | STAGE_UPPERCASE: ${STAGE_UPPERCASE}"
             fi
         fi
     fi

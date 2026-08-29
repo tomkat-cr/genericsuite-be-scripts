@@ -371,13 +371,16 @@ init_chalice:
 npm_lock:
 	npm install --package-lock-only
 
-pre-publish:
+pre-publish: sast-test
 	bash scripts/npm_publish.sh pre-publish
 
 publish:
 	bash scripts/npm_publish.sh publish
 
 ## Pypi library scripts
+
+sast-test:
+	bash scripts/sast_test.sh
 
 pypi-build:
 	# Build 'dist' directory needed for the Pypi publish

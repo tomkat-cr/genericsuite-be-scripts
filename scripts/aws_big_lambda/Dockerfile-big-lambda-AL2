@@ -2,7 +2,7 @@
 # 2023-12-10 | CR
 # Used by: scrips/aws_big_lambda/big_lambdas_manager.sh
 
-FROM public.ecr.aws/lambda/python:3.12
+FROM public.ecr.aws/lambda/python:3.14
 
 # Error: Please make sure the libxml2 and libxslt development packages are installed.
     # google: alpine install libxml2-dev libxslt-dev python-dev
