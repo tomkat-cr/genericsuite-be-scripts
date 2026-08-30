@@ -33,6 +33,8 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 - Enhance error handling and messaging in the `set_fe_cloudfront_domain.sh` script [GS-328]
 - Initialize APP_ENVS variable in `update_additional_envvars.sh` for app-specific environment variables example [GS-329].
 - Update `run_mcp_server.sh` to improve environment variable handling (removing double-quotes), adapt to MCP inspector 2.0, create a .env.mcp.json file to have both stdio and streamable-http servers in the MCP inspector instance, implement a function to manage environment variables, ensuring they are set correctly in the .env file., and improve error handling and streamline variable checks throughout the script [GS-243].
+- Update .npmignore to include additional files and directories for Chalice, Claude Code, and OpenTofu [GS-327].
+- Increment package version to 1.4.0 in package.json and package-lock.json [GS-327].
 
 ### Fixed
 - Fix envvars not being passed to the MCP server in "run_mcp_server.sh": CLOUD_PROVIDER, APP_NAME, AWS_REGION, STORAGE_URL_SEED, APP_SUPERADMIN_EMAIL, GIT_SUBMODULE_LOCAL_PATH, GET_SECRETS_ENABLED, GET_SECRETS_CRITICAL, and GET_SECRETS_ENVVARS [GS-243].
@@ -48,6 +50,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
    * Forge has signature forgery in RSA-PKCS due to ASN.1 extra field (This issue is similar to CVE-2022-24771)
    * Forge has a basicConstraints bypass in its certificate chain verification (RFC 5280 violation) (same vulnerability class as: CVE-2014-0092, CVE-2015-1793, CVE-2020-0601)
    * uuid: Missing buffer bounds check in v3/v5/v6 when buf is provided
+
 
 ## [1.3.0] - 2026-02-18
 
