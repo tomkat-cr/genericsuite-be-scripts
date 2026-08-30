@@ -49,6 +49,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
    * Forge has a basicConstraints bypass in its certificate chain verification (RFC 5280 violation) (same vulnerability class as: CVE-2014-0092, CVE-2015-1793, CVE-2020-0601)
    * uuid: Missing buffer bounds check in v3/v5/v6 when buf is provided
 
+
 ## [1.3.0] - 2026-02-18
 
 ### Added
